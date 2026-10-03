@@ -14,6 +14,29 @@ os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["CUDA_MODULE_LOADING"] = "LAZY"
 
 import sys
+import types
+
+# Polyfill torchao.quantization.FqnToConfig if missing (satisfies diffusers top-level imports)
+try:
+    import torchao
+    import torchao.quantization
+    if not hasattr(torchao.quantization, "FqnToConfig"):
+        class FqnToConfig:
+            def __init__(self, *args, **kwargs): pass
+        torchao.quantization.FqnToConfig = FqnToConfig
+except Exception:
+    try:
+        tao = types.ModuleType("torchao")
+        tao_q = types.ModuleType("torchao.quantization")
+        class FqnToConfig:
+            def __init__(self, *args, **kwargs): pass
+        tao_q.FqnToConfig = FqnToConfig
+        tao.quantization = tao_q
+        sys.modules["torchao"] = tao
+        sys.modules["torchao.quantization"] = tao_q
+    except Exception:
+        pass
+
 import gc
 import re
 import io
@@ -340,18 +363,6 @@ class ModelOrchestrator:
         import torch
 
         try:
-            # Auto-upgrade torchao if FqnToConfig is missing (required by latest diffusers)
-            try:
-                import torchao.quantization
-                if not hasattr(torchao.quantization, "FqnToConfig"):
-                    logger.info("Upgrading torchao for diffusers compatibility...")
-                    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U", "torchao"], check=False)
-                    import importlib
-                    importlib.reload(torchao)
-                    importlib.reload(torchao.quantization)
-            except Exception as tao_err:
-                logger.warning(f"torchao compatibility note: {tao_err}")
-
             # Safe dynamic imports
             PipelineClass = None
             try:
