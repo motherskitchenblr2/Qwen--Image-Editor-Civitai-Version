@@ -94,6 +94,7 @@ GDRIVE_TOKEN_FALLBACK = os.environ.get("GDRIVE_TOKEN_JSON", "")
 
 
 RCLONE_CONF_FILE: Optional[pathlib.Path] = None
+GDRIVE_ENABLED: bool = False
 
 
 def ensure_rclone_installed() -> bool:
@@ -140,14 +141,20 @@ def ensure_rclone_installed() -> bool:
     return False
 
 
-def setup_rclone(client_id: Optional[str] = None, client_secret: Optional[str] = None, token_json: Optional[str] = None):
+def setup_rclone(client_id: Optional[str] = None, client_secret: Optional[str] = None, token_json: Optional[str] = None) -> bool:
     """Write rclone config securely for Google Drive access and ensure rclone binary is ready."""
-    global RCLONE_CONF_FILE
-    ensure_rclone_installed()
+    global RCLONE_CONF_FILE, GDRIVE_ENABLED
 
-    cid = client_id or GDRIVE_CLIENT_ID_FALLBACK
-    csec = client_secret or GDRIVE_CLIENT_SECRET_FALLBACK
-    tok = token_json or GDRIVE_TOKEN_FALLBACK
+    cid = (client_id or GDRIVE_CLIENT_ID_FALLBACK or "").strip()
+    csec = (client_secret or GDRIVE_CLIENT_SECRET_FALLBACK or "").strip()
+    tok = (token_json or GDRIVE_TOKEN_FALLBACK or "").strip()
+
+    if not tok:
+        logger.info("ℹ️ [Google Drive Vault] No OAuth token provided. Local persistent storage (/kaggle/working/) active.")
+        GDRIVE_ENABLED = False
+        return False
+
+    ensure_rclone_installed()
 
     conf_dir = pathlib.Path.home() / ".config" / "rclone"
     conf_dir.mkdir(parents=True, exist_ok=True)
@@ -176,7 +183,9 @@ token = {tok}
 
     os.environ["RCLONE_CONFIG"] = str(conf_file)
     RCLONE_CONF_FILE = conf_file
-    logger.info(f"rclone configuration active for Google Drive ({conf_file}).")
+    GDRIVE_ENABLED = True
+    logger.info(f"✅ rclone configuration active for Google Drive ({conf_file}).")
+    return True
 
 
 def _get_rclone_cmd(base_args: List[str]) -> List[str]:
@@ -189,6 +198,8 @@ def _get_rclone_cmd(base_args: List[str]) -> List[str]:
 
 def gdrive_sync_down(subfolder: str, local_dest: pathlib.Path):
     """Sync assets from Google Drive to local Kaggle working directory."""
+    if not GDRIVE_ENABLED:
+        return
     try:
         ensure_rclone_installed()
         cmd = _get_rclone_cmd(["copy", f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}", str(local_dest)])
@@ -199,6 +210,8 @@ def gdrive_sync_down(subfolder: str, local_dest: pathlib.Path):
 
 def gdrive_sync_metadata(subfolder: str, local_dest: pathlib.Path):
     """Sync only lightweight metadata (.meta.json) from Google Drive without heavy weights."""
+    if not GDRIVE_ENABLED:
+        return
     try:
         ensure_rclone_installed()
         cmd = _get_rclone_cmd(["copy", f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}", str(local_dest), "--include", "*.meta.json"])
@@ -209,6 +222,8 @@ def gdrive_sync_metadata(subfolder: str, local_dest: pathlib.Path):
 
 def gdrive_sync_up(local_src: pathlib.Path, subfolder: str):
     """Sync generated assets, models, or LoRAs to Google Drive."""
+    if not GDRIVE_ENABLED:
+        return
     try:
         ensure_rclone_installed()
         cmd = _get_rclone_cmd(["copy", str(local_src), f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}"])
@@ -220,6 +235,9 @@ def gdrive_sync_up(local_src: pathlib.Path, subfolder: str):
 def gdrive_upload_and_clean(local_src: pathlib.Path, subfolder: str, keep_local: bool = False):
     """Upload to Google Drive Vault and immediately auto-clean local storage once verified."""
     if not local_src.exists():
+        return
+    if not GDRIVE_ENABLED:
+        # Preserve local copy since cloud vault is not active
         return
     try:
         ensure_rclone_installed()
@@ -248,6 +266,8 @@ def gdrive_fetch_on_demand(filename: str, subfolder: str, local_dest: pathlib.Pa
     """Fetch a specific asset on-demand from Google Drive if not present locally."""
     target = local_dest / filename
     if target.exists() and target.stat().st_size > 1000:
+        return target
+    if not GDRIVE_ENABLED:
         return target
     try:
         ensure_rclone_installed()
@@ -297,236 +317,277 @@ class ModelOrchestrator:
         self.lock = threading.Lock()
 
     def load_pipeline(self):
-        """Assembles the QwenImageEditPlusPipeline with T4 x2 Dual-GPU / single-GPU optimizations."""
+        """Assembles the Qwen image edit pipeline with dual GPU or single GPU optimizations."""
         import torch
-        from diffusers import QwenImageEditPlusPipeline, AutoencoderKLQwenImage, QwenImageTransformer2DModel
-        from transformers import Qwen2_5_VLForConditionalGeneration
-
-        num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
-        device_names = [torch.cuda.get_device_name(i) for i in range(num_gpus)] if num_gpus > 0 else []
-        self.status_message = f"Detected {num_gpus} GPU(s): {device_names}. Initializing pipeline..."
-        logger.info(self.status_message)
-
-        # Fast restore lightweight LoRA metadata from Google Drive (Zero safetensors on local disk)
-        gdrive_sync_metadata("loras", LORAS_DIR)
 
         try:
-            torch.cuda.empty_cache()
-            gc.collect()
-        except Exception:
-            pass
-
-        loaded = False
-        last_error = None
-
-        # Strategy 1: Partitioned Multi-GPU Distribution across Dual T4s (30 GB VRAM total)
-        # GPU 0: 36 transformer blocks (6.6 GB weights -> 7.9 GB free headroom for activations/attention)
-        # GPU 1: 24 transformer blocks (4.4 GB) + Text Encoder (4.6 GB) + VAE (0.24 GB) -> 5.3 GB free headroom
-        if num_gpus >= 2:
+            # Safe dynamic imports
+            PipelineClass = None
             try:
-                logger.info(f"Distributing partitioned pipeline across {num_gpus} GPUs (36 blocks GPU 0, 24 blocks GPU 1)...")
-
-                transformer_device_map = {
-                    "pos_embed": 0,
-                    "time_text_embed": 0,
-                    "txt_norm": 0,
-                    "img_in": 0,
-                    "txt_in": 0,
-                }
-                for i in range(42):
-                    transformer_device_map[f"transformer_blocks.{i}"] = 0
-                for i in range(42, 60):
-                    transformer_device_map[f"transformer_blocks.{i}"] = 1
-                transformer_device_map["norm_out"] = 1
-                transformer_device_map["proj_out"] = 1
-
-                logger.info(f"Loading Rapid DiT Transformer ({RAPID_TRANSFORMER_ID}) partitioned across Dual GPUs...")
+                from diffusers import QwenImageEditPlusPipeline
+                PipelineClass = QwenImageEditPlusPipeline
+                logger.info("Using diffusers.QwenImageEditPlusPipeline")
+            except ImportError:
                 try:
-                    tr = QwenImageTransformer2DModel.from_pretrained(
-                        RAPID_TRANSFORMER_ID,
-                        torch_dtype=torch.bfloat16,
-                        device_map=transformer_device_map,
-                        low_cpu_mem_usage=True
-                    )
-                except Exception as tre:
-                    logger.warning(f"Could not load {RAPID_TRANSFORMER_ID}, falling back to {MODEL_ID}: {tre}")
-                    tr = QwenImageTransformer2DModel.from_pretrained(
-                        MODEL_ID,
-                        subfolder="transformer",
-                        torch_dtype=torch.bfloat16,
-                        device_map=transformer_device_map,
-                        low_cpu_mem_usage=True
-                    )
+                    from diffusers import QwenImageEditPipeline
+                    PipelineClass = QwenImageEditPipeline
+                    logger.info("Using diffusers.QwenImageEditPipeline")
+                except ImportError:
+                    try:
+                        from diffusers import DiffusionPipeline
+                        PipelineClass = DiffusionPipeline
+                        logger.info("Using diffusers.DiffusionPipeline fallback")
+                    except ImportError as pe:
+                        raise ImportError(f"Cannot import Diffusers pipeline: {pe}")
 
-                # 2. Text Encoder directly on GPU 1
-                logger.info("Loading Text Encoder (Qwen2.5-VL) on GPU 1 (cuda:1)...")
-                te = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-                    MODEL_ID,
-                    subfolder="text_encoder",
-                    torch_dtype=torch.bfloat16,
-                    device_map="cuda:1",
-                    low_cpu_mem_usage=True
-                )
+            try:
+                from diffusers import AutoencoderKLQwenImage, QwenImageTransformer2DModel
+            except ImportError:
+                AutoencoderKLQwenImage = None
+                QwenImageTransformer2DModel = None
 
-                # 3. VAE directly on GPU 1
-                logger.info("Loading VAE on GPU 1 (cuda:1)...")
-                vae = AutoencoderKLQwenImage.from_pretrained(
-                    MODEL_ID,
-                    subfolder="vae",
-                    torch_dtype=torch.bfloat16,
-                    device_map="cuda:1",
-                    low_cpu_mem_usage=True
-                )
+            try:
+                from transformers import Qwen2_5_VLForConditionalGeneration
+            except ImportError:
+                Qwen2_5_VLForConditionalGeneration = None
 
-                # 4. Assemble QwenImageEditPlusPipeline with pre-mapped models
-                logger.info("Assembling pipeline with pre-mapped sub-models...")
-                self.pipe = QwenImageEditPlusPipeline.from_pretrained(
-                    MODEL_ID,
-                    transformer=tr,
-                    text_encoder=te,
-                    vae=vae,
-                    torch_dtype=torch.bfloat16,
-                )
+            num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+            device_names = [torch.cuda.get_device_name(i) for i in range(num_gpus)] if num_gpus > 0 else []
+            self.status_message = f"Detected {num_gpus} GPU(s): {device_names}. Initializing pipeline..."
+            logger.info(self.status_message)
 
-                # 5. Cross-GPU tensor bridge for transformer forward
-                orig_transformer_forward = self.pipe.transformer.forward
-                cuda0 = torch.device("cuda:0")
+            # Fast restore lightweight LoRA metadata from Google Drive (Zero safetensors on local disk)
+            if GDRIVE_ENABLED:
+                gdrive_sync_metadata("loras", LORAS_DIR)
 
-                def multi_gpu_transformer_forward(*args, **kwargs):
-                    def to_dev(v, dev):
-                        if isinstance(v, torch.Tensor):
-                            return v.to(dev, non_blocking=True)
-                        elif isinstance(v, list):
-                            return [to_dev(x, dev) for x in v]
-                        elif isinstance(v, tuple):
-                            return tuple(to_dev(x, dev) for x in v)
-                        return v
-
-                    # Discover caller's input device (e.g. latents device)
-                    in_dev = None
-                    if "hidden_states" in kwargs and isinstance(kwargs["hidden_states"], torch.Tensor):
-                        in_dev = kwargs["hidden_states"].device
-                    elif args and isinstance(args[0], torch.Tensor):
-                        in_dev = args[0].device
-
-                    new_args = [to_dev(a, cuda0) for a in args]
-                    new_kwargs = {k: to_dev(v, cuda0) for k, v in kwargs.items()}
-                    out = orig_transformer_forward(*new_args, **new_kwargs)
-
-                    if in_dev is not None:
-                        out = to_dev(out, in_dev)
-                    return out
-
-                self.pipe.transformer.forward = multi_gpu_transformer_forward
-
-                # 6. Cross-GPU tensor bridge for VAE decode
-                orig_vae_decode = self.pipe.vae.decode
-                vae_dev = self.pipe.vae.device
-
-                def safe_vae_decode(*args, **kwargs):
-                    def to_dev(v, dev):
-                        if isinstance(v, torch.Tensor):
-                            return v.to(dev, non_blocking=True)
-                        elif isinstance(v, list):
-                            return [to_dev(x, dev) for x in v]
-                        elif isinstance(v, tuple):
-                            return tuple(to_dev(x, dev) for x in v)
-                        return v
-                    new_args = [to_dev(a, vae_dev) for a in args]
-                    new_kwargs = {k: to_dev(v, vae_dev) for k, v in kwargs.items()}
-                    return orig_vae_decode(*new_args, **new_kwargs)
-
-                self.pipe.vae.decode = safe_vae_decode
-                self.pipe.set_progress_bar_config(disable=None)
-                logger.info("✅ Successfully initialized Partitioned Dual-GPU pipeline!")
-                loaded = True
-            except Exception as e:
-                logger.warning(f"Dual-GPU distribution failed: {e}")
-                last_error = e
+            try:
                 torch.cuda.empty_cache()
                 gc.collect()
+            except Exception:
+                pass
 
-        # Strategy 2: Official enable_model_cpu_offload() (Universal fallback for single or multi-GPU)
-        if not loaded:
-            logger.info("Attempting official enable_model_cpu_offload() with Rapid Transformer...")
-            try:
+            loaded = False
+            last_error = None
+
+            # Strategy 1: Partitioned Multi-GPU Distribution across Dual T4s (30 GB VRAM total)
+            if num_gpus >= 2 and AutoencoderKLQwenImage and QwenImageTransformer2DModel and Qwen2_5_VLForConditionalGeneration:
                 try:
-                    tr = QwenImageTransformer2DModel.from_pretrained(
-                        RAPID_TRANSFORMER_ID,
+                    logger.info(f"Distributing partitioned pipeline across {num_gpus} GPUs (36 blocks GPU 0, 24 blocks GPU 1)...")
+
+                    transformer_device_map = {
+                        "pos_embed": 0,
+                        "time_text_embed": 0,
+                        "txt_norm": 0,
+                        "img_in": 0,
+                        "txt_in": 0,
+                    }
+                    for i in range(42):
+                        transformer_device_map[f"transformer_blocks.{i}"] = 0
+                    for i in range(42, 60):
+                        transformer_device_map[f"transformer_blocks.{i}"] = 1
+                    transformer_device_map["norm_out"] = 1
+                    transformer_device_map["proj_out"] = 1
+
+                    logger.info(f"Loading Rapid DiT Transformer ({RAPID_TRANSFORMER_ID}) partitioned across Dual GPUs...")
+                    try:
+                        tr = QwenImageTransformer2DModel.from_pretrained(
+                            RAPID_TRANSFORMER_ID,
+                            torch_dtype=torch.bfloat16,
+                            device_map=transformer_device_map,
+                            low_cpu_mem_usage=True
+                        )
+                    except Exception as tre:
+                        logger.warning(f"Could not load {RAPID_TRANSFORMER_ID}, falling back to {MODEL_ID}: {tre}")
+                        tr = QwenImageTransformer2DModel.from_pretrained(
+                            MODEL_ID,
+                            subfolder="transformer",
+                            torch_dtype=torch.bfloat16,
+                            device_map=transformer_device_map,
+                            low_cpu_mem_usage=True
+                        )
+
+                    # 2. Text Encoder directly on GPU 1
+                    logger.info("Loading Text Encoder (Qwen2.5-VL) on GPU 1 (cuda:1)...")
+                    te = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                        MODEL_ID,
+                        subfolder="text_encoder",
                         torch_dtype=torch.bfloat16,
+                        device_map="cuda:1",
                         low_cpu_mem_usage=True
                     )
-                    self.pipe = QwenImageEditPlusPipeline.from_pretrained(
-                        BASE_MODEL_ID,
+
+                    # 3. VAE directly on GPU 1
+                    logger.info("Loading VAE on GPU 1 (cuda:1)...")
+                    vae = AutoencoderKLQwenImage.from_pretrained(
+                        MODEL_ID,
+                        subfolder="vae",
+                        torch_dtype=torch.bfloat16,
+                        device_map="cuda:1",
+                        low_cpu_mem_usage=True
+                    )
+
+                    # 4. Assemble pipeline with pre-mapped models
+                    logger.info(f"Assembling {PipelineClass.__name__} with pre-mapped sub-models...")
+                    self.pipe = PipelineClass.from_pretrained(
+                        MODEL_ID,
                         transformer=tr,
+                        text_encoder=te,
+                        vae=vae,
                         torch_dtype=torch.bfloat16,
-                        low_cpu_mem_usage=True
                     )
-                except Exception as tre2:
-                    logger.warning(f"Rapid transformer offload fallback: {tre2}")
-                    self.pipe = QwenImageEditPlusPipeline.from_pretrained(
+
+                    # 5. Cross-GPU tensor bridge for transformer forward
+                    orig_transformer_forward = self.pipe.transformer.forward
+                    cuda0 = torch.device("cuda:0")
+
+                    def multi_gpu_transformer_forward(*args, **kwargs):
+                        def to_dev(v, dev):
+                            if isinstance(v, torch.Tensor):
+                                return v.to(dev, non_blocking=True)
+                            elif isinstance(v, list):
+                                return [to_dev(x, dev) for x in v]
+                            elif isinstance(v, tuple):
+                                return tuple(to_dev(x, dev) for x in v)
+                            return v
+
+                        # Discover caller's input device (e.g. latents device)
+                        in_dev = None
+                        if "hidden_states" in kwargs and isinstance(kwargs["hidden_states"], torch.Tensor):
+                            in_dev = kwargs["hidden_states"].device
+                        elif args and isinstance(args[0], torch.Tensor):
+                            in_dev = args[0].device
+
+                        new_args = [to_dev(a, cuda0) for a in args]
+                        new_kwargs = {k: to_dev(v, cuda0) for k, v in kwargs.items()}
+                        out = orig_transformer_forward(*new_args, **new_kwargs)
+
+                        if in_dev is not None:
+                            out = to_dev(out, in_dev)
+                        return out
+
+                    self.pipe.transformer.forward = multi_gpu_transformer_forward
+
+                    # 6. Cross-GPU tensor bridge for VAE decode
+                    orig_vae_decode = self.pipe.vae.decode
+                    vae_dev = self.pipe.vae.device
+
+                    def safe_vae_decode(*args, **kwargs):
+                        def to_dev(v, dev):
+                            if isinstance(v, torch.Tensor):
+                                return v.to(dev, non_blocking=True)
+                            elif isinstance(v, list):
+                                return [to_dev(x, dev) for x in v]
+                            elif isinstance(v, tuple):
+                                return tuple(to_dev(x, dev) for x in v)
+                            return v
+                        new_args = [to_dev(a, vae_dev) for a in args]
+                        new_kwargs = {k: to_dev(v, vae_dev) for k, v in kwargs.items()}
+                        return orig_vae_decode(*new_args, **new_kwargs)
+
+                    self.pipe.vae.decode = safe_vae_decode
+                    self.pipe.set_progress_bar_config(disable=None)
+                    logger.info("✅ Successfully initialized Partitioned Dual-GPU pipeline!")
+                    loaded = True
+                except Exception as e:
+                    logger.warning(f"Dual-GPU distribution failed: {e}")
+                    last_error = e
+                    torch.cuda.empty_cache()
+                    gc.collect()
+
+            # Strategy 2: Official enable_model_cpu_offload() (Universal fallback for single or multi-GPU)
+            if not loaded:
+                logger.info("Attempting official enable_model_cpu_offload()...")
+                try:
+                    if QwenImageTransformer2DModel is not None:
+                        try:
+                            tr = QwenImageTransformer2DModel.from_pretrained(
+                                RAPID_TRANSFORMER_ID,
+                                torch_dtype=torch.bfloat16,
+                                low_cpu_mem_usage=True
+                            )
+                            self.pipe = PipelineClass.from_pretrained(
+                                BASE_MODEL_ID,
+                                transformer=tr,
+                                torch_dtype=torch.bfloat16,
+                                low_cpu_mem_usage=True
+                            )
+                        except Exception as tre2:
+                            logger.warning(f"Rapid transformer offload fallback: {tre2}")
+                            self.pipe = PipelineClass.from_pretrained(
+                                MODEL_ID,
+                                torch_dtype=torch.bfloat16,
+                                low_cpu_mem_usage=True
+                            )
+                    else:
+                        self.pipe = PipelineClass.from_pretrained(
+                            MODEL_ID,
+                            torch_dtype=torch.bfloat16,
+                            low_cpu_mem_usage=True
+                        )
+                    self.pipe.enable_model_cpu_offload()
+                    self.pipe.set_progress_bar_config(disable=None)
+                    logger.info("✅ Pipeline loaded with enable_model_cpu_offload().")
+                    loaded = True
+                except Exception as e2:
+                    logger.warning(f"enable_model_cpu_offload failed: {e2}")
+                    last_error = e2
+                    torch.cuda.empty_cache()
+                    gc.collect()
+
+            # Strategy 3: Sequential CPU offloading fallback
+            if not loaded:
+                logger.info("Attempting sequential CPU offloading fallback...")
+                try:
+                    self.pipe = PipelineClass.from_pretrained(
                         MODEL_ID,
                         torch_dtype=torch.bfloat16,
                         low_cpu_mem_usage=True
                     )
-                self.pipe.enable_model_cpu_offload()
-                self.pipe.set_progress_bar_config(disable=None)
-                logger.info("✅ Pipeline loaded with enable_model_cpu_offload().")
-                loaded = True
-            except Exception as e2:
-                logger.warning(f"enable_model_cpu_offload failed: {e2}")
-                last_error = e2
+                    self.pipe.enable_sequential_cpu_offload()
+                    self.pipe.set_progress_bar_config(disable=None)
+                    logger.info("✅ Pipeline loaded with enable_sequential_cpu_offload().")
+                    loaded = True
+                except Exception as e3:
+                    last_error = e3
+
+            if loaded:
+                try:
+                    if hasattr(self.pipe, "vae") and self.pipe.vae is not None:
+                        self.pipe.vae.enable_slicing()
+                        self.pipe.vae.enable_tiling()
+                except Exception:
+                    pass
+                try:
+                    if hasattr(self.pipe, "enable_attention_slicing"):
+                        self.pipe.enable_attention_slicing(1)
+                except Exception:
+                    pass
+
                 torch.cuda.empty_cache()
                 gc.collect()
+                self.is_ready = True
+                self.status_message = f"Model ready on {num_gpus} GPU(s) ({', '.join(device_names)})."
+                logger.info(f"✅ {self.status_message}")
+            else:
+                self.status_message = f"Pipeline load error: {last_error}"
+                logger.error(self.status_message, exc_info=True)
+                try:
+                    err_file = CONFIGS_DIR / "last_error.log"
+                    err_file.write_text(f"Load error at {time.ctime()}:\n{self.status_message}")
+                    if GDRIVE_ENABLED:
+                        threading.Thread(target=gdrive_sync_up, args=(err_file, "configs")).start()
+                except Exception:
+                    pass
+                def delayed_kill():
+                    logger.warning("🛑 Pipeline failed to load. Auto-terminating GPU session in 90 seconds to save quota...")
+                    time.sleep(90)
+                    os._exit(1)
+                threading.Thread(target=delayed_kill, daemon=True).start()
 
-        # Strategy 3: Sequential CPU offloading fallback
-        if not loaded:
-            logger.info("Attempting sequential CPU offloading fallback...")
-            try:
-                self.pipe = QwenImageEditPlusPipeline.from_pretrained(
-                    MODEL_ID,
-                    torch_dtype=torch.bfloat16,
-                    low_cpu_mem_usage=True
-                )
-                self.pipe.enable_sequential_cpu_offload()
-                self.pipe.set_progress_bar_config(disable=None)
-                logger.info("✅ Pipeline loaded with enable_sequential_cpu_offload().")
-                loaded = True
-            except Exception as e3:
-                last_error = e3
-
-        if loaded:
-            try:
-                if hasattr(self.pipe, "vae") and self.pipe.vae is not None:
-                    self.pipe.vae.enable_slicing()
-                    self.pipe.vae.enable_tiling()
-            except Exception:
-                pass
-            try:
-                if hasattr(self.pipe, "enable_attention_slicing"):
-                    self.pipe.enable_attention_slicing(1)
-            except Exception:
-                pass
-
-            torch.cuda.empty_cache()
-            gc.collect()
-            self.is_ready = True
-            self.status_message = f"Model ready on {num_gpus} GPU(s) ({', '.join(device_names)})."
-            logger.info(f"✅ {self.status_message}")
-        else:
-            self.status_message = f"Pipeline load error: {last_error}"
+        except Exception as top_err:
+            self.status_message = f"Critical load error: {top_err}"
             logger.error(self.status_message, exc_info=True)
-            try:
-                err_file = CONFIGS_DIR / "last_error.log"
-                err_file.write_text(f"Load error at {time.ctime()}:\n{self.status_message}")
-                threading.Thread(target=gdrive_sync_up, args=(err_file, "configs")).start()
-            except Exception:
-                pass
-            def delayed_kill():
-                logger.warning("🛑 Pipeline failed to load. Auto-terminating GPU session in 90 seconds to save quota...")
-                time.sleep(90)
-                os._exit(1)
-            threading.Thread(target=delayed_kill, daemon=True).start()
+            self.is_ready = False
 
     def apply_loras(self, requested_loras: List[Dict[str, Any]]):
         """Dynamically load and scale LoRAs."""
