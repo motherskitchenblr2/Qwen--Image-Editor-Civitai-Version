@@ -28,9 +28,11 @@ import {
   Tag,
   Undo2,
   Shield,
+  Cpu,
 } from "lucide-react";
 import CivitaiLoraHub from "./components/CivitaiLoraHub";
 import SentinelAiGateway from "./components/SentinelAiGateway";
+import AiGeneratorHub from "./components/AiGeneratorHub";
 
 interface LoRAItem {
   name: string;
@@ -47,8 +49,10 @@ interface BackendLoRA {
 }
 
 export default function ImageEditorStudio() {
-  // Navigation Tabs: Studio & Editor | Civitai.red LoRA Hub | Outputs Gallery | Sentinel Gateway
-  const [activeTab, setActiveTab] = useState<"studio" | "loras" | "gallery" | "sentinel">("studio");
+  // Navigation Tabs: Studio & Editor | AI Generator Hub | Civitai.red LoRA Hub | Outputs Gallery | Sentinel Gateway
+  const [activeTab, setActiveTab] = useState<"studio" | "generators" | "loras" | "gallery" | "sentinel">("studio");
+  const [studioMode, setStudioMode] = useState<"edit" | "generate">("edit");
+  const [selectedStudioModel, setSelectedStudioModel] = useState<"kaggle-gpu" | "qwen-cloud" | "nano-banana" | "cf-lucid" | "cf-flux">("kaggle-gpu");
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState<boolean>(false);
 
   // Backend connection
@@ -473,104 +477,181 @@ export default function ImageEditorStudio() {
     }
   };
 
-  // ── Image Generation Inference ────────────────────────────────────
+  // ── Unified Inference Engine (Kaggle GPU + Cloud AI Models) ─────
   const handleGenerate = async () => {
-    if (!originalImage || !backendUrl || !isConnected) return;
+    // Validation based on mode & model
+    if (selectedStudioModel === "kaggle-gpu") {
+      if (!originalImage) {
+        alert("Please upload a source image for Image-to-Image editing on Kaggle GPU.");
+        return;
+      }
+      if (!backendUrl || !isConnected) {
+        alert("Dual Tesla T4 GPU is offline. Click 'Turn On GPU' or switch engine to 'Nano Banana' or 'Alibaba Qwen Cloud' for instant generation!");
+        return;
+      }
+    } else {
+      if (studioMode === "edit" && !originalImage) {
+        alert("Please upload a source image for Image Editing mode.");
+        return;
+      }
+    }
+
+    if (!prompt || !prompt.trim()) {
+      alert("Please enter a prompt.");
+      return;
+    }
+
     setIsGenerating(true);
     setGenerationProgress(0);
     setGenerationStep(0);
     setGenerationElapsed(0);
-    setTotalGenerationSteps(Number(steps));
-    setGenerationStatusText(Number(steps) <= 4 ? "⚡ Initializing 4-Step Rapid Edit (~15-25s)..." : "Initializing GPU inference job...");
 
     const timer = setInterval(() => {
       setGenerationElapsed((prev) => prev + 1);
     }, 1000);
 
     try {
-      const cleanUrl = backendUrl.replace(/\/+$/, "");
-      const payload = {
-        image_base64: originalImage,
-        prompt: prompt,
-        negative_prompt: negativePrompt,
-        true_cfg_scale: Number(trueCfgScale),
-        guidance_scale: Number(guidanceScale),
-        num_inference_steps: Number(steps),
-        seed: seed === "" ? null : Number(seed),
-        loras: activeLoras,
-        async_mode: true,
-      };
+      if (selectedStudioModel === "kaggle-gpu") {
+        setTotalGenerationSteps(Number(steps));
+        setGenerationStatusText(Number(steps) <= 4 ? "⚡ Initializing 4-Step Rapid Edit (~15-25s)..." : "Initializing GPU inference job...");
 
-      const res = await fetch(`${cleanUrl}/api/edit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+        const cleanUrl = backendUrl.replace(/\/+$/, "");
+        const payload = {
+          image_base64: originalImage,
+          prompt: prompt,
+          negative_prompt: negativePrompt,
+          true_cfg_scale: Number(trueCfgScale),
+          guidance_scale: Number(guidanceScale),
+          num_inference_steps: Number(steps),
+          seed: seed === "" ? null : Number(seed),
+          loras: activeLoras,
+          async_mode: true,
+        };
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || "Request failed");
-      }
+        const res = await fetch(`${cleanUrl}/api/edit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-      const data = await res.json();
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "Request failed");
+        }
 
-      if (data.task_id) {
-        setGenerationStatusText(Number(steps) <= 4 ? "⚡ Rapid job queued on GPU DiT layers..." : `Task ${data.task_id} queued on Dual Tesla T4s...`);
-        let completed = false;
-        let attempts = 0;
-        const maxAttempts = 300;
+        const data = await res.json();
 
-        while (!completed && attempts < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-          attempts++;
+        if (data.task_id) {
+          setGenerationStatusText(Number(steps) <= 4 ? "⚡ Rapid job queued on GPU DiT layers..." : `Task ${data.task_id} queued on Dual Tesla T4s...`);
+          let completed = false;
+          let attempts = 0;
+          const maxAttempts = 300;
 
-          try {
-            const statusRes = await fetch(`${cleanUrl}/api/edit/status/${data.task_id}`);
-            if (statusRes.ok) {
-              const statusData = await statusRes.json();
-              if (statusData.status === "completed" && statusData.image_base64) {
-                setEditedImage(statusData.image_base64);
-                setGallery((prev) => [statusData.image_base64, ...prev]);
-                setViewMode("result");
-                setGenerationStatusText("Completed in Rapid Time!");
-                completed = true;
-                break;
-              } else if (statusData.status === "failed") {
-                throw new Error(statusData.error || "Inference failed on GPU");
-              } else {
-                const totalSt = statusData.total_steps || Number(steps);
-                const currSt = statusData.step || 0;
-                const pct = totalSt > 0 ? Math.round((currSt / totalSt) * 100) : (statusData.progress || 0);
-                setGenerationProgress(pct);
-                setGenerationStep(currSt);
-                setTotalGenerationSteps(totalSt);
-                if (totalSt <= 4) {
-                  setGenerationStatusText(`⚡ Rapid Step ${currSt}/${totalSt} (${pct}%)`);
+          while (!completed && attempts < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            attempts++;
+
+            try {
+              const statusRes = await fetch(`${cleanUrl}/api/edit/status/${data.task_id}`);
+              if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                if (statusData.status === "completed" && statusData.image_base64) {
+                  setEditedImage(statusData.image_base64);
+                  setGallery((prev) => [statusData.image_base64, ...prev]);
+                  setViewMode("result");
+                  setGenerationStatusText("Completed in Rapid Time!");
+                  completed = true;
+                  break;
+                } else if (statusData.status === "failed") {
+                  throw new Error(statusData.error || "Inference failed on GPU");
                 } else {
-                  setGenerationStatusText(`Step ${currSt}/${totalSt} (${pct}%)`);
+                  const totalSt = statusData.total_steps || Number(steps);
+                  const currSt = statusData.step || 0;
+                  const pct = totalSt > 0 ? Math.round((currSt / totalSt) * 100) : (statusData.progress || 0);
+                  setGenerationProgress(pct);
+                  setGenerationStep(currSt);
+                  setTotalGenerationSteps(totalSt);
+                  if (totalSt <= 4) {
+                    setGenerationStatusText(`⚡ Rapid Step ${currSt}/${totalSt} (${pct}%)`);
+                  } else {
+                    setGenerationStatusText(`Step ${currSt}/${totalSt} (${pct}%)`);
+                  }
                 }
               }
+            } catch (pollErr: any) {
+              console.warn("Status poll warning:", pollErr);
             }
-          } catch (pollErr: any) {
-            console.warn("Status poll warning:", pollErr);
           }
+
+          if (!completed) {
+            throw new Error("Generation timed out.");
+          }
+        } else if (data.image_base64) {
+          setEditedImage(data.image_base64);
+          setGallery((prev) => [data.image_base64, ...prev]);
+          setViewMode("result");
+        }
+      } else {
+        // Cloud API Engine: Nano Banana Turbo, Alibaba Qwen Cloud, Cloudflare Workers AI
+        setGenerationStatusText(
+          selectedStudioModel === "nano-banana"
+            ? "⚡ Synthesizing with Nano Banana Turbo (~1.5s)..."
+            : selectedStudioModel === "qwen-cloud"
+            ? `Synthesizing with Alibaba ${studioMode === "edit" ? "qwen-image-edit" : "qwen-image"}...`
+            : "Synthesizing with Cloudflare Workers AI (~3s)..."
+        );
+        setGenerationProgress(35);
+
+        const targetCloudModel =
+          selectedStudioModel === "qwen-cloud"
+            ? (studioMode === "edit" ? "qwen-image-edit" : "qwen-image")
+            : selectedStudioModel === "cf-lucid"
+            ? "@cf/leonardo/lucid-origin"
+            : selectedStudioModel === "cf-flux"
+            ? "@cf/black-forest-labs/flux-1-schnell"
+            : "nano-banana";
+
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: prompt.trim(),
+            negative_prompt: negativePrompt,
+            model: targetCloudModel,
+            mode: studioMode,
+            image_base64: studioMode === "edit" ? originalImage : undefined,
+            seed: seed === "" ? null : Number(seed),
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (data.code === "QUOTA_EXHAUSTED" || res.status === 402) {
+            throw new Error(data.error || "Alibaba Cloud quota exhausted on free tier. Switched recommendation to Nano Banana.");
+          }
+          throw new Error(data.error || `Cloud generation failed (${res.status})`);
         }
 
-        if (!completed) {
-          throw new Error("Generation timed out.");
+        const outImg = data.image_url || data.image_base64;
+        if (!outImg) {
+          throw new Error("No image data returned from generator engine.");
         }
-      } else if (data.image_base64) {
-        setEditedImage(data.image_base64);
-        setGallery((prev) => [data.image_base64, ...prev]);
+
+        setGenerationProgress(100);
+        setGenerationStatusText("Generated successfully!");
+        setEditedImage(outImg);
+        setGallery((prev) => [outImg, ...prev]);
         setViewMode("result");
       }
     } catch (e: any) {
       console.error("Generation failed:", e);
-      alert(`Generation note: ${e.message || e}`);
+      alert(`Generation notice: ${e.message || e}`);
     } finally {
       clearInterval(timer);
       setIsGenerating(false);
-      checkBackend();
+      if (selectedStudioModel === "kaggle-gpu" && isConnected) {
+        checkBackend();
+      }
     }
   };
 
@@ -603,6 +684,20 @@ export default function ImageEditorStudio() {
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Studio &amp; Editor</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("generators")}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+              activeTab === "generators"
+                ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <span>AI Generator Hub</span>
+            <span className="px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/40 rounded-full text-[9px] text-amber-300 font-bold">
+              MULTI-AI
+            </span>
           </button>
           <button
             onClick={() => setActiveTab("loras")}
@@ -942,7 +1037,17 @@ export default function ImageEditorStudio() {
       )}
 
       {/* ── MAIN CONTENT BY TAB ──────────────────────────────────── */}
-      {activeTab === "loras" ? (
+      {activeTab === "generators" ? (
+        <AiGeneratorHub
+          onSendToStudio={(imageUrl, promptText) => {
+            setOriginalImage(imageUrl);
+            setEditedImage(null);
+            if (promptText) setPrompt(promptText);
+            setStudioMode("edit");
+            setActiveTab("studio");
+          }}
+        />
+      ) : activeTab === "loras" ? (
         <CivitaiLoraHub
           backendUrl={backendUrl}
           isConnected={isConnected}
@@ -1037,10 +1142,64 @@ export default function ImageEditorStudio() {
               </span>
             </div>
 
-            {/* Edit Instruction Prompt */}
+            {/* ── Mode Selection: Equal-Sized Buttons in One Line (UI-UX-PRO-MAX) ── */}
+            <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setStudioMode("generate")}
+                className={`flex-1 h-9 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  studioMode === "generate"
+                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/25"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>🎨 Generate Image</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setStudioMode("edit")}
+                className={`flex-1 h-9 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  studioMode === "edit"
+                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/25"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                <span>✨ Edit Image</span>
+              </button>
+            </div>
+
+            {/* ── AI Engine Model Selector ── */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <label className="font-medium text-slate-300 flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+                  AI Engine Model
+                </label>
+                <span className="text-[10px] text-cyan-400 font-mono">
+                  {selectedStudioModel === "nano-banana" ? "⚡ Sub-2s" : selectedStudioModel === "kaggle-gpu" ? "Dual T4s" : "Cloud API"}
+                </span>
+              </div>
+              <select
+                value={selectedStudioModel}
+                onChange={(e) => setSelectedStudioModel(e.target.value as any)}
+                className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl px-3 h-9 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 cursor-pointer"
+              >
+                <option value="kaggle-gpu">Dual Tesla T4 (Kaggle GPU + LoRA Vault)</option>
+                <option value="qwen-cloud">Alibaba Qwen Cloud ({studioMode === "generate" ? "qwen-image" : "qwen-image-edit"})</option>
+                <option value="nano-banana">⚡ Nano Banana Turbo (~1.5s Ultra-Fast)</option>
+                <option value="cf-lucid">Cloudflare Lucid Origin (~3s Edge)</option>
+                <option value="cf-flux">Cloudflare Flux 1 Schnell (~3.5s DiT)</option>
+              </select>
+            </div>
+
+            {/* Edit / Generation Instruction Prompt */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-slate-300">Edit Prompt</label>
+                <label className="text-xs font-medium text-slate-300">
+                  {studioMode === "generate" ? "Generation Prompt" : "Edit Prompt"}
+                </label>
                 <button
                   type="button"
                   onClick={handleEnhancePrompt}
@@ -1289,28 +1448,62 @@ export default function ImageEditorStudio() {
               </div>
             </div>
 
-            {/* Generate Button */}
-            <button
-              onClick={handleGenerate}
-              disabled={!originalImage || !isConnected || isGenerating}
-              className={`w-full py-3.5 rounded-xl font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition active:scale-95 ${
-                !originalImage || !isConnected || isGenerating
-                  ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
-                  : "bg-gradient-to-r from-cyan-400 via-teal-400 to-indigo-500 text-black hover:opacity-95 shadow-cyan-500/25"
-              }`}
-            >
-              {isGenerating ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Processing on Tesla T4s...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 fill-black" />
-                  <span>Generate Image Edit</span>
-                </>
-              )}
-            </button>
+            {/* ── Action Buttons Row: Smaller, Equal-Sized Consistency (UI-UX-PRO-MAX) ── */}
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+              <button
+                onClick={handleGenerate}
+                disabled={
+                  isGenerating ||
+                  (selectedStudioModel === "kaggle-gpu" && (!originalImage || !isConnected)) ||
+                  (studioMode === "edit" && !originalImage && selectedStudioModel !== "kaggle-gpu")
+                }
+                className={`flex-1 h-9 px-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-md ${
+                  isGenerating ||
+                  (selectedStudioModel === "kaggle-gpu" && (!originalImage || !isConnected)) ||
+                  (studioMode === "edit" && !originalImage && selectedStudioModel !== "kaggle-gpu")
+                    ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
+                    : "bg-gradient-to-r from-cyan-400 via-teal-400 to-indigo-500 text-black hover:opacity-95 shadow-cyan-500/25"
+                }`}
+              >
+                {isGenerating ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : studioMode === "generate" ? (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 fill-black" />
+                    <span>Generate Image</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-3.5 h-3.5 fill-black" />
+                    <span>Apply Image Edit</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleEnhancePrompt}
+                disabled={isEnhancingPrompt || !prompt.trim()}
+                title="AI Enhance Prompt"
+                className="h-9 px-3 bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-800/80 text-cyan-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-40"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${isEnhancingPrompt ? "animate-spin text-cyan-400" : "fill-cyan-400"}`} />
+                <span>{isEnhancingPrompt ? "..." : "Enhance"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
+                title="Randomize seed"
+                className="h-9 px-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1 transition"
+              >
+                <span>🎲</span>
+                <span>Seed</span>
+              </button>
+            </div>
 
             {/* Progress Bar & Status */}
             {isGenerating && (
@@ -1366,6 +1559,18 @@ export default function ImageEditorStudio() {
                 <img src={editedImage} alt="Edited result" className="max-h-[460px] w-auto object-contain rounded-xl shadow-2xl" />
               ) : originalImage ? (
                 <img src={originalImage} alt="Source upload" className="max-h-[460px] w-auto object-contain rounded-xl shadow-2xl" />
+              ) : studioMode === "generate" ? (
+                <div className="flex flex-col items-center gap-3 p-8 text-center max-w-sm">
+                  <div className="p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-400 shadow-lg shadow-cyan-500/10">
+                    <Sparkles className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-200">Text-to-Image Generation Mode</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Type your creative prompt and click &quot;Generate Image&quot; below. No source image required!
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <div
                   onClick={() => fileInputRef.current?.click()}
