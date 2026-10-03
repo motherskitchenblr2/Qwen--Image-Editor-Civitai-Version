@@ -27,8 +27,10 @@ import {
   ArrowRight,
   Tag,
   Undo2,
+  Shield,
 } from "lucide-react";
 import CivitaiLoraHub from "./components/CivitaiLoraHub";
+import SentinelAiGateway from "./components/SentinelAiGateway";
 
 interface LoRAItem {
   name: string;
@@ -45,8 +47,9 @@ interface BackendLoRA {
 }
 
 export default function ImageEditorStudio() {
-  // Navigation Tabs: Studio & Editor | Civitai.red LoRA Hub | Outputs Gallery
-  const [activeTab, setActiveTab] = useState<"studio" | "loras" | "gallery">("studio");
+  // Navigation Tabs: Studio & Editor | Civitai.red LoRA Hub | Outputs Gallery | Sentinel Gateway
+  const [activeTab, setActiveTab] = useState<"studio" | "loras" | "gallery" | "sentinel">("studio");
+  const [isEnhancingPrompt, setIsEnhancingPrompt] = useState<boolean>(false);
 
   // Backend connection
   const [backendUrl, setBackendUrl] = useState<string>("");
@@ -311,6 +314,38 @@ export default function ImageEditorStudio() {
         setEditedImage(null);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEnhancePrompt = async () => {
+    if (!prompt.trim()) return;
+    setIsEnhancingPrompt(true);
+    try {
+      const storedKeys = localStorage.getItem("sentinel_api_keys");
+      const activeCopilot = localStorage.getItem("sentinel_active_copilot") || "gemini";
+      const keys = storedKeys ? JSON.parse(storedKeys) : {};
+      const apiKey = keys[activeCopilot] || "";
+
+      const res = await fetch("/api/sentinel/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          provider: activeCopilot,
+          apiKey,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.enhancedPrompt) {
+          setPrompt(data.enhancedPrompt);
+        }
+      }
+    } catch (e) {
+      console.warn("Enhance prompt error:", e);
+    } finally {
+      setIsEnhancingPrompt(false);
     }
   };
 
@@ -600,6 +635,17 @@ export default function ImageEditorStudio() {
                 {gallery.length}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => setActiveTab("sentinel")}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+              activeTab === "sentinel"
+                ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Sentinel Gateway</span>
           </button>
         </div>
 
@@ -978,6 +1024,8 @@ export default function ImageEditorStudio() {
             </div>
           )}
         </div>
+      ) : activeTab === "sentinel" ? (
+        <SentinelAiGateway />
       ) : (
         /* ── STUDIO & EDITOR TAB ───────────────────────────────── */
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-7xl mx-auto w-full animate-fadeIn">
@@ -991,7 +1039,19 @@ export default function ImageEditorStudio() {
 
             {/* Edit Instruction Prompt */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-300">Edit Prompt</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-slate-300">Edit Prompt</label>
+                <button
+                  type="button"
+                  onClick={handleEnhancePrompt}
+                  disabled={isEnhancingPrompt || !prompt.trim()}
+                  className="flex items-center gap-1.5 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 bg-cyan-950/60 border border-cyan-800/80 px-2.5 py-0.5 rounded-lg transition active:scale-95 disabled:opacity-40"
+                  title="Enhance prompt with active Sentinel AI copilot"
+                >
+                  <Sparkles className={`w-3 h-3 ${isEnhancingPrompt ? "animate-spin text-cyan-400" : "fill-cyan-400"}`} />
+                  <span>{isEnhancingPrompt ? "Enhancing..." : "⚡ AI Enhance"}</span>
+                </button>
+              </div>
               <textarea
                 rows={3}
                 value={prompt}

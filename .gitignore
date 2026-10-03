@@ -1,30 +1,31 @@
-# Dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Node dependencies & Next.js builds
+node_modules/
+.next/
+out/
+build/
+dist/
 
-# Next.js build
-/.next/
-/out/
-/build
-
-# Vercel
-.vercel
-
-# Environment variables
-.env*.local
-.env
-
-# Python & ML
+# Python cache & runtime logs
 __pycache__/
-*.py[cod]
-*.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+backend/kaggle_run_output/
+backend/cloudflared
 *.log
-.ipynb_checkpoints/
-kaggle_run_output/
 
-# OS / Editor
-.DS_Store
+# Sensitive environments and keys
+.env
+.env*.local
+.env.production
+.env.development
 *.pem
-*.tsbuildinfo
-next-env.d.ts
+*.key
+*.token
+
+# Local storage and cache
+.DS_Store
+*.swp
+*.swo
+frontend/
