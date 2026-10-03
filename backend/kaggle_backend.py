@@ -410,73 +410,82 @@ class ModelOrchestrator:
 
             loaded = False
             last_error = None
+            preferred_dtype = torch.bfloat16 if (torch.cuda.is_available() and torch.cuda.is_bf16_supported()) else torch.float16
 
-            # Strategy 1: Official Diffusers enable_model_cpu_offload() (Universal & OOM-Proof for Dual T4 / Single GPU)
-            # Fits Qwen-Image-Edit (37.5 GB total weights) cleanly by staging active submodels in GPU VRAM and resting in 30 GB CPU RAM
-            logger.info("Attempting pipeline initialization with enable_model_cpu_offload()...")
-            try:
-                if QwenImageTransformer2DModel is not None:
-                    try:
-                        logger.info(f"Loading Rapid DiT Transformer ({RAPID_TRANSFORMER_ID})...")
-                        tr = QwenImageTransformer2DModel.from_pretrained(
-                            RAPID_TRANSFORMER_ID,
-                            torch_dtype=torch.bfloat16,
-                            low_cpu_mem_usage=True
-                        )
+            # Strategy 1: Balanced Multi-GPU Device Map (Primary for Kaggle Dual Tesla T4)
+            # Distributes 35GB pipeline weights across GPU 0 (13GB), GPU 1 (13GB), and CPU (9GB)
+            # Streams shards directly without exceeding Kaggle 30GB CPU RAM ceiling
+            if num_gpus >= 2:
+                logger.info(f"Attempting primary multi-GPU device_map across {num_gpus} GPUs (dtype={preferred_dtype})...")
+                try:
+                    max_memory = {i: "13GiB" for i in range(num_gpus)}
+                    max_memory["cpu"] = "20GiB"
+
+                    if QwenImageTransformer2DModel is not None:
+                        try:
+                            logger.info(f"Loading Rapid DiT Transformer with device_map='auto' ({RAPID_TRANSFORMER_ID})...")
+                            tr = QwenImageTransformer2DModel.from_pretrained(
+                                RAPID_TRANSFORMER_ID,
+                                torch_dtype=preferred_dtype,
+                                device_map="auto",
+                                max_memory=max_memory,
+                                low_cpu_mem_usage=True
+                            )
+                            self.pipe = PipelineClass.from_pretrained(
+                                MODEL_ID,
+                                transformer=tr,
+                                torch_dtype=preferred_dtype,
+                                device_map="auto",
+                                max_memory=max_memory,
+                                low_cpu_mem_usage=True
+                            )
+                        except Exception as tre:
+                            logger.warning(f"Rapid DiT load note: {tre}. Falling back to default transformer...")
+                            self.pipe = PipelineClass.from_pretrained(
+                                MODEL_ID,
+                                torch_dtype=preferred_dtype,
+                                device_map="auto",
+                                max_memory=max_memory,
+                                low_cpu_mem_usage=True
+                            )
+                    else:
                         self.pipe = PipelineClass.from_pretrained(
                             MODEL_ID,
-                            transformer=tr,
-                            torch_dtype=torch.bfloat16,
+                            torch_dtype=preferred_dtype,
+                            device_map="auto",
+                            max_memory=max_memory,
                             low_cpu_mem_usage=True
                         )
-                    except Exception as tre:
-                        logger.warning(f"Rapid DiT load note: {tre}. Falling back to default transformer...")
-                        self.pipe = PipelineClass.from_pretrained(
-                            MODEL_ID,
-                            torch_dtype=torch.bfloat16,
-                            low_cpu_mem_usage=True
-                        )
-                else:
-                    self.pipe = PipelineClass.from_pretrained(
-                        MODEL_ID,
-                        torch_dtype=torch.bfloat16,
-                        low_cpu_mem_usage=True
-                    )
 
-                if num_gpus > 0:
-                    self.pipe.enable_model_cpu_offload()
-                self.pipe.set_progress_bar_config(disable=None)
-                logger.info("✅ Pipeline loaded successfully with enable_model_cpu_offload().")
-                loaded = True
-            except Exception as e1:
-                logger.warning(f"enable_model_cpu_offload failed: {e1}")
-                last_error = e1
-                try:
-                    del self.pipe
-                except Exception:
-                    pass
-                self.pipe = None
-                torch.cuda.empty_cache()
-                gc.collect()
-
-            # Strategy 2: Accelerate Balanced Device Map with Strict Memory Caps (Multi-GPU partitioning)
-            if not loaded and num_gpus >= 2:
-                logger.info(f"Attempting balanced multi-GPU device_map across {num_gpus} GPUs...")
-                try:
-                    max_memory = {i: "12GiB" for i in range(num_gpus)}
-                    max_memory["cpu"] = "26GiB"
-                    self.pipe = PipelineClass.from_pretrained(
-                        MODEL_ID,
-                        torch_dtype=torch.bfloat16,
-                        device_map="auto",
-                        max_memory=max_memory,
-                        low_cpu_mem_usage=True
-                    )
                     self.pipe.set_progress_bar_config(disable=None)
                     logger.info("✅ Pipeline loaded successfully with balanced multi-GPU device_map='auto'.")
                     loaded = True
+                except Exception as e1:
+                    logger.warning(f"multi-GPU device_map='auto' failed: {e1}")
+                    last_error = e1
+                    try:
+                        del self.pipe
+                    except Exception:
+                        pass
+                    self.pipe = None
+                    torch.cuda.empty_cache()
+                    gc.collect()
+
+            # Strategy 2: Official Diffusers enable_model_cpu_offload() (Fallback)
+            if not loaded and num_gpus > 0:
+                logger.info("Attempting pipeline initialization with enable_model_cpu_offload()...")
+                try:
+                    self.pipe = PipelineClass.from_pretrained(
+                        MODEL_ID,
+                        torch_dtype=preferred_dtype,
+                        low_cpu_mem_usage=True
+                    )
+                    self.pipe.enable_model_cpu_offload()
+                    self.pipe.set_progress_bar_config(disable=None)
+                    logger.info("✅ Pipeline loaded successfully with enable_model_cpu_offload().")
+                    loaded = True
                 except Exception as e2:
-                    logger.warning(f"device_map='auto' failed: {e2}")
+                    logger.warning(f"enable_model_cpu_offload failed: {e2}")
                     last_error = e2
                     try:
                         del self.pipe

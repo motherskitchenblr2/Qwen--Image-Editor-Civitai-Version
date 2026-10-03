@@ -27,5 +27,6 @@ backend/cloudflared
 # Local storage and cache
 .DS_Store
 *.swp
-*.swo
 frontend/
+*.tsbuildinfo
+next-env.d.ts
