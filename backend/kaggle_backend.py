@@ -721,7 +721,7 @@ orchestrator = ModelOrchestrator()
 
 # ─── 3. FASTAPI SERVICE SPECIFICATION ────────────────────────────────────────
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -1038,6 +1038,62 @@ def download_lora(req: LoRADownloadRequest, background_tasks: BackgroundTasks):
         "size_mb": size_mb,
         "trigger_words": req.trigger_words or "",
         "storage": "Google Drive Vault (AutoCleaned locally)"
+    }
+
+
+@app.post("/api/loras/upload")
+async def upload_local_lora(
+    file: UploadFile = File(...),
+    name: Optional[str] = Form(None),
+    trigger_words: Optional[str] = Form(""),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    """Upload a local .safetensors LoRA, register metadata, and sync to Google Drive Vault."""
+    touch_activity()
+    filename = file.filename or f"local_lora_{int(time.time())}.safetensors"
+    safe_filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', filename)
+    if not safe_filename.endswith(".safetensors"):
+        safe_filename = f"{safe_filename}.safetensors"
+
+    stem = safe_filename.replace(".safetensors", "")
+    display_name = name or stem
+    target_path = LORAS_DIR / safe_filename
+
+    logger.info(f"Uploading local LoRA: {safe_filename} -> {target_path}...")
+    try:
+        with open(target_path, "wb") as f_out:
+            shutil.copyfileobj(file.file, f_out)
+    except Exception as e:
+        logger.error(f"Failed to save uploaded LoRA file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {e}")
+
+    size_mb = round(target_path.stat().st_size / (1024 * 1024), 2)
+    meta_file = LORAS_DIR / f"{stem}.meta.json"
+    meta_data = {
+        "name": display_name,
+        "filename": safe_filename,
+        "trigger_words": trigger_words or "",
+        "size_mb": size_mb,
+        "source": "Local Upload",
+        "created_at": time.time(),
+    }
+    try:
+        with open(meta_file, "w") as mf:
+            json.dump(meta_data, mf)
+        if GDRIVE_ENABLED:
+            background_tasks.add_task(gdrive_sync_up, meta_file, "loras")
+            background_tasks.add_task(gdrive_sync_up, target_path, "loras")
+    except Exception as me:
+        logger.warning(f"Could not write LoRA metadata: {me}")
+
+    return {
+        "status": "success",
+        "name": display_name,
+        "filename": safe_filename,
+        "size_mb": size_mb,
+        "trigger_words": trigger_words or "",
+        "storage": "Google Drive Vault & Local Cache" if GDRIVE_ENABLED else "Local Cache",
+        "message": f"LoRA '{display_name}' ({size_mb} MB) uploaded successfully and ready for GPU fusing!"
     }
 
 

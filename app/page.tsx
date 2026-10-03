@@ -17,6 +17,7 @@ import {
   AlertCircle,
   ExternalLink,
   ChevronDown,
+  FolderOpen,
   Layers,
   Zap,
   Power,
@@ -111,6 +112,9 @@ export default function ImageEditorStudio() {
   const [viewMode, setViewMode] = useState<"result" | "original">("result");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const localLoraInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingLocalLora, setIsUploadingLocalLora] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   // Auto-discover live backend from Google Drive & Vercel Registry
   const autoDiscoverBackend = async () => {
@@ -355,16 +359,96 @@ export default function ImageEditorStudio() {
 
   // ── LoRA Dropdown & GPU Fusing Logic ──────────────────────────────
   const handleSelectLoraFromDropdown = (filename: string) => {
-    if (!filename) return;
+    if (!filename) {
+      setSelectedDropdownLora("");
+      setActiveLoras([]);
+      return;
+    }
     const lora = availableLoras.find((l) => l.filename === filename || l.name === filename);
     if (!lora) return;
 
-    if (!activeLoras.some((l) => l.name === lora.name)) {
-      setActiveLoras((prev) => [...prev, { name: lora.name, scale: 0.8 }]);
-      setSelectedDropdownLora("");
-      if (lora.trigger_words && !prompt.includes(lora.trigger_words)) {
-        setPrompt((prev) => `${prev}, ${lora.trigger_words}`);
-      }
+    // Single Selected LoRA Mode: guarantees only the chosen LoRA from the dropdown is loaded & fused
+    setSelectedDropdownLora(filename);
+    setActiveLoras([{ name: lora.name, scale: lora.scale || 0.8 }]);
+
+    if (lora.trigger_words && !prompt.includes(lora.trigger_words)) {
+      setPrompt((prev) => `${prev}, ${lora.trigger_words}`);
+    }
+  };
+
+  const handleLocalLoraFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".safetensors")) {
+      alert("Please select a valid .safetensors LoRA file.");
+      if (localLoraInputRef.current) localLoraInputRef.current.value = "";
+      return;
+    }
+
+    if (!backendUrl || !isConnected) {
+      alert("Kaggle Dual Tesla T4 GPU backend is currently offline. Please turn on the GPU first to upload your local LoRA into the storage vault.");
+      if (localLoraInputRef.current) localLoraInputRef.current.value = "";
+      return;
+    }
+
+    setIsUploadingLocalLora(true);
+    setUploadProgress(0);
+    setFusedStatusMessage(`Uploading local LoRA "${file.name}" (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`);
+
+    try {
+      const cleanUrl = backendUrl.replace(/\/+$/, "");
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("name", file.name.replace(".safetensors", ""));
+
+      // Use XMLHttpRequest for real-time progress percentage
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${cleanUrl}/api/loras/upload`);
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(percent);
+            setFusedStatusMessage(`Uploading local LoRA: ${percent}%...`);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`Upload failed with HTTP ${xhr.status}: ${xhr.statusText}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network connection error during LoRA upload."));
+        xhr.send(formData);
+      });
+
+      // Refresh available LoRAs from backend
+      await fetchAvailableLoras(cleanUrl);
+
+      // Clean filename for auto-selection
+      const safeFilename = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
+      const cleanFilename = safeFilename.endsWith(".safetensors") ? safeFilename : `${safeFilename}.safetensors`;
+      const loraName = file.name.replace(".safetensors", "");
+
+      // Auto-select ONLY this uploaded LoRA as requested
+      setSelectedDropdownLora(cleanFilename);
+      setActiveLoras([{ name: loraName, scale: 0.8 }]);
+
+      setFusedStatusMessage(`✅ LoRA "${loraName}" uploaded! Selected & ready to fuse into GPU.`);
+      setTimeout(() => setFusedStatusMessage(""), 6000);
+    } catch (err: any) {
+      console.error("Upload LoRA error:", err);
+      alert(`Local LoRA upload error: ${err.message || err}`);
+      setFusedStatusMessage("");
+    } finally {
+      setIsUploadingLocalLora(false);
+      setUploadProgress(0);
+      if (localLoraInputRef.current) localLoraInputRef.current.value = "";
     }
   };
 
@@ -1295,19 +1379,58 @@ export default function ImageEditorStudio() {
 
             {/* ── LoRA Selection Dropdown & Dynamic GPU Fusing Hub ── */}
             <div className="space-y-2.5 pt-2 border-t border-slate-800/60">
+              <input
+                type="file"
+                ref={localLoraInputRef}
+                onChange={handleLocalLoraFileChange}
+                accept=".safetensors"
+                className="hidden"
+              />
+
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-cyan-400" />
                   LoRA Model Dropdown
                 </label>
-                <button
-                  onClick={() => setActiveTab("loras")}
-                  className="text-[11px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition font-medium"
-                >
-                  <span>+ Browse Civitai Hub</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => localLoraInputRef.current?.click()}
+                    disabled={isUploadingLocalLora || !isConnected}
+                    className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition font-medium disabled:opacity-40"
+                    title="Upload and fuse a locally downloaded .safetensors LoRA"
+                  >
+                    <FolderOpen className="w-3 h-3" />
+                    <span>Browse Locally</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("loras")}
+                    className="text-[11px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition font-medium"
+                    title="Explore Civitai LoRAs"
+                  >
+                    <span>Civitai Hub</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
+
+              {/* Upload Progress Indicator */}
+              {isUploadingLocalLora && (
+                <div className="p-2.5 rounded-xl border border-emerald-800/80 bg-emerald-950/70 text-xs text-emerald-200 flex flex-col gap-1.5 animate-pulse">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                      Uploading Local LoRA to GPU Storage...
+                    </span>
+                    <span className="font-mono font-bold text-emerald-300">{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-1.5 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* LoRA Dropdown Selector */}
               <div className="relative">
@@ -1318,8 +1441,8 @@ export default function ImageEditorStudio() {
                 >
                   <option value="">
                     {availableLoras.length === 0
-                      ? "-- No LoRAs in Vault (Click Browse Hub) --"
-                      : `-- Select LoRA from Vault (${availableLoras.length} Available) --`}
+                      ? "-- No LoRAs in Vault (Click Browse Locally / Hub) --"
+                      : `-- Select LoRA to Fuse into GPU (${availableLoras.length} Available) --`}
                   </option>
                   {availableLoras.map((lora) => (
                     <option key={lora.filename} value={lora.filename}>
@@ -1679,6 +1802,17 @@ export default function ImageEditorStudio() {
                 Browse Hub &rarr;
               </button>
             </div>
+
+            {/* Browse & Upload Local LoRA */}
+            <button
+              onClick={() => localLoraInputRef.current?.click()}
+              disabled={isUploadingLocalLora || !isConnected}
+              className="w-full py-2 px-3 bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-800/80 rounded-xl text-xs font-semibold text-emerald-300 flex items-center justify-center gap-2 transition shadow-sm active:scale-95 disabled:opacity-40"
+              title="Upload a .safetensors LoRA from local storage to Vault"
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Browse Local LoRA (.safetensors)</span>
+            </button>
 
             {/* Quick Civitai URL Downloader */}
             <div className="space-y-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">

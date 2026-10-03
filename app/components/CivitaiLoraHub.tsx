@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Search,
   Download,
@@ -20,6 +20,7 @@ import {
   Clock,
   Star,
   ChevronDown,
+  FolderOpen,
 } from "lucide-react";
 
 export interface CivitaiModelItem {
@@ -109,6 +110,71 @@ export default function CivitaiLoraHub({
   const [directUrl, setDirectUrl] = useState<string>("");
   const [directName, setDirectName] = useState<string>("");
   const [isDirectDownloading, setIsDirectDownloading] = useState<boolean>(false);
+
+  // Local LoRA upload
+  const localHubInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingLocal, setIsUploadingLocal] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+
+  const handleLocalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".safetensors")) {
+      alert("Please select a valid .safetensors LoRA file.");
+      if (localHubInputRef.current) localHubInputRef.current.value = "";
+      return;
+    }
+
+    if (!backendUrl || !isConnected) {
+      alert("GPU Backend is offline. Please start or connect the GPU backend first to upload your local LoRA.");
+      if (localHubInputRef.current) localHubInputRef.current.value = "";
+      return;
+    }
+
+    setIsUploadingLocal(true);
+    setUploadProgress(0);
+
+    try {
+      const cleanUrl = backendUrl.replace(/\/+$/, "");
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("name", file.name.replace(".safetensors", ""));
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${cleanUrl}/api/loras/upload`);
+
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`Upload failed (${xhr.status}): ${xhr.statusText}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network connection error during file upload."));
+        xhr.send(formData);
+      });
+
+      const safeFilename = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
+      const cleanFilename = safeFilename.endsWith(".safetensors") ? safeFilename : `${safeFilename}.safetensors`;
+      onLoraDownloaded(cleanFilename);
+      alert(`✅ Local LoRA "${file.name}" uploaded successfully! It is now available in your LoRA Model Dropdown in Studio.`);
+    } catch (err: any) {
+      alert(`Upload error: ${err.message || err}`);
+    } finally {
+      setIsUploadingLocal(false);
+      setUploadProgress(0);
+      if (localHubInputRef.current) localHubInputRef.current.value = "";
+    }
+  };
 
   // Version selection per model
   const [selectedVersions, setSelectedVersions] = useState<Record<number, number>>({});
@@ -264,34 +330,72 @@ export default function CivitaiLoraHub({
             </p>
           </div>
 
-          {/* Quick Direct Link Input */}
-          <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl flex flex-col gap-2 w-full md:w-80 shadow-lg">
-            <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-              <HardDrive className="w-3.5 h-3.5 text-cyan-400" />
-              Direct Civitai Download
-            </span>
+          {/* Action Cards: Browse Local LoRA + Direct Civitai Download */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            {/* Browse & Upload Local LoRA */}
             <input
-              type="text"
-              placeholder="Paste Civitai / Civitai.red URL or ID"
-              value={directUrl}
-              onChange={(e) => setDirectUrl(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              type="file"
+              ref={localHubInputRef}
+              onChange={handleLocalUpload}
+              accept=".safetensors"
+              className="hidden"
             />
-            <div className="flex gap-2">
+            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl flex flex-col justify-between gap-2.5 w-full sm:w-64 shadow-lg">
+              <span className="text-[11px] font-semibold text-emerald-300 flex items-center gap-1.5">
+                <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
+                Upload Local LoRA
+              </span>
+              <p className="text-[10px] text-slate-400 leading-tight">
+                Select downloaded <code className="text-emerald-400">.safetensors</code> from your local disk/phone to upload into GPU storage.
+              </p>
+              <button
+                onClick={() => localHubInputRef.current?.click()}
+                disabled={isUploadingLocal || !isConnected}
+                className="w-full py-2 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-700/80 text-emerald-200 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40"
+              >
+                {isUploadingLocal ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                    <span>Uploading {uploadProgress}%</span>
+                  </>
+                ) : (
+                  <>
+                    <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Browse Local File</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Quick Direct Link Input */}
+            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl flex flex-col gap-2 w-full sm:w-72 shadow-lg">
+              <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                <HardDrive className="w-3.5 h-3.5 text-cyan-400" />
+                Direct Civitai Download
+              </span>
               <input
                 type="text"
-                placeholder="Custom filename (optional)"
-                value={directName}
-                onChange={(e) => setDirectName(e.target.value)}
-                className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                placeholder="Paste Civitai / Civitai.red URL or ID"
+                value={directUrl}
+                onChange={(e) => setDirectUrl(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
               />
-              <button
-                onClick={handleDirectDownload}
-                disabled={!directUrl.trim() || isDirectDownloading || !isConnected}
-                className="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black text-xs font-bold rounded-lg transition disabled:opacity-40"
-              >
-                {isDirectDownloading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              </button>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Custom filename (optional)"
+                  value={directName}
+                  onChange={(e) => setDirectName(e.target.value)}
+                  className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                />
+                <button
+                  onClick={handleDirectDownload}
+                  disabled={!directUrl.trim() || isDirectDownloading || !isConnected}
+                  className="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black text-xs font-bold rounded-lg transition disabled:opacity-40"
+                >
+                  {isDirectDownloading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>
