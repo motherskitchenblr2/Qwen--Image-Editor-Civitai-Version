@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PROVIDER_ENV_MAP } from "../vault/route";
+import { PROVIDER_ENV_MAP } from "@/app/lib/sentinelConfig";
 
 export const dynamic = "force-dynamic";
 
