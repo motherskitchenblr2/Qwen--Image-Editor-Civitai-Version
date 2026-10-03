@@ -1618,6 +1618,7 @@ export default function ImageEditorStudio() {
                   ))}
 
                   {/* Actions for Selected LoRAs */}
+                  <div className="flex items-center gap-2 pt-1">
                     <button
                       onClick={() => handleFuseLora(activeLoras)}
                       disabled={isFusingLora || !isConnected || !isModelReady}
