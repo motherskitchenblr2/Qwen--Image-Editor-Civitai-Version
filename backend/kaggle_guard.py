@@ -162,7 +162,7 @@ def emergency_supersede_kill(kernel_slug: str = DEFAULT_KERNEL):
             "code_file": "emergency_stop.ipynb",
             "language": "python",
             "kernel_type": "notebook",
-            "is_private": False,
+            "is_private": True,
             "enable_gpu": False,
             "enable_internet": False,
             "dataset_sources": [],
