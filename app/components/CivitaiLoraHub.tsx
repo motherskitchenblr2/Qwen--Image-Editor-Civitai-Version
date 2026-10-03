@@ -66,6 +66,7 @@ export interface CivitaiModelItem {
 interface CivitaiLoraHubProps {
   backendUrl: string;
   isConnected: boolean;
+  isModelReady?: boolean;
   availableLoras: Array<{ name: string; filename: string; size_mb: number; is_active: boolean }>;
   onLoraDownloaded: (loraName: string) => void;
   onSelectForStudio: (loraFilename: string, triggerWords?: string[]) => void;
@@ -89,6 +90,7 @@ const BASE_MODELS = ["All", "SDXL 1.0", "Flux.1 D", "SD 1.5", "Pony"];
 export default function CivitaiLoraHub({
   backendUrl,
   isConnected,
+  isModelReady = false,
   availableLoras,
   onLoraDownloaded,
   onSelectForStudio,
@@ -329,9 +331,21 @@ export default function CivitaiLoraHub({
         <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-full text-xs font-semibold text-cyan-300">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              Civitai.red Live LoRA Explorer
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-full text-xs font-semibold text-cyan-300">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                Civitai.red Live LoRA Explorer
+              </div>
+              {isConnected && (
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                  isModelReady
+                    ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
+                    : "bg-amber-500/10 border border-amber-500/30 text-amber-300 animate-pulse"
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${isModelReady ? "bg-emerald-400" : "bg-amber-400 animate-ping"}`} />
+                  <span>{isModelReady ? "Dual T4 GPU Ready" : "Dual T4 Warming Up (~60s)"}</span>
+                </div>
+              )}
             </div>
             <h2 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
               Browse, Download & Fuse LoRAs to 5 TB Vault

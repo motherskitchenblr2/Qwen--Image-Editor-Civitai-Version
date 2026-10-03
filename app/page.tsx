@@ -89,6 +89,8 @@ export default function ImageEditorStudio() {
   // GPU & Quota states
   const [isShuttingDown, setIsShuttingDown] = useState<boolean>(false);
   const [isStartingGpu, setIsStartingGpu] = useState<boolean>(false);
+  const [isModelReady, setIsModelReady] = useState<boolean>(false);
+  const [modelStatusMessage, setModelStatusMessage] = useState<string>("");
   const [bootMessage, setBootMessage] = useState<string>("");
   const [showAdvancedUrl, setShowAdvancedUrl] = useState<boolean>(false);
 
@@ -226,6 +228,9 @@ export default function ImageEditorStudio() {
       if (res.ok) {
         const data = await res.json();
         setIsConnected(true);
+        const ready = Boolean(data.model_ready);
+        setIsModelReady(ready);
+        setModelStatusMessage(data.message || (ready ? "Model ready on Dual T4 GPUs" : "Warming up pipeline in GPU VRAM..."));
         setVramStats(data.vram);
         localStorage.setItem("qwen_backend_url", cleanUrl);
         fetchAvailableLoras(cleanUrl);
@@ -244,9 +249,11 @@ export default function ImageEditorStudio() {
         } catch {}
       } else {
         setIsConnected(false);
+        setIsModelReady(false);
       }
     } catch {
       setIsConnected(false);
+      setIsModelReady(false);
     } finally {
       setIsCheckingHealth(false);
     }
@@ -534,6 +541,10 @@ export default function ImageEditorStudio() {
   const handleFuseLora = async (lorasToFuse = activeLoras) => {
     if (!backendUrl || !isConnected) {
       alert("Please turn on or connect the Kaggle Dual T4 GPU first.");
+      return;
+    }
+    if (!isModelReady) {
+      alert(`The Dual T4 GPU model pipeline is still warming up (${modelStatusMessage || "loading weights into VRAM"}). Please wait for the green 'Ready' indicator before fusing LoRAs.`);
       return;
     }
     if (lorasToFuse.length === 0) {
@@ -858,15 +869,28 @@ export default function ImageEditorStudio() {
             {/* Mobile GPU Power Toggle Button (Right side on mobile only) */}
             <div className="flex items-center gap-1.5 lg:hidden shrink-0">
               {isConnected ? (
-                <button
-                  onClick={handleShutdownGpu}
-                  disabled={isShuttingDown}
-                  title="Turn off GPU"
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[11px] font-semibold transition"
-                >
-                  <Power className={`w-3 h-3 ${isShuttingDown ? "animate-spin" : ""}`} />
-                  <span>Stop GPU</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    title={modelStatusMessage}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold ${
+                      isModelReady
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isModelReady ? "bg-emerald-400" : "bg-amber-400 animate-ping"}`} />
+                    <span>{isModelReady ? "Ready" : "Warming..."}</span>
+                  </span>
+                  <button
+                    onClick={handleShutdownGpu}
+                    disabled={isShuttingDown}
+                    title="Turn off GPU"
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[11px] font-semibold transition"
+                  >
+                    <Power className={`w-3 h-3 ${isShuttingDown ? "animate-spin" : ""}`} />
+                    <span>Stop</span>
+                  </button>
+                </div>
               ) : isStartingGpu ? (
                 <span className="flex items-center gap-1 px-2 py-1 bg-amber-500/20 text-amber-300 rounded-lg text-[10px] font-semibold animate-pulse">
                   <RefreshCw className="w-3 h-3 animate-spin text-amber-400" />
@@ -969,9 +993,12 @@ export default function ImageEditorStudio() {
           <div className="hidden lg:flex items-center gap-3 shrink-0">
             {/* Status Badge */}
             <div
+              title={isConnected ? modelStatusMessage : undefined}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold backdrop-blur-md transition ${
                 isConnected
-                  ? "bg-emerald-950/60 border-emerald-700/80 text-emerald-300 shadow-sm shadow-emerald-900/20"
+                  ? isModelReady
+                    ? "bg-emerald-950/60 border-emerald-700/80 text-emerald-300 shadow-sm shadow-emerald-900/20"
+                    : "bg-amber-950/60 border-amber-700/80 text-amber-300 animate-pulse"
                   : isStartingGpu
                   ? "bg-amber-950/60 border-amber-700/80 text-amber-300 animate-pulse"
                   : "bg-slate-900/80 border-slate-800 text-slate-400"
@@ -980,7 +1007,9 @@ export default function ImageEditorStudio() {
               <div
                 className={`w-2 h-2 rounded-full ${
                   isConnected
-                    ? "bg-emerald-400 animate-ping duration-1000"
+                    ? isModelReady
+                      ? "bg-emerald-400 shadow-sm shadow-emerald-400/50"
+                      : "bg-amber-400 animate-ping"
                     : isStartingGpu
                     ? "bg-amber-400 animate-pulse"
                     : "bg-slate-500"
@@ -988,7 +1017,9 @@ export default function ImageEditorStudio() {
               />
               <span>
                 {isConnected
-                  ? "Dual Tesla T4 Online"
+                  ? isModelReady
+                    ? "Dual Tesla T4 Ready"
+                    : "Dual T4 Warming Up (~60s)"
                   : isStartingGpu
                   ? "Booting Kaggle GPU..."
                   : "GPU Offline (Quota Safe)"}
@@ -1273,6 +1304,7 @@ export default function ImageEditorStudio() {
         <CivitaiLoraHub
           backendUrl={backendUrl}
           isConnected={isConnected}
+          isModelReady={isModelReady}
           availableLoras={availableLoras}
           onLoraDownloaded={(name) => {
             if (backendUrl) fetchAvailableLoras(backendUrl);
@@ -1586,18 +1618,26 @@ export default function ImageEditorStudio() {
                   ))}
 
                   {/* Actions for Selected LoRAs */}
-                  <div className="flex items-center gap-2 pt-1">
                     <button
                       onClick={() => handleFuseLora(activeLoras)}
-                      disabled={isFusingLora || !isConnected}
+                      disabled={isFusingLora || !isConnected || !isModelReady}
+                      title={!isModelReady && isConnected ? `GPU pipeline is warming up: ${modelStatusMessage}` : "Fuse selected LoRA into GPU"}
                       className="flex-1 py-1.5 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black text-xs font-bold rounded-lg transition shadow-md shadow-cyan-500/10 flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40"
                     >
                       {isFusingLora ? (
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : !isModelReady && isConnected ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       ) : (
                         <Zap className="w-3.5 h-3.5 fill-black" />
                       )}
-                      <span>Fuse into GPU</span>
+                      <span>
+                        {isFusingLora
+                          ? "Fusing..."
+                          : !isModelReady && isConnected
+                          ? "Warming Up..."
+                          : "Fuse into GPU"}
+                      </span>
                     </button>
                     <button
                       onClick={handleUnloadLoras}
