@@ -340,6 +340,18 @@ class ModelOrchestrator:
         import torch
 
         try:
+            # Auto-upgrade torchao if FqnToConfig is missing (required by latest diffusers)
+            try:
+                import torchao.quantization
+                if not hasattr(torchao.quantization, "FqnToConfig"):
+                    logger.info("Upgrading torchao for diffusers compatibility...")
+                    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U", "torchao"], check=False)
+                    import importlib
+                    importlib.reload(torchao)
+                    importlib.reload(torchao.quantization)
+            except Exception as tao_err:
+                logger.warning(f"torchao compatibility note: {tao_err}")
+
             # Safe dynamic imports
             PipelineClass = None
             try:
