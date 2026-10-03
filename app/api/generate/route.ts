@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     // 1. ALIBABA DASHSCOPE (Qwen-Image & Qwen-Image-Edit)
     // ─────────────────────────────────────────────────────────────
     if (model === "qwen-cloud" || model === "qwen-image" || model === "qwen-image-edit") {
-      const activeKey = apiKey || DASHSCOPE_API_KEY;
+      const activeKey = (apiKey && !apiKey.includes("*") ? apiKey : null) || DASHSCOPE_API_KEY;
       if (!activeKey) {
         return NextResponse.json(
           { error: "Alibaba DashScope API Key not configured. Please add your key in Sentinel Gateway." },
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     // 2. GOOGLE AI STUDIO (Imagen 3: imagen-3.0-generate-002)
     // ─────────────────────────────────────────────────────────────
     if (model === "google-imagen" || model === "imagen-3") {
-      const activeGoogleKey = apiKey || GEMINI_API_KEY;
+      const activeGoogleKey = (apiKey && !apiKey.includes("*") ? apiKey : null) || GEMINI_API_KEY;
       if (!activeGoogleKey) {
         return NextResponse.json(
           {
@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
     const cfRes = await fetch(cfUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${CLOUDFLARE_API_TOKEN}`,
+        Authorization: `Bearer ${(apiKey && !apiKey.includes("*") ? apiKey : null) || CLOUDFLARE_API_TOKEN}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(cfPayload),

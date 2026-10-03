@@ -1,18 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PROVIDER_ENV_MAP } from "../vault/route";
 
 export async function POST(req: NextRequest) {
   try {
     const { provider, apiKey, endpoint } = await req.json();
 
-    if (!provider || !apiKey) {
-      return NextResponse.json({ success: false, error: "Provider and API Key are required." }, { status: 400 });
+    if (!provider) {
+      return NextResponse.json({ success: false, error: "Provider identifier is required." }, { status: 400 });
+    }
+
+    const envKey = PROVIDER_ENV_MAP[provider];
+    let effectiveKey = (apiKey || "").trim();
+    if (!effectiveKey || effectiveKey.includes("*") || effectiveKey === "__FROM_ENV__") {
+      effectiveKey = (envKey && process.env[envKey]) ? process.env[envKey] : "";
+    }
+
+    if (!effectiveKey && provider !== "ollama" && provider !== "nanobanana") {
+      return NextResponse.json({
+        success: false,
+        error: `API Key for ${provider} (${envKey}) is not set in Server Environment or Vault.`,
+      }, { status: 400 });
     }
 
     const startTime = Date.now();
 
     switch (provider) {
       case "gemini": {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${effectiveKey}`;
         const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
         const latency = Date.now() - startTime;
         if (res.ok) {
@@ -34,7 +48,7 @@ export async function POST(req: NextRequest) {
 
       case "openrouter": {
         const res = await fetch("https://openrouter.ai/api/v1/auth/key", {
-          headers: { Authorization: `Bearer ${apiKey}` },
+          headers: { Authorization: `Bearer ${effectiveKey}` },
           signal: AbortSignal.timeout(6000),
         });
         const latency = Date.now() - startTime;
@@ -57,7 +71,7 @@ export async function POST(req: NextRequest) {
 
       case "groq": {
         const res = await fetch("https://api.groq.com/openai/v1/models", {
-          headers: { Authorization: `Bearer ${apiKey}` },
+          headers: { Authorization: `Bearer ${effectiveKey}` },
           signal: AbortSignal.timeout(6000),
         });
         const latency = Date.now() - startTime;
@@ -78,7 +92,7 @@ export async function POST(req: NextRequest) {
 
       case "mistral": {
         const res = await fetch("https://api.mistral.ai/v1/models", {
-          headers: { Authorization: `Bearer ${apiKey}` },
+          headers: { Authorization: `Bearer ${effectiveKey}` },
           signal: AbortSignal.timeout(6000),
         });
         const latency = Date.now() - startTime;
@@ -99,7 +113,7 @@ export async function POST(req: NextRequest) {
 
       case "nvidia": {
         const res = await fetch("https://integrate.api.nvidia.com/v1/models", {
-          headers: { Authorization: `Bearer ${apiKey}` },
+          headers: { Authorization: `Bearer ${effectiveKey}` },
           signal: AbortSignal.timeout(6000),
         });
         const latency = Date.now() - startTime;
@@ -122,7 +136,7 @@ export async function POST(req: NextRequest) {
         const target = endpoint || "https://ollama.com";
         const cleanTarget = target.replace(/\/+$/, "");
         const res = await fetch(`${cleanTarget}/api/tags`, {
-          headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+          headers: apiKey ? { Authorization: `Bearer ${effectiveKey}` } : {},
           signal: AbortSignal.timeout(5000),
         }).catch(() => null);
 
@@ -144,7 +158,7 @@ export async function POST(req: NextRequest) {
       case "agentrouter": {
         const target = endpoint || "https://api.agentrouter.org/v1/models";
         const res = await fetch(target, {
-          headers: { Authorization: `Bearer ${apiKey}` },
+          headers: { Authorization: `Bearer ${effectiveKey}` },
           signal: AbortSignal.timeout(6000),
         }).catch(() => null);
 
@@ -167,7 +181,7 @@ export async function POST(req: NextRequest) {
         const res = await fetch("https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${effectiveKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -215,7 +229,7 @@ export async function POST(req: NextRequest) {
       case "cloudflare_ai": {
         const cfAcc = process.env.CLOUDFLARE_ACCOUNT_ID || "08c4584f2d7f89d42713e4fdd5bb9538";
         const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAcc}/tokens/verify`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
+          headers: { Authorization: `Bearer ${effectiveKey}` },
           signal: AbortSignal.timeout(6000),
         }).catch(() => null);
         const latency = Date.now() - startTime;

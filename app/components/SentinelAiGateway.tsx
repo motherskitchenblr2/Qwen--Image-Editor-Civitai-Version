@@ -6,8 +6,6 @@ import {
   Key,
   Lock,
   Unlock,
-  Eye,
-  EyeOff,
   Check,
   CheckCircle2,
   AlertCircle,
@@ -53,7 +51,7 @@ const PROVIDERS: ProviderConfig[] = [
     badge: "Unified Multi-Model Gateway",
     category: "Aggregator",
     description: "Access Claude 3.5, DeepSeek R1, Qwen 2.5 72B, and 200+ models with universal OpenAI-compatible routing.",
-    placeholder: "sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    placeholder: "Paste OpenRouter API key...",
     docsUrl: "https://openrouter.ai/keys",
     recommendedModels: ["anthropic/claude-3.5-sonnet", "deepseek/deepseek-r1", "qwen/qwen-2.5-72b-instruct"],
     color: {
@@ -69,7 +67,7 @@ const PROVIDERS: ProviderConfig[] = [
     badge: "Multimodal Vision & Fast Reasoning",
     category: "Vision & Frontier",
     description: "Frontier multimodal understanding for direct image analysis, captioning, and structured prompt engineering.",
-    placeholder: "AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    placeholder: "Paste Google Gemini API key...",
     docsUrl: "https://aistudio.google.com/app/apikey",
     recommendedModels: ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
     color: {
@@ -85,7 +83,7 @@ const PROVIDERS: ProviderConfig[] = [
     badge: "Ultra-Fast Inference (500+ tok/s)",
     category: "LPU Inference",
     description: "Low-latency inference engine powered by Language Processing Units (LPU) for instant prompt expansion.",
-    placeholder: "gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    placeholder: "Paste Groq LPU API key...",
     docsUrl: "https://console.groq.com/keys",
     recommendedModels: ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "llama-3.1-8b-instant"],
     color: {
@@ -101,7 +99,7 @@ const PROVIDERS: ProviderConfig[] = [
     badge: "Enterprise GPU Acceleration",
     category: "Enterprise NIM",
     description: "Microservices accelerated on NVIDIA DGX Cloud for cutting-edge vision, Nemotron, and Llama 3.",
-    placeholder: "nvapi-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    placeholder: "Paste NVIDIA NIM API key...",
     docsUrl: "https://build.nvidia.com/",
     recommendedModels: ["meta/llama-3.1-70b-instruct", "nvidia/nemotron-4-340b-instruct"],
     color: {
@@ -117,7 +115,7 @@ const PROVIDERS: ProviderConfig[] = [
     badge: "Private & Local LLM Bridge",
     category: "Self-Hosted",
     description: "Connect to your remote or cloud-hosted Ollama server instance for private inference with zero logging.",
-    placeholder: "ollama_xxxxxxxxxxxxxxxx (or leave blank for public/local)",
+    placeholder: "Enter Ollama token (or leave blank for local)...",
     defaultEndpoint: "https://ollama.com",
     docsUrl: "https://ollama.com/download",
     recommendedModels: ["llama3.2-vision", "qwen2.5:14b", "mistral-nemo"],
@@ -134,7 +132,7 @@ const PROVIDERS: ProviderConfig[] = [
     badge: "Autonomous Agent Tool Routing",
     category: "Autonomous",
     description: "High-throughput API router designed for multi-agent workflows, code interpreters, and dynamic fallbacks.",
-    placeholder: "ar-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    placeholder: "Paste AgentRouter API key...",
     docsUrl: "https://agentrouter.org",
     recommendedModels: ["agentrouter-default", "smart-routing-v2"],
     color: {
@@ -150,7 +148,7 @@ const PROVIDERS: ProviderConfig[] = [
     badge: "European Frontier Models",
     category: "Vision & Frontier",
     description: "Advanced reasoning and visual processing with Mistral Large 2, Pixtral 12B Vision, and Codestral.",
-    placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    placeholder: "Paste Mistral API key...",
     docsUrl: "https://console.mistral.ai/api-keys/",
     recommendedModels: ["mistral-large-latest", "pixtral-12b-2409", "codestral-latest"],
     color: {
@@ -166,7 +164,7 @@ const PROVIDERS: ProviderConfig[] = [
     badge: "Qwen-Image & Qwen-Image-Edit",
     category: "Vision & Frontier",
     description: "Official Alibaba ModelStudio API for Qwen Text-to-Image synthesis and precision Image-to-Image editing.",
-    placeholder: "sk-ws-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    placeholder: "Paste Alibaba DashScope key...",
     docsUrl: "https://dashscope.console.aliyun.com/",
     recommendedModels: ["qwen-image", "qwen-image-edit", "qwen-plus", "qwen-max"],
     color: {
@@ -198,7 +196,7 @@ const PROVIDERS: ProviderConfig[] = [
     badge: "Edge Serverless Diffusion",
     category: "Vision & Frontier",
     description: "Serverless Workers AI running Leonardo Lucid Origin and Black Forest Labs Flux 1 Schnell on global edge GPUs.",
-    placeholder: "cfat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    placeholder: "Paste Cloudflare Workers AI token...",
     docsUrl: "https://dash.cloudflare.com/ai/workers-ai",
     recommendedModels: ["@cf/leonardo/lucid-origin", "@cf/black-forest-labs/flux-1-schnell"],
     color: {
@@ -215,12 +213,15 @@ interface SentinelProps {
 }
 
 export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelProps) {
-  // Stored keys state
-  const [keys, setKeys] = useState<Record<string, string>>({});
+  // Vault state populated directly from Vercel Project Environment variables
+  const [vaultInfo, setVaultInfo] = useState<Record<string, { configured: boolean; masked: string; envKey: string; endpoint?: string }>>({});
+  const [typedKeys, setTypedKeys] = useState<Record<string, string>>({});
   const [endpoints, setEndpoints] = useState<Record<string, string>>({});
-  const [showKey, setShowKey] = useState<Record<string, boolean>>({});
+  const [editingKey, setEditingKey] = useState<Record<string, boolean>>({});
+  const [isEncrypting, setIsEncrypting] = useState<Record<string, boolean>>({});
+  const [isSavingAll, setIsSavingAll] = useState<boolean>(false);
 
-  // Verification status per provider: { [id]: { status: 'idle'|'verifying'|'verified'|'error', latency?: number, message?: string } }
+  // Verification status per provider
   const [verifyStatus, setVerifyStatus] = useState<Record<string, { status: string; latency?: number; message?: string }>>({});
 
   // Active copilot provider
@@ -234,64 +235,146 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Mount: load keys from localStorage
-  useEffect(() => {
+  // 1. Fetch authoritative environment status from Vercel / serverless runtime
+  const fetchVaultStatus = async () => {
     try {
-      const storedKeys = localStorage.getItem("sentinel_api_keys");
-      if (storedKeys) {
-        setKeys(JSON.parse(storedKeys));
-      }
-      const storedEndpoints = localStorage.getItem("sentinel_endpoints");
-      if (storedEndpoints) {
-        setEndpoints(JSON.parse(storedEndpoints));
-      }
-      const savedCopilot = localStorage.getItem("sentinel_active_copilot");
-      if (savedCopilot) {
-        setActiveCopilot(savedCopilot);
+      const res = await fetch("/api/sentinel/vault", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.vault) {
+          setVaultInfo(data.vault);
+          const initialEndpoints: Record<string, string> = {};
+          for (const [pId, info] of Object.entries(data.vault as Record<string, any>)) {
+            if (info.endpoint) {
+              initialEndpoints[pId] = info.endpoint;
+            }
+          }
+          setEndpoints((prev) => ({ ...initialEndpoints, ...prev }));
+        }
       }
     } catch (e) {
-      console.warn("Could not read sentinel keys from storage:", e);
+      console.warn("Could not fetch server vault status:", e);
     }
+  };
+
+  useEffect(() => {
+    fetchVaultStatus();
+    try {
+      const savedCopilot = localStorage.getItem("sentinel_active_copilot");
+      if (savedCopilot) setActiveCopilot(savedCopilot);
+    } catch {}
   }, []);
 
-  const handleKeyChange = (providerId: string, value: string) => {
-    setKeys((prev) => ({ ...prev, [providerId]: value.trim() }));
-    // Reset verification state if key changes
-    setVerifyStatus((prev) => ({ ...prev, [providerId]: { status: "idle" } }));
-  };
+  // 2. Encrypt & Save key directly into Vercel Project Environment
+  const handleEncryptAndSave = async (providerId: string) => {
+    const rawVal = (typedKeys[providerId] || "").trim();
+    if (!rawVal || rawVal.includes("*")) {
+      showToast("Please enter or paste an API key first.", "error");
+      return;
+    }
 
-  const handleEndpointChange = (providerId: string, value: string) => {
-    setEndpoints((prev) => ({ ...prev, [providerId]: value.trim() }));
-  };
-
-  const toggleShowKey = (providerId: string) => {
-    setShowKey((prev) => ({ ...prev, [providerId]: !prev[providerId] }));
-  };
-
-  const handleSaveAll = () => {
+    setIsEncrypting((prev) => ({ ...prev, [providerId]: true }));
     try {
-      localStorage.setItem("sentinel_api_keys", JSON.stringify(keys));
-      localStorage.setItem("sentinel_endpoints", JSON.stringify(endpoints));
-      localStorage.setItem("sentinel_active_copilot", activeCopilot);
-      showToast("🔒 All API Keys saved to Sentinel Local Vault successfully!", "success");
-    } catch (e: any) {
-      showToast(`Save error: ${e.message}`, "error");
+      const res = await fetch("/api/sentinel/vault", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: providerId,
+          apiKey: rawVal,
+          endpoint: endpoints[providerId] || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        // Clear raw plaintext from memory immediately!
+        setTypedKeys((prev) => {
+          const c = { ...prev };
+          delete c[providerId];
+          return c;
+        });
+
+        // Lock edit state
+        setEditingKey((prev) => ({ ...prev, [providerId]: false }));
+
+        // Update vault state with ************* stars
+        setVaultInfo((prev) => ({
+          ...prev,
+          [providerId]: {
+            configured: true,
+            masked: "********************",
+            envKey: data.envKey,
+            endpoint: endpoints[providerId] || undefined,
+          },
+        }));
+
+        showToast(data.message || `🔒 Key encrypted into ${data.envKey}!`, "success");
+
+        // Automatically trigger live verification
+        handleVerify(providerId);
+      } else {
+        showToast(data.error || "Failed to encrypt key into Vercel environment.", "error");
+      }
+    } catch (err: any) {
+      showToast(`Encryption error: ${err.message}`, "error");
+    } finally {
+      setIsEncrypting((prev) => ({ ...prev, [providerId]: false }));
     }
   };
 
-  const handleClearKey = (providerId: string) => {
-    const updated = { ...keys };
-    delete updated[providerId];
-    setKeys(updated);
+  // 3. Revoke / Clear key from Vercel Project Environment
+  const handleClearKey = async (providerId: string) => {
+    const updatedTyped = { ...typedKeys };
+    delete updatedTyped[providerId];
+    setTypedKeys(updatedTyped);
+
+    setEditingKey((prev) => ({ ...prev, [providerId]: false }));
     setVerifyStatus((prev) => ({ ...prev, [providerId]: { status: "idle" } }));
-    localStorage.setItem("sentinel_api_keys", JSON.stringify(updated));
-    showToast(`Cleared ${providerId} key from vault.`, "info");
+
+    setVaultInfo((prev) => {
+      const copy = { ...prev };
+      if (copy[providerId]) {
+        copy[providerId] = { ...copy[providerId], configured: false, masked: "" };
+      }
+      return copy;
+    });
+
+    try {
+      await fetch("/api/sentinel/vault", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: providerId }),
+      });
+      showToast(`Revoked ${providerId} key from server environment.`, "info");
+    } catch {}
   };
 
+  // 4. Batch encrypt all currently drafted keys to Vercel
+  const handleSaveAll = async () => {
+    setIsSavingAll(true);
+    let count = 0;
+    for (const p of PROVIDERS) {
+      const rawVal = (typedKeys[p.id] || "").trim();
+      if (rawVal && rawVal.length > 3 && !rawVal.includes("*")) {
+        await handleEncryptAndSave(p.id);
+        count++;
+      }
+    }
+    setIsSavingAll(false);
+    if (count > 0) {
+      showToast(`🔒 ${count} new API keys encrypted & saved to Vercel Environment!`, "success");
+    } else {
+      showToast("All active keys are already encrypted and locked in Vercel Environment.", "info");
+    }
+  };
+
+  // 5. Test Ping connection using server-side vaulted secret
   const handleVerify = async (providerId: string) => {
-    const key = keys[providerId];
-    if (!key && providerId !== "ollama") {
-      showToast(`Please enter an API key for ${providerId} first.`, "error");
+    const isVaulted = vaultInfo[providerId]?.configured;
+    const rawDraft = typedKeys[providerId];
+
+    if (!isVaulted && (!rawDraft || rawDraft.includes("*")) && providerId !== "ollama" && providerId !== "nanobanana") {
+      showToast(`Please enter and encrypt an API key for ${providerId} first.`, "error");
       return;
     }
 
@@ -306,7 +389,7 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           provider: providerId,
-          apiKey: key || "",
+          apiKey: rawDraft && !rawDraft.includes("*") ? rawDraft : "__FROM_ENV__",
           endpoint: endpoints[providerId] || undefined,
         }),
       });
@@ -342,7 +425,7 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
     }
   };
 
-  const configuredCount = Object.keys(keys).filter((k) => keys[k] && keys[k].length > 3).length;
+  const configuredCount = Object.keys(vaultInfo).filter((k) => vaultInfo[k]?.configured).length;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 animate-fadeIn">
@@ -384,12 +467,12 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
               <div>
                 <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2.5">
                   Sentinel: AI Gateway &amp; Key Vault
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 uppercase tracking-widest">
-                    AES-256 / Zero-Leak
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-widest flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Auto-Encrypting Vercel Env
                   </span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Centralized multi-provider secrets hub for prompt engineering, vision analysis copilots, and cloud storage.
+                  When you paste an API key, it instantly encrypts into <span className="font-mono text-emerald-400 font-bold">*************</span> stars and automatically syncs to your app&apos;s Vercel Project Environment.
                 </p>
               </div>
             </div>
@@ -398,19 +481,24 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
           {/* Quick Metrics & Save All */}
           <div className="flex items-center gap-3 flex-wrap">
             <div className="bg-slate-900/90 border border-slate-800 px-3.5 py-2 rounded-xl text-xs flex items-center gap-2">
-              <Key className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-slate-400">Active Keys:</span>
-              <span className="font-mono font-bold text-cyan-300">
+              <Lock className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-slate-400">In Vercel Env:</span>
+              <span className="font-mono font-bold text-emerald-300">
                 {configuredCount} / {PROVIDERS.length}
               </span>
             </div>
 
             <button
               onClick={handleSaveAll}
-              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-black font-extrabold rounded-xl text-xs shadow-lg shadow-cyan-500/20 transition active:scale-95"
+              disabled={isSavingAll}
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-black font-extrabold rounded-xl text-xs shadow-lg shadow-emerald-500/20 transition active:scale-95 disabled:opacity-50"
             >
-              <Save className="w-4 h-4" />
-              <span>Save All Keys to Vault</span>
+              {isSavingAll ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>Sync All Drafts to Vercel</span>
             </button>
           </div>
         </div>
@@ -448,33 +536,46 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
 
       {/* Active Copilot Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/80 border border-slate-800/80 px-4 py-3 rounded-2xl">
-        <div className="flex items-center gap-2 text-xs text-slate-300 font-semibold">
+        <div className="flex items-center gap-2.5">
           <Sparkles className="w-4 h-4 text-cyan-400" />
-          <span>Active Vision &amp; Prompt Copilot Engine:</span>
+          <span className="text-xs font-bold text-slate-200">Active Studio Prompt Copilot:</span>
+          <span className="text-[11px] text-slate-400 hidden md:inline">
+            Powers the &ldquo;Enhance Prompt&rdquo; button in the editor.
+          </span>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {PROVIDERS.filter((p) => ["gemini", "openrouter", "groq", "mistral", "nvidia"].includes(p.id)).map((p) => {
-            const hasKey = Boolean(keys[p.id]);
-            const isSelected = activeCopilot === p.id;
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {["gemini", "groq", "openrouter"].map((pid) => {
+            const p = PROVIDERS.find((item) => item.id === pid);
+            if (!p) return null;
+            const isSelected = activeCopilot === pid;
+            const isConfigured = !!vaultInfo[pid]?.configured;
+
             return (
               <button
-                key={p.id}
+                key={pid}
                 onClick={() => {
-                  setActiveCopilot(p.id);
-                  if (onCopilotProviderChange) onCopilotProviderChange(p.id);
-                  localStorage.setItem("sentinel_active_copilot", p.id);
-                  showToast(`Active copilot switched to ${p.name}`);
+                  setActiveCopilot(pid);
+                  try {
+                    localStorage.setItem("sentinel_active_copilot", pid);
+                  } catch {}
+                  if (onCopilotProviderChange) onCopilotProviderChange(pid);
+                  showToast(`Active Copilot set to ${p.name}`);
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
                   isSelected
                     ? "bg-cyan-500 text-black shadow-md shadow-cyan-500/20 font-bold"
-                    : hasKey
-                    ? "bg-slate-900 border border-slate-700 text-slate-300 hover:text-white"
-                    : "bg-slate-900/40 border border-slate-800/50 text-slate-500 hover:text-slate-400"
+                    : "bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800"
                 }`}
               >
                 <span>{p.name.replace(" API", "")}</span>
-                {hasKey && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                {isConfigured && (
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isSelected ? "bg-black" : "bg-emerald-400"
+                    }`}
+                  />
+                )}
               </button>
             );
           })}
@@ -484,17 +585,20 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
       {/* Provider Keys Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {PROVIDERS.map((provider) => {
-          const val = keys[provider.id] || "";
-          const isRevealed = showKey[provider.id] || false;
+          const isVaulted = !!vaultInfo[provider.id]?.configured;
+          const envVarName = vaultInfo[provider.id]?.envKey || "APP_ENV";
+          const isEditing = editingKey[provider.id] || false;
+          const draftVal = typedKeys[provider.id] ?? "";
+          const displayVal = isVaulted && !isEditing ? "********************" : draftVal;
           const status = verifyStatus[provider.id] || { status: "idle" };
-          const hasKey = val.length > 3;
+          const hasDraft = draftVal.trim().length > 3 && !draftVal.includes("*");
 
           return (
             <div
               key={provider.id}
               className={`flex flex-col justify-between rounded-2xl border p-5 transition-all duration-200 backdrop-blur-xl ${
-                hasKey
-                  ? "bg-slate-900/80 border-slate-700/80 shadow-md"
+                isVaulted
+                  ? "bg-slate-900/80 border-emerald-500/30 shadow-md shadow-emerald-950/20"
                   : "bg-slate-950/60 border-slate-800/80 hover:border-slate-700"
               }`}
             >
@@ -508,7 +612,7 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
                     <div>
                       <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                         {provider.name}
-                        {hasKey && (
+                        {isVaulted && (
                           <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400 animate-pulse" />
                         )}
                       </h3>
@@ -552,41 +656,101 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
                       type="text"
                       placeholder={provider.defaultEndpoint}
                       value={endpoints[provider.id] || ""}
-                      onChange={(e) => handleEndpointChange(provider.id, e.target.value)}
+                      onChange={(e) => setEndpoints((prev) => ({ ...prev, [provider.id]: e.target.value.trim() }))}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-200 text-xs font-mono focus:ring-1 focus:ring-cyan-500 focus:outline-none"
                     />
                   </div>
                 )}
 
                 {/* API Key Input Field */}
-                <div className="space-y-1 pt-1">
-                  <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>API Key / Secret Token</span>
-                    {hasKey && <span className="text-[10px] text-emerald-400 font-mono">● Saved in Vault</span>}
-                  </label>
-                  <div className="relative flex items-center">
-                    <input
-                      type={isRevealed ? "text" : "password"}
-                      placeholder={provider.placeholder}
-                      value={val}
-                      onChange={(e) => handleKeyChange(provider.id, e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 pr-20 text-slate-200 text-xs font-mono focus:ring-1 focus:ring-cyan-500 focus:outline-none"
-                    />
-                    <div className="absolute right-2 flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => toggleShowKey(provider.id)}
-                        className="p-1 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-900 transition"
-                        title={isRevealed ? "Hide Key" : "Reveal Key"}
-                      >
-                        {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                      {hasKey && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Lock className="w-3 h-3 text-cyan-400" />
+                      <span>API Key / Secret Token</span>
+                    </label>
+                    {isVaulted ? (
+                      <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1 font-semibold">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>Encrypted in Vercel Env ({envVarName})</span>
+                      </span>
+                    ) : hasDraft ? (
+                      <span className="text-[10px] text-amber-400 font-mono animate-pulse">
+                        ● Unsaved Draft
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="relative flex items-center gap-2">
+                    <div className="relative flex-1 flex items-center">
+                      <input
+                        type={isEditing ? "password" : "text"}
+                        placeholder={provider.placeholder}
+                        value={displayVal}
+                        readOnly={isVaulted && !isEditing}
+                        onChange={(e) => {
+                          const newVal = e.target.value;
+                          setTypedKeys((prev) => ({ ...prev, [provider.id]: newVal }));
+                          setVerifyStatus((prev) => ({ ...prev, [provider.id]: { status: "idle" } }));
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && hasDraft) {
+                            handleEncryptAndSave(provider.id);
+                          }
+                        }}
+                        className={`w-full rounded-xl px-3 py-2 text-xs font-mono focus:outline-none transition ${
+                          isVaulted && !isEditing
+                            ? "bg-slate-950/90 border border-emerald-500/40 text-emerald-400 tracking-widest cursor-default font-black"
+                            : "bg-slate-950 border border-slate-800 text-slate-200 focus:ring-1 focus:ring-cyan-500"
+                        }`}
+                      />
+                      {isVaulted && !isEditing && (
+                        <div className="absolute right-2.5 flex items-center gap-1 pointer-events-none">
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                            LOCKED
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {(!isVaulted || isEditing) ? (
+                        <button
+                          type="button"
+                          onClick={() => handleEncryptAndSave(provider.id)}
+                          disabled={isEncrypting[provider.id] || !displayVal || displayVal.includes("*")}
+                          className="px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-black font-extrabold rounded-xl text-xs flex items-center gap-1.5 transition active:scale-95 disabled:opacity-40 shadow-md shadow-emerald-500/20"
+                          title="Encrypt into ************* stars and permanently store in Vercel Project Environment"
+                        >
+                          {isEncrypting[provider.id] ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Lock className="w-3.5 h-3.5" />
+                          )}
+                          <span>Encrypt &amp; Save</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingKey((prev) => ({ ...prev, [provider.id]: true }));
+                            setTypedKeys((prev) => ({ ...prev, [provider.id]: "" }));
+                          }}
+                          className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-[11px] font-semibold flex items-center gap-1 transition"
+                          title="Replace or update this key"
+                        >
+                          <Key className="w-3 h-3 text-cyan-400" />
+                          <span>Replace</span>
+                        </button>
+                      )}
+
+                      {isVaulted && (
                         <button
                           type="button"
                           onClick={() => handleClearKey(provider.id)}
-                          className="p-1 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition"
-                          title="Clear Key"
+                          className="p-2 text-slate-500 hover:text-rose-400 rounded-xl hover:bg-slate-900 transition border border-transparent hover:border-slate-800"
+                          title="Delete key from Vercel Project Environment"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -621,31 +785,18 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
               {/* Card Footer Actions */}
               <div className="flex items-center justify-between gap-2 pt-4 mt-3 border-t border-slate-800/80">
                 <span className="text-[10px] text-slate-500 font-mono">
-                  {hasKey ? `Length: ${val.length} chars` : "Not configured"}
+                  {isVaulted ? `Environment: ${envVarName}` : "Unencrypted / No Key Set"}
                 </span>
 
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => handleVerify(provider.id)}
-                    disabled={status.status === "verifying"}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition active:scale-95 disabled:opacity-50"
+                    disabled={status.status === "verifying" || (!isVaulted && !hasDraft)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition active:scale-95 disabled:opacity-40"
                   >
                     <RefreshCw className={`w-3 h-3 ${status.status === "verifying" ? "animate-spin" : ""}`} />
                     <span>Test Ping</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      localStorage.setItem("sentinel_api_keys", JSON.stringify(keys));
-                      showToast(`Saved ${provider.name} key to vault.`);
-                    }}
-                    disabled={!hasKey}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded-lg text-xs font-semibold transition active:scale-95 disabled:opacity-40"
-                  >
-                    <Check className="w-3 h-3" />
-                    <span>Save</span>
                   </button>
                 </div>
               </div>

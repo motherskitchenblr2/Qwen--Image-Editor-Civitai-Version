@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PROVIDER_ENV_MAP } from "../vault/route";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,13 +11,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
     }
 
+    const envKey = provider ? PROVIDER_ENV_MAP[provider] : null;
+    let effectiveKey = (apiKey || "").trim();
+    if (!effectiveKey || effectiveKey.includes("*") || effectiveKey === "__FROM_ENV__") {
+      effectiveKey = (envKey && process.env[envKey]) ? process.env[envKey] : "";
+    }
+
     const systemInstruction =
       "You are a master image editing prompt engineer for Qwen-Image-Edit and Stable Diffusion DiT pipelines. " +
       "Rewrite and enrich the user's edit instruction to be vivid, high-detail, visually striking, with exact lighting, texture, and composition details. " +
       "Return ONLY the enhanced prompt string without explanations, quotes, or markdown preambles.";
 
-    if (provider === "gemini" && apiKey) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    if (provider === "gemini" && effectiveKey) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${effectiveKey}`;
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -41,11 +50,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (provider === "groq" && apiKey) {
+    if (provider === "groq" && effectiveKey) {
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${effectiveKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -69,11 +78,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (provider === "openrouter" && apiKey) {
+    if (provider === "openrouter" && effectiveKey) {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${effectiveKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
