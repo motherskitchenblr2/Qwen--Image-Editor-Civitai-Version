@@ -227,22 +227,29 @@ export async function POST(req: NextRequest) {
       }
 
       case "cloudflare_ai": {
-        const cfAcc = process.env.CLOUDFLARE_ACCOUNT_ID || "08c4584f2d7f89d42713e4fdd5bb9538";
+        const cfAcc = process.env.CLOUDFLARE_ACCOUNT_ID || "";
+        const latency = Date.now() - startTime;
+        if (!cfAcc) {
+          return NextResponse.json({
+            success: true,
+            latency,
+            message: "Cloudflare Workers AI key configured (set CLOUDFLARE_ACCOUNT_ID for edge verification).",
+          });
+        }
         const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAcc}/tokens/verify`, {
           headers: { Authorization: `Bearer ${effectiveKey}` },
           signal: AbortSignal.timeout(6000),
         }).catch(() => null);
-        const latency = Date.now() - startTime;
         if (res && res.ok) {
           return NextResponse.json({
             success: true,
-            latency,
+            latency: Date.now() - startTime,
             message: "Cloudflare Workers AI edge verified!",
           });
         }
         return NextResponse.json({
           success: true,
-          latency,
+          latency: Date.now() - startTime,
           message: "Cloudflare Workers AI key configured.",
         });
       }

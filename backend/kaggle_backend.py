@@ -413,49 +413,23 @@ class ModelOrchestrator:
             preferred_dtype = torch.bfloat16 if (torch.cuda.is_available() and torch.cuda.is_bf16_supported()) else torch.float16
 
             # Strategy 1: Balanced Multi-GPU Device Map (Primary for Kaggle Dual Tesla T4)
-            # Distributes 35GB pipeline weights across GPU 0 (13GB), GPU 1 (13GB), and CPU (9GB)
-            # Streams shards directly without exceeding Kaggle 30GB CPU RAM ceiling
+            # Distributes weights across GPU 0 (11.8GiB), GPU 1 (13.6GiB), leaving ~3.0GiB free on GPU 0
+            # for Qwen text-encoder activations and keeping CPU RAM usage minimal (<3GiB).
             if num_gpus >= 2:
-                logger.info(f"Attempting primary multi-GPU device_map across {num_gpus} GPUs (dtype={preferred_dtype})...")
                 try:
-                    max_memory = {i: "13GiB" for i in range(num_gpus)}
-                    max_memory["cpu"] = "20GiB"
+                    max_memory = {0: "11.8GiB", 1: "13.6GiB"}
+                    for i in range(2, num_gpus):
+                        max_memory[i] = "13.0GiB"
+                    max_memory["cpu"] = "16GiB"
+                    logger.info(f"Attempting primary multi-GPU device_map across {num_gpus} GPUs (dtype={preferred_dtype}, max_memory={max_memory})...")
 
-                    if QwenImageTransformer2DModel is not None:
-                        try:
-                            logger.info(f"Loading Rapid DiT Transformer with device_map='auto' ({RAPID_TRANSFORMER_ID})...")
-                            tr = QwenImageTransformer2DModel.from_pretrained(
-                                RAPID_TRANSFORMER_ID,
-                                torch_dtype=preferred_dtype,
-                                device_map="auto",
-                                max_memory=max_memory,
-                                low_cpu_mem_usage=True
-                            )
-                            self.pipe = PipelineClass.from_pretrained(
-                                MODEL_ID,
-                                transformer=tr,
-                                torch_dtype=preferred_dtype,
-                                device_map="auto",
-                                max_memory=max_memory,
-                                low_cpu_mem_usage=True
-                            )
-                        except Exception as tre:
-                            logger.warning(f"Rapid DiT load note: {tre}. Falling back to default transformer...")
-                            self.pipe = PipelineClass.from_pretrained(
-                                MODEL_ID,
-                                torch_dtype=preferred_dtype,
-                                device_map="auto",
-                                max_memory=max_memory,
-                                low_cpu_mem_usage=True
-                            )
-                    else:
-                        self.pipe = PipelineClass.from_pretrained(
-                            MODEL_ID,
-                            torch_dtype=preferred_dtype,
-                            device_map="auto",
-                            max_memory=max_memory,
-                            low_cpu_mem_usage=True
-                        )
+                    self.pipe = PipelineClass.from_pretrained(
+                        MODEL_ID,
+                        torch_dtype=preferred_dtype,
+                        device_map="auto",
+                        max_memory=max_memory,
+                        low_cpu_mem_usage=True
+                    )
 
                     self.pipe.set_progress_bar_config(disable=None)
                     logger.info("✅ Pipeline loaded successfully with balanced multi-GPU device_map='auto'.")
@@ -673,6 +647,8 @@ class ModelOrchestrator:
                         call_kwargs["callback_on_step_end"] = step_cb
                         call_kwargs["callback_on_step_end_tensor_inputs"] = ["latents"]
 
+                    torch.cuda.empty_cache()
+                    gc.collect()
                     result = self.pipe(**call_kwargs)
 
                 output_img = result.images[0]

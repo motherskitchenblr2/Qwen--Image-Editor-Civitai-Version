@@ -189,21 +189,6 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
         seed: seed === "" ? null : Number(seed),
       };
 
-      // Auto-attach API key from Sentinel Gateway if configured
-      try {
-        const stored = localStorage.getItem("sentinel_api_keys");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (selectedModel === "google-imagen" && parsed.gemini) {
-            payload.apiKey = parsed.gemini;
-          } else if (selectedModel === "qwen-cloud" && parsed.dashscope) {
-            payload.apiKey = parsed.dashscope;
-          } else if (selectedModel.startsWith("cf-") && parsed.cloudflare_ai) {
-            payload.apiKey = parsed.cloudflare_ai;
-          }
-        }
-      } catch (e) {}
-
       if (activeMode === "edit" && sourceImage) {
         payload.image_base64 = sourceImage;
       }

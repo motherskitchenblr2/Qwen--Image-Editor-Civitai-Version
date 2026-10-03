@@ -402,10 +402,7 @@ export default function ImageEditorStudio() {
     if (!prompt.trim()) return;
     setIsEnhancingPrompt(true);
     try {
-      const storedKeys = localStorage.getItem("sentinel_api_keys");
       const activeCopilot = localStorage.getItem("sentinel_active_copilot") || "gemini";
-      const keys = storedKeys ? JSON.parse(storedKeys) : {};
-      const apiKey = keys[activeCopilot] || "";
 
       const res = await fetch("/api/sentinel/enhance", {
         method: "POST",
@@ -413,7 +410,6 @@ export default function ImageEditorStudio() {
         body: JSON.stringify({
           prompt,
           provider: activeCopilot,
-          apiKey,
         }),
       });
 
@@ -789,18 +785,6 @@ export default function ImageEditorStudio() {
             ? "@cf/black-forest-labs/flux-1-schnell"
             : "nano-banana";
 
-        // Auto-attach API key from Sentinel Gateway if present
-        let userKey = null;
-        try {
-          const stored = localStorage.getItem("sentinel_api_keys");
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (selectedStudioModel === "google-imagen") userKey = parsed.gemini;
-            else if (selectedStudioModel === "qwen-cloud") userKey = parsed.dashscope;
-            else if (selectedStudioModel.startsWith("cf-")) userKey = parsed.cloudflare_ai;
-          }
-        } catch (e) {}
-
         const res = await fetch("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -811,7 +795,6 @@ export default function ImageEditorStudio() {
             mode: studioMode,
             image_base64: studioMode === "edit" ? originalImage : undefined,
             seed: seed === "" ? null : Number(seed),
-            apiKey: userKey || undefined,
           }),
         });
 

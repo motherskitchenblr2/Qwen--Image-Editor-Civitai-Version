@@ -1,9 +1,11 @@
 # Node dependencies & Next.js builds
+node_modules
 node_modules/
 .next/
 out/
 build/
 dist/
+coverage/
 
 # Python cache & runtime logs
 __pycache__/

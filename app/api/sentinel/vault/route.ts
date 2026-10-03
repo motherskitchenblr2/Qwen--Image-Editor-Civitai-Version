@@ -10,7 +10,8 @@ function maskSecret(secret?: string): string {
 
 // Helper to query Vercel API for environment variables
 async function getVercelEnvVars(vtoken: string, projectId: string, teamId: string) {
-  const url = `https://api.vercel.com/v10/projects/${projectId}/env?teamId=${teamId}`;
+  const teamQuery = teamId ? `?teamId=${encodeURIComponent(teamId)}` : "";
+  const url = `https://api.vercel.com/v10/projects/${projectId}/env${teamQuery}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${vtoken}` },
     cache: "no-store",
@@ -76,21 +77,22 @@ export async function POST(req: NextRequest) {
 
     // 2. Persist to Vercel Project Encrypted Environment Variables if credentials are present
     const vtoken = process.env.VERCEL_TOKEN;
-    const projectId = process.env.VERCEL_PROJECT_ID || "prj_onSBHHpaYBeZVUJ6KAKhdRnqG6w5";
-    const teamId = process.env.VERCEL_TEAM_ID || "team_GJ823s9O5bAbHRCpuFt9mQmc";
+    const projectId = process.env.VERCEL_PROJECT_ID || "";
+    const teamId = process.env.VERCEL_TEAM_ID || "";
 
     let savedToVercel = false;
     let vercelMessage = "";
 
     if (vtoken && projectId) {
       try {
+        const teamQuery = teamId ? `?teamId=${encodeURIComponent(teamId)}` : "";
         const existingVars = await getVercelEnvVars(vtoken, projectId, teamId);
         const match = existingVars.find((v) => v.key === envKey);
 
         if (match) {
           // Delete existing and re-create to ensure fresh encrypted state
           await fetch(
-            `https://api.vercel.com/v10/projects/${projectId}/env/${match.id}?teamId=${teamId}`,
+            `https://api.vercel.com/v10/projects/${projectId}/env/${match.id}${teamQuery}`,
             {
               method: "DELETE",
               headers: { Authorization: `Bearer ${vtoken}` },
@@ -100,7 +102,7 @@ export async function POST(req: NextRequest) {
 
         // Create encrypted env var
         const createRes = await fetch(
-          `https://api.vercel.com/v10/projects/${projectId}/env?teamId=${teamId}`,
+          `https://api.vercel.com/v10/projects/${projectId}/env${teamQuery}`,
           {
             method: "POST",
             headers: {
@@ -130,7 +132,7 @@ export async function POST(req: NextRequest) {
           const epMatch = existingVars.find((v) => v.key === epKey);
           if (epMatch) {
             await fetch(
-              `https://api.vercel.com/v10/projects/${projectId}/env/${epMatch.id}?teamId=${teamId}`,
+              `https://api.vercel.com/v10/projects/${projectId}/env/${epMatch.id}${teamQuery}`,
               {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${vtoken}` },
@@ -138,7 +140,7 @@ export async function POST(req: NextRequest) {
             );
           }
           await fetch(
-            `https://api.vercel.com/v10/projects/${projectId}/env?teamId=${teamId}`,
+            `https://api.vercel.com/v10/projects/${projectId}/env${teamQuery}`,
             {
               method: "POST",
               headers: {
@@ -186,16 +188,17 @@ export async function DELETE(req: NextRequest) {
     delete process.env[envKey];
 
     const vtoken = process.env.VERCEL_TOKEN;
-    const projectId = process.env.VERCEL_PROJECT_ID || "prj_onSBHHpaYBeZVUJ6KAKhdRnqG6w5";
-    const teamId = process.env.VERCEL_TEAM_ID || "team_GJ823s9O5bAbHRCpuFt9mQmc";
+    const projectId = process.env.VERCEL_PROJECT_ID || "";
+    const teamId = process.env.VERCEL_TEAM_ID || "";
 
     if (vtoken && projectId) {
       try {
+        const teamQuery = teamId ? `?teamId=${encodeURIComponent(teamId)}` : "";
         const existingVars = await getVercelEnvVars(vtoken, projectId, teamId);
         const match = existingVars.find((v) => v.key === envKey);
         if (match) {
           await fetch(
-            `https://api.vercel.com/v10/projects/${projectId}/env/${match.id}?teamId=${teamId}`,
+            `https://api.vercel.com/v10/projects/${projectId}/env/${match.id}${teamQuery}`,
             {
               method: "DELETE",
               headers: { Authorization: `Bearer ${vtoken}` },

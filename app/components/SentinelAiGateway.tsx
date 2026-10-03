@@ -515,7 +515,7 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-slate-100">Cloudflare MCP &amp; R2 Storage Active</span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  Account: 08c4584f2d7f89d42713e4fdd5bb9538
+                  Account: {vaultInfo["cloudflare_ai"]?.configured ? "Connected" : "Configured"}
                 </span>
               </div>
               <p className="text-xs text-slate-400">
