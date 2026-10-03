@@ -55,7 +55,7 @@ MODEL_ID = BASE_MODEL_ID
 CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY", "")
 
 # ─── 0. INACTIVITY WATCHDOG & AUTO-SHUTDOWN GUARD ───────────────────────────
-IDLE_TIMEOUT_SECONDS = int(os.environ.get("IDLE_TIMEOUT_SECONDS", 5 * 60)) # Default 5 minutes (Recommended) -> auto-stop GPU
+IDLE_TIMEOUT_SECONDS = int(os.environ.get("IDLE_TIMEOUT_SECONDS", 20 * 60)) # Default 20 minutes (prevents premature termination) -> auto-stop GPU
 AUTO_SHUTDOWN_ENABLED = True
 last_activity_time = time.time()
 
@@ -144,6 +144,25 @@ def ensure_rclone_installed() -> bool:
 def setup_rclone(client_id: Optional[str] = None, client_secret: Optional[str] = None, token_json: Optional[str] = None) -> bool:
     """Write rclone config securely for Google Drive access and ensure rclone binary is ready."""
     global RCLONE_CONF_FILE, GDRIVE_ENABLED
+
+    # 1. Discover if an existing valid configuration is already present on disk
+    for candidate in [
+        pathlib.Path.home() / ".config" / "rclone" / "rclone.conf",
+        pathlib.Path("/root/.config/rclone/rclone.conf"),
+        WORKING_DIR / "rclone.conf"
+    ]:
+        try:
+            if candidate.exists():
+                text = candidate.read_text()
+                if "token =" in text and len(text.split("token =")[1].strip()) > 20:
+                    ensure_rclone_installed()
+                    RCLONE_CONF_FILE = candidate
+                    os.environ["RCLONE_CONFIG"] = str(candidate)
+                    GDRIVE_ENABLED = True
+                    logger.info(f"✅ Existing valid rclone configuration active at {candidate}")
+                    return True
+        except Exception:
+            pass
 
     cid = (client_id or GDRIVE_CLIENT_ID_FALLBACK or "").strip()
     csec = (client_secret or GDRIVE_CLIENT_SECRET_FALLBACK or "").strip()
@@ -872,6 +891,33 @@ def set_idle_timeout(cfg: IdleTimeoutConfig):
         "timeout_minutes": timeout_m,
         "message": f"Auto-shutdown successfully scheduled for {timeout_m} minutes of inactivity."
     }
+
+
+class StorageConfigRequest(BaseModel):
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
+    token_json: Optional[str] = None
+    rclone_conf: Optional[str] = None
+
+
+@app.post("/api/storage/config")
+def update_storage_config(req: StorageConfigRequest):
+    """Dynamically configure Google Drive Vault via rclone."""
+    touch_activity()
+    if req.rclone_conf:
+        conf_dir = pathlib.Path.home() / ".config" / "rclone"
+        conf_dir.mkdir(parents=True, exist_ok=True)
+        conf_file = conf_dir / "rclone.conf"
+        conf_file.write_text(req.rclone_conf)
+        os.chmod(conf_file, 0o600)
+        global RCLONE_CONF_FILE, GDRIVE_ENABLED
+        RCLONE_CONF_FILE = conf_file
+        GDRIVE_ENABLED = True
+        return {"status": "configured", "gdrive_enabled": True}
+    if req.token_json:
+        ok = setup_rclone(req.client_id, req.client_secret, req.token_json)
+        return {"status": "configured" if ok else "failed", "gdrive_enabled": ok}
+    return {"status": "ignored", "gdrive_enabled": GDRIVE_ENABLED}
 
 
 @app.post("/api/reload")

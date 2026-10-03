@@ -141,6 +141,55 @@ export default function ImageEditorStudio() {
 
   // Mount effect: load saved and initiate auto-discovery polling
   useEffect(() => {
+    // 1. Immediately restore cached LoRAs from browser storage (0ms flash, zero data loss on refresh)
+    try {
+      const cachedLoras = localStorage.getItem("qwen_vault_loras");
+      if (cachedLoras) {
+        const parsed = JSON.parse(cachedLoras);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAvailableLoras(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("Cached LoRAs load error:", e);
+    }
+
+    // 2. Load permanent Google Drive Vault catalog from server
+    fetch("/api/vault/loras")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.loras && Array.isArray(data.loras) && data.loras.length > 0) {
+          setAvailableLoras((prev) => {
+            const map = new Map<string, BackendLoRA>();
+            data.loras.forEach((l: BackendLoRA) => map.set(l.filename, l));
+            prev.forEach((l) => {
+              if (map.has(l.filename)) {
+                map.set(l.filename, { ...map.get(l.filename)!, ...l });
+              } else {
+                map.set(l.filename, l);
+              }
+            });
+            const merged = Array.from(map.values());
+            try {
+              localStorage.setItem("qwen_vault_loras", JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
+      })
+      .catch((err) => console.warn("Google Drive Vault catalog fetch:", err));
+
+    // 3. Immediately restore saved backend URL and perform health check
+    try {
+      const savedBackend = localStorage.getItem("qwen_backend_url");
+      if (savedBackend) {
+        const cleanSaved = savedBackend.replace(/\/+$/, "");
+        setBackendUrl(cleanSaved);
+        checkBackend(cleanSaved);
+      }
+    } catch {}
+
+    // 4. Restore idle timeout watchdog preferences
     try {
       const savedIdleM = localStorage.getItem("qwen_idle_timeout_minutes");
       if (savedIdleM) {
@@ -306,7 +355,24 @@ export default function ImageEditorStudio() {
       const res = await fetch(`${baseUrl}/api/loras`);
       if (res.ok) {
         const data = await res.json();
-        setAvailableLoras(data.loras || []);
+        const backendLoras: BackendLoRA[] = data.loras || [];
+        setAvailableLoras((prev) => {
+          const map = new Map<string, BackendLoRA>();
+          prev.forEach((l) => map.set(l.filename, l));
+          backendLoras.forEach((bl) => {
+            const existing = map.get(bl.filename);
+            if (existing) {
+              map.set(bl.filename, { ...existing, ...bl });
+            } else {
+              map.set(bl.filename, bl);
+            }
+          });
+          const merged = Array.from(map.values());
+          try {
+            localStorage.setItem("qwen_vault_loras", JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
       }
     } catch (e) {
       console.error("Failed to fetch LoRAs:", e);
@@ -426,6 +492,19 @@ export default function ImageEditorStudio() {
         xhr.onerror = () => reject(new Error("Network connection error during LoRA upload."));
         xhr.send(formData);
       });
+
+      // Register in local Next.js Vault registry
+      try {
+        await fetch("/api/vault/loras", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: file.name.replace(".safetensors", ""),
+            filename: file.name.endsWith(".safetensors") ? file.name : `${file.name}.safetensors`,
+            size_mb: Math.round((file.size / (1024 * 1024)) * 100) / 100,
+          }),
+        });
+      } catch {}
 
       // Refresh available LoRAs from backend
       await fetchAvailableLoras(cleanUrl);

@@ -1,0 +1,272 @@
+[
+  {
+    "name": "Add More Details - Detail Enhancer - Tweaker -  -  LoR",
+    "filename": "Add_More_Details_-_Detail_Enhancer___Tweaker________LoRA.safetensors",
+    "size_mb": 9.11,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1V2nUtQbahmdBV2_SciWiHQflGlxJR3ga"
+  },
+  {
+    "name": "Blonde Girl Ai Character NSFW NSFW Multi Model - Z Image Turbo - Qwen Imag",
+    "filename": "Blonde_Girl_Ai_Character__NSFW_NSFW__Multi_Model_-_Z_Image_Turbo___Qwen_Image.safetensors",
+    "size_mb": 281.47,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1AJu2MmCYUShzpD_Ct_m90coyPAvAoKUD"
+  },
+  {
+    "name": "Japanese Asian Ai Character - SFW NSFW - Qwen 2512 - Z Image Turbo - Qwen Imag",
+    "filename": "Japanese_Asian_Ai_Character_-_SFW_NSFW_-_Qwen_2512___Z_Image_Turbo___Qwen_Image.safetensors",
+    "size_mb": 281.47,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1L3ZQ5JiDHK1XQ6-iDZUO2MUas8MD7gkA"
+  },
+  {
+    "name": "Mannequins - Pose References Qwen-Image-Edit 2509 Flux 2 Klein 9B Base",
+    "filename": "Mannequins___Pose_References__Qwen-Image-Edit_2509__Flux_2_Klein_9B_Base_.safetensors",
+    "size_mb": 80.08,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1UO3LKBDErks5J3BtV8e1WLCN8GLiPSIl"
+  },
+  {
+    "name": "Qwen-Image-Edit-2509-Manga-Ton",
+    "filename": "Qwen-Image-Edit-2509-Manga-Tone.safetensors",
+    "size_mb": 562.82,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1lKghn4Lfma_-CY6Dckn-SBWj3MTFnu4s"
+  },
+  {
+    "name": "Qwen-Image-Edit-2509-Photo-to-Anim",
+    "filename": "Qwen-Image-Edit-2509-Photo-to-Anime.safetensors",
+    "size_mb": 281.47,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1HelvbVs65H-Od6OiuWQEmjWyIBgAedEk"
+  },
+  {
+    "name": "Qwen-Image-Edit-2511-Multiple-Angles-LoR",
+    "filename": "Qwen-Image-Edit-2511-Multiple-Angles-LoRA.safetensors",
+    "size_mb": 281.47,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1LlBf2AXQN9IHvyHFuw5UCS7xtNH6yh5N"
+  },
+  {
+    "name": "Qwen-Image-Edit-2511-monochrome-charachang",
+    "filename": "Qwen-Image-Edit-2511-monochrome-charachange.safetensors",
+    "size_mb": 562.82,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1oNdlshxRPkgnqyWN5BfBo0QL69SEZFUs"
+  },
+  {
+    "name": "Qwen-Image-Edit-LoRA Chibi comic realistic anime",
+    "filename": "Qwen-Image-Edit-LoRA__Chibi__comic__realistic__anime_.safetensors",
+    "size_mb": 562.72,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1dqxE2Ic1LGyVBtfJJuJdwDYaIE5M0moI"
+  },
+  {
+    "name": "Qwen-Image-Edit Lowres-Fix Input Image Repair",
+    "filename": "Qwen-Image-Edit_Lowres-Fix__Input_Image_Repair_.safetensors",
+    "size_mb": 450.18,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "15iR3C3bMkGHRQqtBPtDl_lwalaV-6fVc"
+  },
+  {
+    "name": "Qwen-Image-Edit Semi-Realistic Detaile",
+    "filename": "Qwen-Image-Edit_Semi-Realistic_Detailer.safetensors",
+    "size_mb": 720.13,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1jxEg0PJ2sbyhlb5M8n-HOWus4w4tgMtr"
+  },
+  {
+    "name": "Qwen-Image-Edit Smoothif",
+    "filename": "Qwen-Image-Edit_Smoothify.safetensors",
+    "size_mb": 720.13,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1t6EUubZUCdsB20mgrbXC__XblBs4q95f"
+  },
+  {
+    "name": "Qwen Edit versatile photo pose",
+    "filename": "Qwen_Edit_versatile_photo_poses.safetensors",
+    "size_mb": 225.18,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1PUuL5FFrDSePNxY_2aTneTyesZSouniA"
+  },
+  {
+    "name": "Qwen Image 2 1 Consistency LoR",
+    "filename": "Qwen_Image_2_1_Consistency_LoRA.safetensors",
+    "size_mb": 152.05,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1a--jvikE8PWd6aidz9CJUy3sLKLuifHl"
+  },
+  {
+    "name": "Qwen Image Edit 2096 Lightning Loras - Re-ranke",
+    "filename": "Qwen_Image_Edit_2096_Lightning_Loras_-_Re-ranked.safetensors",
+    "size_mb": 202.75,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1hf1XXITZndDHVEKi77t9Qzgh5oMINe5F"
+  },
+  {
+    "name": "Qwen Image Edit Easy Inpaint LoR",
+    "filename": "Qwen_Image_Edit_Easy_Inpaint_LoRA.safetensors",
+    "size_mb": 140.85,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1b0d_jqqTIYC5znFHOprDmEPnVZSJaYx8"
+  },
+  {
+    "name": "Qwen Image Edit Middle Finger LoR",
+    "filename": "Qwen_Image_Edit_Middle_Finger_LoRA.safetensors",
+    "size_mb": 281.47,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1XtJimm4pYao4m2-B9tY15l6QzvM3bUmQ"
+  },
+  {
+    "name": "SHORT HAIR ASIAN SFW NSFW - Multimodel QWEN IMAGE - OWEN 2512 - ZiT - ZiB",
+    "filename": "SHORT_HAIR_ASIAN__SFW_NSFW__-_Multimodel__QWEN_IMAGE___OWEN_2512___ZiT___ZiB_.safetensors",
+    "size_mb": 281.47,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1RqVPWtKXTRyk7QjhSVaKqdtN6OeVoqUB"
+  },
+  {
+    "name": "UNCROP INPAINT OUTPAINT WITH CONTEXT IMAGE for F 2 Klein 9B - QWEN IMAGE EDIT LOR",
+    "filename": "UNCROP_INPAINT_OUTPAINT_WITH_CONTEXT_IMAGE_for_F_2_Klein_9B___QWEN_IMAGE_EDIT_LORA.safetensors",
+    "size_mb": 562.72,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "14VhsjEjZ9K1TvNWUm9Z17VLbviWLqqgr"
+  },
+  {
+    "name": "Qwen-Image Emotional Photography -",
+    "filename": "_Qwen-Image_Emotional_Photography_____.safetensors",
+    "size_mb": 70.72,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1DIDLaSnksbL-zuS4TZsRdYudkfqvYYE9"
+  },
+  {
+    "name": "Qwen Edit OOTD Lor",
+    "filename": "_Qwen_Edit__OOTD_Lora.safetensors",
+    "size_mb": 450.19,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1GtwmjLxPmmkPbZTRBlluO3DglEpYORuR"
+  },
+  {
+    "name": "Qwen Image Asian Mix Lor",
+    "filename": "_Qwen_Image__Asian_Mix_Lora.safetensors",
+    "size_mb": 563.26,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1YkMZR_Ue6_RC1m-5A7adkVr7Ytn9Dq0Q"
+  },
+  {
+    "name": "civitai test lor",
+    "filename": "civitai_test_lora.safetensors",
+    "size_mb": 242.05,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1G0Q5KOPfb0fvKSrpHZhQSheCLKPd5uiU"
+  },
+  {
+    "name": "lora 179096243",
+    "filename": "lora_1790962432.safetensors",
+    "size_mb": 80.08,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1RSVluJjNiRXamdPkTMaPBfBgtdkA95n_"
+  },
+  {
+    "name": "lora 179096276",
+    "filename": "lora_1790962765.safetensors",
+    "size_mb": 562.82,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1m4h1ORXoyTYHtYeyOvkHzncXhL4Uqa2G"
+  },
+  {
+    "name": "qwen-edit- -  -  -",
+    "filename": "qwen-edit-____________.safetensors",
+    "size_mb": 450.18,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1JfVlaKmbuVx18IvuWKQXOK-Po568bVdn"
+  },
+  {
+    "name": "qwen-edit-ski",
+    "filename": "qwen-edit-skin.safetensors",
+    "size_mb": 281.47,
+    "is_active": false,
+    "scale": 0.8,
+    "trigger_words": "",
+    "storage": "Google Drive Vault",
+    "gdrive_id": "1YRFgvbl9T5kIyzwT_unoGO0NR5koeTLW"
+  }
+]

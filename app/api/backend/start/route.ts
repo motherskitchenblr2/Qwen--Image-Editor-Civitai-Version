@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Read packaged notebook
+    // Read packaged notebook template
     const nbPath = path.join(process.cwd(), "app", "api", "backend", "start", "notebook.json");
     if (!fs.existsSync(nbPath)) {
       return NextResponse.json(
@@ -28,12 +28,45 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const nbText = fs.readFileSync(nbPath, "utf-8");
+    const nbObj = JSON.parse(fs.readFileSync(nbPath, "utf-8"));
+    const body = await req.json().catch(() => ({}));
+
+    const gdriveToken = body.gdrive_token || process.env.GDRIVE_TOKEN_JSON;
+    const gdriveCid = body.gdrive_client_id || process.env.GDRIVE_CLIENT_ID;
+    const gdriveCsec = body.gdrive_client_secret || process.env.GDRIVE_CLIENT_SECRET;
+
+    // If Google Drive token is available in runtime env or request, dynamically inject rclone setup cell in memory
+    if (gdriveToken && typeof gdriveToken === "string") {
+      const escapedToken = gdriveToken.trim();
+      const escapedCid = (gdriveCid || "").trim();
+      const escapedCsec = (gdriveCsec || "").trim();
+
+      const configCell = {
+        cell_type: "code",
+        execution_count: null,
+        id: "cell_gdrive_init",
+        metadata: {},
+        outputs: [],
+        source: [
+          "# Dynamic Google Drive Vault Provisioning\n",
+          "import pathlib, os\n",
+          "conf_dir = pathlib.Path('/root/.config/rclone')\n",
+          "conf_dir.mkdir(parents=True, exist_ok=True)\n",
+          `cfg = \"\"\"[gdrive]\\ntype = drive\\nscope = drive\\nclient_id = ${escapedCid}\\nclient_secret = ${escapedCsec}\\ntoken = ${escapedToken}\\n\"\"\"\n`,
+          "(conf_dir / 'rclone.conf').write_text(cfg)\n",
+          "os.chmod(conf_dir / 'rclone.conf', 0o600)\n",
+          "print('✅ Dynamic rclone configuration provisioned successfully.')\n",
+        ],
+      };
+
+      // Insert before server execution cell
+      nbObj.cells.splice(2, 0, configCell);
+    }
 
     const payload = {
       slug: KERNEL_SLUG,
       newTitle: KERNEL_TITLE,
-      text: nbText,
+      text: JSON.stringify(nbObj, null, 2),
       language: "python",
       kernelType: "notebook",
       isPrivate: false,

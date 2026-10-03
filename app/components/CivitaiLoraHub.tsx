@@ -165,6 +165,19 @@ export default function CivitaiLoraHub({
 
       const safeFilename = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
       const cleanFilename = safeFilename.endsWith(".safetensors") ? safeFilename : `${safeFilename}.safetensors`;
+
+      try {
+        await fetch("/api/vault/loras", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: file.name.replace(".safetensors", ""),
+            filename: cleanFilename,
+            size_mb: Math.round((file.size / (1024 * 1024)) * 100) / 100,
+          }),
+        });
+      } catch {}
+
       onLoraDownloaded(cleanFilename);
       alert(`✅ Local LoRA "${file.name}" uploaded successfully! It is now available in your LoRA Model Dropdown in Studio.`);
     } catch (err: any) {
