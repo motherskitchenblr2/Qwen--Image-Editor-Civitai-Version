@@ -46,6 +46,17 @@ const AVAILABLE_MODELS: AiModelConfig[] = [
     accentColor: "from-amber-400 to-yellow-500",
   },
   {
+    id: "google-imagen",
+    name: "Google Imagen 3",
+    provider: "Google AI Studio",
+    badge: "Photorealistic DiT",
+    type: "text2img",
+    latency: "~3.8s",
+    status: "active",
+    description: "Google AI Studio premier high-fidelity neural image synthesis with superb text rendering and realism.",
+    accentColor: "from-blue-500 to-indigo-500",
+  },
+  {
     id: "qwen-cloud",
     name: "Alibaba Qwen-Image",
     provider: "Alibaba ModelStudio",
@@ -178,6 +189,21 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
         seed: seed === "" ? null : Number(seed),
       };
 
+      // Auto-attach API key from Sentinel Gateway if configured
+      try {
+        const stored = localStorage.getItem("sentinel_api_keys");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (selectedModel === "google-imagen" && parsed.gemini) {
+            payload.apiKey = parsed.gemini;
+          } else if (selectedModel === "qwen-cloud" && parsed.dashscope) {
+            payload.apiKey = parsed.dashscope;
+          } else if (selectedModel.startsWith("cf-") && parsed.cloudflare_ai) {
+            payload.apiKey = parsed.cloudflare_ai;
+          }
+        }
+      } catch (e) {}
+
       if (activeMode === "edit" && sourceImage) {
         payload.image_base64 = sourceImage;
       }
@@ -248,31 +274,33 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
       </div>
 
       {/* ── Mode Selection & Model Switcher: Equal-Size Inline Bar ── */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-4">
+      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 sm:p-4 space-y-4">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Mode Switcher: Equal-Sized Buttons in One Line */}
-          <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800 w-full md:w-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-950 p-1 sm:p-1.5 rounded-xl border border-slate-800 w-full md:w-auto">
             <button
               onClick={() => setActiveMode("generate")}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 h-9 rounded-lg text-xs font-bold transition-all ${
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-5 h-9 rounded-lg text-xs font-bold transition-all ${
                 activeMode === "generate"
                   ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/25"
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>🎨 Generate Image (Text-to-Image)</span>
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span>🎨 Generate</span>
+              <span className="hidden sm:inline"> Image (Text-to-Image)</span>
             </button>
             <button
               onClick={() => setActiveMode("edit")}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 h-9 rounded-lg text-xs font-bold transition-all ${
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-5 h-9 rounded-lg text-xs font-bold transition-all ${
                 activeMode === "edit"
                   ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/25"
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <ImageIcon className="w-3.5 h-3.5" />
-              <span>✨ Edit Image (Image-to-Image)</span>
+              <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+              <span>✨ Edit</span>
+              <span className="hidden sm:inline"> Image (Image-to-Image)</span>
             </button>
           </div>
 
@@ -282,7 +310,7 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              className="bg-slate-950 border border-slate-700 hover:border-cyan-500/60 text-slate-200 rounded-xl px-3 h-9 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-cyan-500 cursor-pointer"
+              className="w-full sm:w-auto bg-slate-950 border border-slate-700 hover:border-cyan-500/60 text-slate-200 rounded-xl px-3 h-9 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-cyan-500 cursor-pointer"
             >
               {filteredModels.map((m) => (
                 <option key={m.id} value={m.id} disabled={m.status === "coming_soon"}>
@@ -294,7 +322,7 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
         </div>
 
         {/* Model Quick Switcher Chips */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-2 border-t border-slate-800/60">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 pt-2 border-t border-slate-800/60">
           {filteredModels.map((m) => {
             const isSelected = selectedModel === m.id;
             return (

@@ -52,7 +52,7 @@ export default function ImageEditorStudio() {
   // Navigation Tabs: Studio & Editor | AI Generator Hub | Civitai.red LoRA Hub | Outputs Gallery | Sentinel Gateway
   const [activeTab, setActiveTab] = useState<"studio" | "generators" | "loras" | "gallery" | "sentinel">("studio");
   const [studioMode, setStudioMode] = useState<"edit" | "generate">("edit");
-  const [selectedStudioModel, setSelectedStudioModel] = useState<"kaggle-gpu" | "qwen-cloud" | "nano-banana" | "cf-lucid" | "cf-flux">("kaggle-gpu");
+  const [selectedStudioModel, setSelectedStudioModel] = useState<"kaggle-gpu" | "qwen-cloud" | "nano-banana" | "google-imagen" | "cf-lucid" | "cf-flux">("kaggle-gpu");
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState<boolean>(false);
 
   // Backend connection
@@ -592,10 +592,12 @@ export default function ImageEditorStudio() {
           setViewMode("result");
         }
       } else {
-        // Cloud API Engine: Nano Banana Turbo, Alibaba Qwen Cloud, Cloudflare Workers AI
+        // Cloud API Engine: Nano Banana Turbo, Alibaba Qwen Cloud, Google Imagen 3, Cloudflare Workers AI
         setGenerationStatusText(
           selectedStudioModel === "nano-banana"
             ? "⚡ Synthesizing with Nano Banana Turbo (~1.5s)..."
+            : selectedStudioModel === "google-imagen"
+            ? "Synthesizing with Google Imagen 3 (AI Studio)..."
             : selectedStudioModel === "qwen-cloud"
             ? `Synthesizing with Alibaba ${studioMode === "edit" ? "qwen-image-edit" : "qwen-image"}...`
             : "Synthesizing with Cloudflare Workers AI (~3s)..."
@@ -605,11 +607,25 @@ export default function ImageEditorStudio() {
         const targetCloudModel =
           selectedStudioModel === "qwen-cloud"
             ? (studioMode === "edit" ? "qwen-image-edit" : "qwen-image")
+            : selectedStudioModel === "google-imagen"
+            ? "google-imagen"
             : selectedStudioModel === "cf-lucid"
             ? "@cf/leonardo/lucid-origin"
             : selectedStudioModel === "cf-flux"
             ? "@cf/black-forest-labs/flux-1-schnell"
             : "nano-banana";
+
+        // Auto-attach API key from Sentinel Gateway if present
+        let userKey = null;
+        try {
+          const stored = localStorage.getItem("sentinel_api_keys");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (selectedStudioModel === "google-imagen") userKey = parsed.gemini;
+            else if (selectedStudioModel === "qwen-cloud") userKey = parsed.dashscope;
+            else if (selectedStudioModel.startsWith("cf-")) userKey = parsed.cloudflare_ai;
+          }
+        } catch (e) {}
 
         const res = await fetch("/api/generate", {
           method: "POST",
@@ -621,6 +637,7 @@ export default function ImageEditorStudio() {
             mode: studioMode,
             image_base64: studioMode === "edit" ? originalImage : undefined,
             seed: seed === "" ? null : Number(seed),
+            apiKey: userKey || undefined,
           }),
         });
 
@@ -658,167 +675,209 @@ export default function ImageEditorStudio() {
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-black">
       {/* ── Top Header ────────────────────────────────────────── */}
-      <header className="border-b border-slate-800 bg-slate-900/70 backdrop-blur-xl px-6 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-md">
-        {/* Brand Logo & Name */}
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-tr from-cyan-500 to-indigo-500 p-2.5 rounded-2xl text-black shadow-lg shadow-cyan-500/25">
-            <Sparkles className="w-5 h-5 fill-black" />
-          </div>
-          <div>
-            <h1 className="font-extrabold text-base lg:text-lg leading-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-              Qwen Image Editor Studio
-            </h1>
-            <p className="text-[11px] text-slate-400 font-medium">Dual Tesla T4 &bull; 5 TB Google Drive Vault</p>
-          </div>
-        </div>
+      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl px-3 sm:px-6 py-2.5 lg:py-3 sticky top-0 z-50 shadow-md w-full max-w-full">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-2.5 lg:gap-4 w-full">
+          {/* Top Row on Mobile: Brand on Left, Quick GPU Controls on Right */}
+          <div className="flex items-center justify-between w-full lg:w-auto gap-3">
+            {/* Brand Logo & Name */}
+            <div className="flex items-center gap-2.5">
+              <div className="bg-gradient-to-tr from-cyan-500 to-indigo-500 p-2 rounded-xl text-black shadow-lg shadow-cyan-500/25 shrink-0">
+                <Sparkles className="w-4 h-4 fill-black" />
+              </div>
+              <div>
+                <h1 className="font-extrabold text-sm sm:text-base lg:text-lg leading-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                  Qwen Image Editor Studio
+                </h1>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Dual Tesla T4 &bull; 5 TB Google Drive Vault</p>
+              </div>
+            </div>
 
-        {/* Tab Switcher Navigation */}
-        <div className="flex items-center gap-1.5 bg-slate-950/90 p-1.5 rounded-2xl border border-slate-800/80 shadow-inner">
-          <button
-            onClick={() => setActiveTab("studio")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-              activeTab === "studio"
-                ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Studio &amp; Editor</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("generators")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-              activeTab === "generators"
-                ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            <span>AI Generator Hub</span>
-            <span className="px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/40 rounded-full text-[9px] text-amber-300 font-bold">
-              MULTI-AI
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab("loras")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-              activeTab === "loras"
-                ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Civitai.red LoRA Hub</span>
-            {availableLoras.length > 0 && (
-              <span className="px-1.5 py-0.5 bg-slate-900 border border-slate-700/80 rounded-full text-[10px] text-cyan-300 font-mono font-bold">
-                {availableLoras.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("gallery")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-              activeTab === "gallery"
-                ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <ImageIcon className="w-3.5 h-3.5" />
-            <span>Vault Gallery</span>
-            {gallery.length > 0 && (
-              <span className="px-1.5 py-0.5 bg-slate-900 border border-slate-700/80 rounded-full text-[10px] text-slate-300 font-mono">
-                {gallery.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("sentinel")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-              activeTab === "sentinel"
-                ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Shield className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Sentinel Gateway</span>
-          </button>
-        </div>
+            {/* Mobile GPU Power Toggle Button (Right side on mobile only) */}
+            <div className="flex items-center gap-1.5 lg:hidden shrink-0">
+              {isConnected ? (
+                <button
+                  onClick={handleShutdownGpu}
+                  disabled={isShuttingDown}
+                  title="Turn off GPU"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[11px] font-semibold transition"
+                >
+                  <Power className={`w-3 h-3 ${isShuttingDown ? "animate-spin" : ""}`} />
+                  <span>Stop GPU</span>
+                </button>
+              ) : isStartingGpu ? (
+                <span className="flex items-center gap-1 px-2 py-1 bg-amber-500/20 text-amber-300 rounded-lg text-[10px] font-semibold animate-pulse">
+                  <RefreshCw className="w-3 h-3 animate-spin text-amber-400" />
+                  <span>Booting...</span>
+                </span>
+              ) : (
+                <button
+                  onClick={handleStartGpu}
+                  title="Boot Kaggle GPU"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 rounded-lg text-[11px] font-bold shadow-sm transition"
+                >
+                  <Zap className="w-3 h-3 fill-slate-950" />
+                  <span>Start GPU</span>
+                </button>
+              )}
+              <button
+                onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
+                className="p-1.5 bg-slate-900 border border-slate-800 text-slate-400 rounded-lg"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
 
-        {/* Backend & GPU 1-Click Power Hub */}
-        <div className="flex items-center gap-3">
-          {/* Status Badge */}
-          <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold backdrop-blur-md transition ${
-              isConnected
-                ? "bg-emerald-950/60 border-emerald-700/80 text-emerald-300 shadow-sm shadow-emerald-900/20"
-                : isStartingGpu
-                ? "bg-amber-950/60 border-amber-700/80 text-amber-300 animate-pulse"
-                : "bg-slate-900/80 border-slate-800 text-slate-400"
-            }`}
-          >
+          {/* Tab Switcher Navigation - Full width with clean horizontal swipe on mobile, center on desktop */}
+          <div className="w-full lg:w-auto overflow-x-auto no-scrollbar py-0.5">
+            <div className="flex items-center gap-1 sm:gap-1.5 bg-slate-950/90 p-1 sm:p-1.5 rounded-2xl border border-slate-800/80 shadow-inner w-max mx-auto lg:mx-0">
+              <button
+                onClick={() => setActiveTab("studio")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+                  activeTab === "studio"
+                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span>Studio &amp; Editor</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("generators")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+                  activeTab === "generators"
+                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>AI Generators</span>
+                <span className="px-1.5 py-0.2 bg-amber-500/20 border border-amber-500/40 rounded-full text-[9px] text-amber-300 font-bold">
+                  NEW
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab("loras")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+                  activeTab === "loras"
+                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5 shrink-0" />
+                <span>Civitai LoRA Hub</span>
+                {availableLoras.length > 0 && (
+                  <span className="px-1.5 py-0.2 bg-slate-900 border border-slate-700/80 rounded-full text-[10px] text-cyan-300 font-mono font-bold">
+                    {availableLoras.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("gallery")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+                  activeTab === "gallery"
+                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>Gallery</span>
+                {gallery.length > 0 && (
+                  <span className="px-1.5 py-0.2 bg-slate-900 border border-slate-700/80 rounded-full text-[10px] text-slate-300 font-mono">
+                    {gallery.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("sentinel")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+                  activeTab === "sentinel"
+                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span>Sentinel</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop GPU 1-Click Power Hub (Hidden on mobile, visible on desktop) */}
+          <div className="hidden lg:flex items-center gap-3 shrink-0">
+            {/* Status Badge */}
             <div
-              className={`w-2 h-2 rounded-full ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold backdrop-blur-md transition ${
                 isConnected
-                  ? "bg-emerald-400 animate-ping duration-1000"
+                  ? "bg-emerald-950/60 border-emerald-700/80 text-emerald-300 shadow-sm shadow-emerald-900/20"
                   : isStartingGpu
-                  ? "bg-amber-400 animate-pulse"
-                  : "bg-slate-500"
+                  ? "bg-amber-950/60 border-amber-700/80 text-amber-300 animate-pulse"
+                  : "bg-slate-900/80 border-slate-800 text-slate-400"
               }`}
-            />
-            <span>
-              {isConnected
-                ? "Dual Tesla T4 Online"
-                : isStartingGpu
-                ? "Booting Kaggle GPU..."
-                : "GPU Offline (Quota Safe)"}
-            </span>
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isConnected
+                    ? "bg-emerald-400 animate-ping duration-1000"
+                    : isStartingGpu
+                    ? "bg-amber-400 animate-pulse"
+                    : "bg-slate-500"
+                }`}
+              />
+              <span>
+                {isConnected
+                  ? "Dual Tesla T4 Online"
+                  : isStartingGpu
+                  ? "Booting Kaggle GPU..."
+                  : "GPU Offline (Quota Safe)"}
+              </span>
+            </div>
+
+            {/* 1-Click Power Toggle */}
+            {isConnected ? (
+              <button
+                onClick={handleShutdownGpu}
+                disabled={isShuttingDown}
+                title="Stop Kaggle GPU immediately to prevent burning quota"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 text-white rounded-xl text-xs font-semibold shadow-md shadow-rose-900/30 transition active:scale-95 disabled:opacity-50"
+              >
+                <Power className={`w-3.5 h-3.5 ${isShuttingDown ? "animate-spin" : ""}`} />
+                <span>{isShuttingDown ? "Stopping GPU..." : "Turn Off GPU"}</span>
+              </button>
+            ) : isStartingGpu ? (
+              <button
+                disabled
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 rounded-xl text-xs font-semibold"
+              >
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                <span>Booting Dual T4s (~90s)...</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleStartGpu}
+                title="One-click boot Kaggle Dual Tesla T4s and auto-connect tunnel"
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition active:scale-95"
+              >
+                <Zap className="w-3.5 h-3.5 fill-slate-950" />
+                <span>Turn On GPU</span>
+              </button>
+            )}
+
+            {/* Advanced / Manual URL Override Toggle */}
+            <button
+              onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
+              title="Advanced: Inspect or override tunnel URL"
+              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 rounded-lg transition"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Storage Badge */}
+            <div className="hidden xl:flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg text-xs">
+              <Database className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-slate-400">Vault:</span>
+              <span className="text-slate-200 font-medium">5.0 TiB Google Drive</span>
+            </div>
           </div>
-
-          {/* 1-Click Power Toggle */}
-          {isConnected ? (
-            <button
-              onClick={handleShutdownGpu}
-              disabled={isShuttingDown}
-              title="Stop Kaggle GPU immediately to prevent burning quota"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 text-white rounded-xl text-xs font-semibold shadow-md shadow-rose-900/30 transition active:scale-95 disabled:opacity-50"
-            >
-              <Power className={`w-3.5 h-3.5 ${isShuttingDown ? "animate-spin" : ""}`} />
-              <span>{isShuttingDown ? "Stopping GPU..." : "Turn Off GPU"}</span>
-            </button>
-          ) : isStartingGpu ? (
-            <button
-              disabled
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 rounded-xl text-xs font-semibold"
-            >
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-400" />
-              <span>Booting Dual T4s (~90s)...</span>
-            </button>
-          ) : (
-            <button
-              onClick={handleStartGpu}
-              title="One-click boot Kaggle Dual Tesla T4s and auto-connect tunnel"
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition active:scale-95"
-            >
-              <Zap className="w-3.5 h-3.5 fill-slate-950" />
-              <span>Turn On GPU</span>
-            </button>
-          )}
-
-          {/* Advanced / Manual URL Override Toggle */}
-          <button
-            onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
-            title="Advanced: Inspect or override tunnel URL"
-            className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 rounded-lg transition"
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Storage Badge */}
-        <div className="hidden xl:flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg text-xs">
-          <Database className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="text-slate-400">Vault:</span>
-          <span className="text-slate-200 font-medium">5.0 TiB Google Drive</span>
         </div>
       </header>
 
@@ -1133,9 +1192,9 @@ export default function ImageEditorStudio() {
         <SentinelAiGateway />
       ) : (
         /* ── STUDIO & EDITOR TAB ───────────────────────────────── */
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-7xl mx-auto w-full animate-fadeIn">
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 p-3 sm:p-6 max-w-7xl mx-auto w-full max-w-full overflow-hidden animate-fadeIn">
           {/* Left: Input & Tuning Panel (4 cols) */}
-          <section className="lg:col-span-4 flex flex-col gap-5 bg-slate-900/40 border border-slate-800/80 p-5 rounded-2xl">
+          <section className="lg:col-span-4 flex flex-col gap-4 sm:gap-5 bg-slate-900/40 border border-slate-800/80 p-3.5 sm:p-5 rounded-2xl w-full max-w-full overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <span className="text-sm font-semibold flex items-center gap-2 text-slate-200">
                 <Sliders className="w-4 h-4 text-cyan-400" /> Generation Settings
@@ -1143,7 +1202,7 @@ export default function ImageEditorStudio() {
             </div>
 
             {/* ── Mode Selection: Equal-Sized Buttons in One Line (UI-UX-PRO-MAX) ── */}
-            <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 w-full">
               <button
                 type="button"
                 onClick={() => setStudioMode("generate")}
@@ -1153,8 +1212,9 @@ export default function ImageEditorStudio() {
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>🎨 Generate Image</span>
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span>🎨 Generate</span>
+                <span className="hidden sm:inline"> Image</span>
               </button>
               <button
                 type="button"
@@ -1165,8 +1225,9 @@ export default function ImageEditorStudio() {
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                <ImageIcon className="w-3.5 h-3.5" />
-                <span>✨ Edit Image</span>
+                <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>✨ Edit</span>
+                <span className="hidden sm:inline"> Image</span>
               </button>
             </div>
 
@@ -1189,6 +1250,7 @@ export default function ImageEditorStudio() {
                 <option value="kaggle-gpu">Dual Tesla T4 (Kaggle GPU + LoRA Vault)</option>
                 <option value="qwen-cloud">Alibaba Qwen Cloud ({studioMode === "generate" ? "qwen-image" : "qwen-image-edit"})</option>
                 <option value="nano-banana">⚡ Nano Banana Turbo (~1.5s Ultra-Fast)</option>
+                <option value="google-imagen">Google Imagen 3 (Google AI Studio)</option>
                 <option value="cf-lucid">Cloudflare Lucid Origin (~3s Edge)</option>
                 <option value="cf-flux">Cloudflare Flux 1 Schnell (~3.5s DiT)</option>
               </select>

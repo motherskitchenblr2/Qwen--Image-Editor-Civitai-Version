@@ -1,10 +1,18 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Qwen Image Editor Studio | Powered by Kaggle GPU",
-  description: "Next-gen AI Image Editor with Civitai LoRA Integration and 5TB Google Drive Storage",
+  title: "Qwen Image Editor Studio | Multi-Model AI Studio",
+  description: "Next-gen AI Image Editor with Civitai LoRA Integration, Nano Banana Turbo, Alibaba Qwen, and 5TB Drive Vault",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#020617",
 };
 
 export default function RootLayout({

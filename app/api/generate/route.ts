@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const DASHSCOPE_API_KEY = process.env.DASHSCOPE_API_KEY || process.env.ALIBABA_API_KEY || "";
 const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID || "";
 const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN || "";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_KEY || "";
 
 export async function POST(req: NextRequest) {
   try {
@@ -126,7 +127,59 @@ export async function POST(req: NextRequest) {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 2. NANO BANANA (Turbo Compact AI Model) & CLOUDFLARE WORKERS AI
+    // 2. GOOGLE AI STUDIO (Imagen 3: imagen-3.0-generate-002)
+    // ─────────────────────────────────────────────────────────────
+    if (model === "google-imagen" || model === "imagen-3") {
+      const activeGoogleKey = apiKey || GEMINI_API_KEY;
+      if (!activeGoogleKey) {
+        return NextResponse.json(
+          {
+            error: "Google AI Studio API Key not configured. Please add your key in Sentinel Gateway, or switch to 'Nano Banana Turbo' (no key required!).",
+            suggestedModel: "nano-banana",
+          },
+          { status: 401 }
+        );
+      }
+
+      const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${activeGoogleKey}`;
+      const imagenAspect = size === "1280*720" ? "16:9" : size === "720*1280" ? "9:16" : "1:1";
+      const imagenPayload = {
+        instances: [{ prompt: prompt.trim() }],
+        parameters: {
+          sampleCount: 1,
+          aspectRatio: imagenAspect,
+        },
+      };
+
+      const imagenRes = await fetch(imagenUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(imagenPayload),
+      });
+
+      const imagenData = await imagenRes.json().catch(() => ({}));
+
+      if (!imagenRes.ok) {
+        return NextResponse.json({
+          error: imagenData.error?.message || `Google Imagen HTTP ${imagenRes.status}`,
+        }, { status: imagenRes.status });
+      }
+
+      const b64 = imagenData.predictions?.[0]?.bytesBase64Encoded;
+      if (b64) {
+        const fullBase64 = `data:image/jpeg;base64,${b64}`;
+        return NextResponse.json({
+          success: true,
+          image_base64: fullBase64,
+          model: "Google Imagen 3 (AI Studio)",
+          prompt,
+        });
+      }
+      return NextResponse.json({ error: "No image predictions returned by Google AI Studio." }, { status: 500 });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 3. NANO BANANA (Turbo Compact AI Model) & CLOUDFLARE WORKERS AI
     // ─────────────────────────────────────────────────────────────
     const cfModelName =
       model === "nano-banana"
