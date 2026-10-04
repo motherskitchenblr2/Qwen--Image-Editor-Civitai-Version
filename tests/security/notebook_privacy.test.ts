@@ -34,6 +34,68 @@ describe("Security: Kaggle Notebook Privacy & Token Zero-Leak", () => {
       const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
       expect(meta.is_private).toBe(true);
     });
+
+    it("verifies backend/kaggle_guard.py enforces 'is_private': True in emergency stop metadata and contains zero public flags", () => {
+      const guardPath = path.join(process.cwd(), "backend", "kaggle_guard.py");
+      expect(fs.existsSync(guardPath), "backend/kaggle_guard.py must exist").toBe(true);
+
+      const content = fs.readFileSync(guardPath, "utf-8");
+
+      // Invariant 1: "is_private": True must be present
+      expect(content).toMatch(/"is_private":\s*True\b/);
+
+      // Invariant 2: "is_private": False must be absent
+      expect(content).not.toMatch(/"is_private":\s*False\b/);
+      expect(content).not.toMatch(/"is_private":\s*false\b/);
+    });
+
+    it("guarantees zero occurrences of public notebook flags across entire backend/ and app/ directories", () => {
+      const scanDirs = ["backend", "app"];
+      const FORBIDDEN_PUBLIC_PATTERNS = [
+        { name: "is_private: False", regex: /["']?is_private["']?\s*:\s*False\b/ },
+        { name: "is_private: false", regex: /["']?is_private["']?\s*:\s*false\b/ },
+        { name: "isPrivate: false", regex: /["']?isPrivate["']?\s*:\s*false\b/i },
+      ];
+
+      function getTargetFiles(dir: string): string[] {
+        const fullDir = path.join(process.cwd(), dir);
+        if (!fs.existsSync(fullDir)) return [];
+        const entries = fs.readdirSync(fullDir, { withFileTypes: true });
+        const fileList: string[] = [];
+        for (const entry of entries) {
+          const fullPath = path.join(fullDir, entry.name);
+          if (entry.isDirectory()) {
+            if (!["__pycache__", "node_modules", ".next", "kaggle_run_output"].includes(entry.name)) {
+              fileList.push(...getTargetFiles(path.join(dir, entry.name)));
+            }
+          } else if (/\.(ts|tsx|js|jsx|json|py)$/.test(entry.name)) {
+            fileList.push(fullPath);
+          }
+        }
+        return fileList;
+      }
+
+      const violations: { file: string; pattern: string; snippet: string }[] = [];
+
+      for (const dir of scanDirs) {
+        const files = getTargetFiles(dir);
+        for (const file of files) {
+          const content = fs.readFileSync(file, "utf-8");
+          for (const { name, regex } of FORBIDDEN_PUBLIC_PATTERNS) {
+            const match = content.match(regex);
+            if (match) {
+              violations.push({
+                file: path.relative(process.cwd(), file),
+                pattern: name,
+                snippet: match[0],
+              });
+            }
+          }
+        }
+      }
+
+      expect(violations, `Found forbidden public notebook flags: ${JSON.stringify(violations, null, 2)}`).toHaveLength(0);
+    });
   });
 
   describe("Runtime Kaggle Kernel Payload Privacy Contract", () => {
