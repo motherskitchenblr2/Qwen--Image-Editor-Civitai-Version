@@ -5,6 +5,8 @@ import path from "node:path";
 
 // Import route handlers directly to verify module resolution and TypeScript syntax
 import * as backendStartRoute from "@/app/api/backend/start/route";
+import * as backendStopRoute from "@/app/api/backend/stop/route";
+import * as backendStatusRoute from "@/app/api/backend/status/route";
 import * as civitaiRoute from "@/app/api/civitai/route";
 import * as generateRoute from "@/app/api/generate/route";
 import * as editRoute from "@/app/api/edit/route";
@@ -33,6 +35,8 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
   describe("Static Route Export Contract Audits", () => {
     const routeModules: Record<string, any> = {
       "app/api/backend/start/route.ts": backendStartRoute,
+      "app/api/backend/stop/route.ts": backendStopRoute,
+      "app/api/backend/status/route.ts": backendStatusRoute,
       "app/api/civitai/route.ts": civitaiRoute,
       "app/api/edit/route.ts": editRoute,
       "app/api/generate/route.ts": generateRoute,

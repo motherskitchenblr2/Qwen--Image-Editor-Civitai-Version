@@ -259,14 +259,27 @@ export default function ImageEditorStudio() {
     }
   };
 
-  const handleStartGpu = async () => {
+  const handleStartGpu = async (forceRestart: boolean = false) => {
     setIsStartingGpu(true);
-    setBootMessage("Triggering Kaggle Dual Tesla T4 GPU boot sequence...");
+    setBootMessage(forceRestart ? "Force restarting Kaggle GPU session..." : "Checking Kaggle Dual Tesla T4 GPU status...");
     try {
-      const res = await fetch("/api/backend/start", { method: "POST" });
+      const res = await fetch("/api/backend/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force_restart: forceRestart }),
+      });
       const data = await res.json();
       if (res.ok) {
-        setBootMessage("Kaggle booting Dual T4s (~90s)... Auto-connecting when ready.");
+        if (data.status === "already_running" && data.tunnel_url) {
+          setBootMessage("GPU is already online! Connecting...");
+          setBackendUrl(data.tunnel_url);
+          await checkBackend(data.tunnel_url);
+          setIsStartingGpu(false);
+          setBootMessage("");
+          return;
+        }
+
+        setBootMessage(data.message || "Kaggle booting Dual T4s (~90s)... Auto-connecting when ready.");
         let connectedUrl: string | null = null;
         let attempts = 0;
         while (!connectedUrl && attempts < 35) {
@@ -291,20 +304,21 @@ export default function ImageEditorStudio() {
   };
 
   const handleShutdownGpu = async () => {
-    if (!backendUrl) return;
     if (!confirm("Are you sure you want to stop the Kaggle GPU backend? This will deallocate the GPU instance immediately to protect your quota.")) {
       return;
     }
     setIsShuttingDown(true);
     try {
-      const cleanUrl = backendUrl.replace(/\/+$/, "");
-      await fetch(`${cleanUrl}/api/shutdown`, { method: "POST" });
+      const res = await fetch("/api/backend/stop", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
       setIsConnected(false);
+      setIsModelReady(false);
       setBackendUrl("");
       localStorage.removeItem("qwen_backend_url");
-      alert("✅ Kaggle GPU backend terminated! GPU instance deallocated immediately.");
+      alert(data.message || "✅ Kaggle GPU backend stopped and deallocated! All rolling GPU queues cleared.");
     } catch {
       setIsConnected(false);
+      setIsModelReady(false);
       setBackendUrl("");
       localStorage.removeItem("qwen_backend_url");
       alert("✅ Shutdown signal sent! Tunnel is disconnected and GPU is powering down.");
@@ -887,7 +901,7 @@ export default function ImageEditorStudio() {
                 </span>
               ) : (
                 <button
-                  onClick={handleStartGpu}
+                  onClick={() => handleStartGpu()}
                   title="Boot Kaggle GPU"
                   className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 rounded-lg text-[11px] font-bold shadow-sm transition"
                 >
@@ -1036,7 +1050,7 @@ export default function ImageEditorStudio() {
               </button>
             ) : (
               <button
-                onClick={handleStartGpu}
+                onClick={() => handleStartGpu()}
                 title="One-click boot Kaggle Dual Tesla T4s and auto-connect tunnel"
                 className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition active:scale-95"
               >
@@ -1245,21 +1259,32 @@ export default function ImageEditorStudio() {
                 </div>
               )}
 
-              {/* Action Buttons: Cancel and Save */}
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800/60">
+              {/* Action Buttons: Emergency Halt, Cancel and Save */}
+              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-800/60">
                 <button
                   type="button"
-                  onClick={handleCancelIdleTimeout}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition"
+                  onClick={handleShutdownGpu}
+                  disabled={isShuttingDown}
+                  title="Immediately supersedes and deallocates any running or queued Kaggle GPU workers to fix rolling icons"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-800/80 text-rose-300 rounded-lg text-xs font-semibold transition active:scale-95 disabled:opacity-50"
                 >
-                  Cancel
+                  <Power className={`w-3.5 h-3.5 ${isShuttingDown ? "animate-spin" : ""}`} />
+                  <span>{isShuttingDown ? "Halting Kaggle..." : "Halt & Dismiss All Kaggle GPU Sessions"}</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={handleSaveIdleTimeout}
-                  disabled={isSavingIdleTimeout}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-lg text-xs shadow-lg shadow-cyan-500/20 transition active:scale-95 disabled:opacity-50"
-                >
+                <div className="flex items-center gap-2.5 ml-auto">
+                  <button
+                    type="button"
+                    onClick={handleCancelIdleTimeout}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveIdleTimeout}
+                    disabled={isSavingIdleTimeout}
+                    className="flex items-center gap-1.5 px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-lg text-xs shadow-lg shadow-cyan-500/20 transition active:scale-95 disabled:opacity-50"
+                  >
                   {isSavingIdleTimeout ? (
                     <>
                       <RefreshCw className="w-3 h-3 animate-spin" />
@@ -1276,7 +1301,8 @@ export default function ImageEditorStudio() {
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* ── MAIN CONTENT BY TAB ──────────────────────────────────── */}
       {activeTab === "generators" ? (
