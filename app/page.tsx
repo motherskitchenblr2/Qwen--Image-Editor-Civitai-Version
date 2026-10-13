@@ -698,15 +698,18 @@ export default function ImageEditorStudio() {
           async_mode: true,
         };
 
-        const res = await fetch(`${cleanUrl}/api/edit`, {
+        const res = await fetch("/api/edit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            ...payload,
+            backend_url: cleanUrl || undefined,
+          }),
         });
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.detail || "Request failed");
+          throw new Error(errData.detail || errData.error || "Request failed");
         }
 
         const data = await res.json();
@@ -722,7 +725,10 @@ export default function ImageEditorStudio() {
             attempts++;
 
             try {
-              const statusRes = await fetch(`${cleanUrl}/api/edit/status/${data.task_id}`);
+              const statusUrl = cleanUrl
+                ? `/api/edit/status/${data.task_id}?backend_url=${encodeURIComponent(cleanUrl)}`
+                : `/api/edit/status/${data.task_id}`;
+              const statusRes = await fetch(statusUrl);
               if (statusRes.ok) {
                 const statusData = await statusRes.json();
                 if (statusData.status === "completed" && statusData.image_base64) {

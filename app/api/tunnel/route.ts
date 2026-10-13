@@ -1,83 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getActiveTunnelUrl, setMemoryCachedTunnel, edgeConfigUrl } from "../../lib/tunnelDiscovery";
 
-// In-memory cache for the latest active tunnel URL
-let cachedTunnelUrl: string | null = null;
-let lastRegisteredAt: number = 0;
-
-const GDRIVE_DIRECT_URL = "https://drive.google.com/uc?export=download&id=1CsejFXhS81WTExe1EdQIuT0Glo0KDE4h";
+const EDGE_CONFIG_ID = process.env.EDGE_CONFIG_ID || "";
+const VERCEL_TOKEN = process.env.VERCEL_TOKEN || "";
+const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || "";
 
 export async function GET() {
-  // 1. If we have an in-memory registered URL, check if it is alive
-  if (cachedTunnelUrl) {
-    try {
-      const ping = await fetch(`${cachedTunnelUrl}/api/health`, {
-        signal: AbortSignal.timeout(2500),
-      });
-      if (ping.ok) {
-        return NextResponse.json({
-          url: cachedTunnelUrl,
-          is_alive: true,
-          source: "memory_registry",
-        });
-      }
-    } catch {
-      // Stale or dead, proceed to check Google Drive
-      cachedTunnelUrl = null;
-    }
-  }
-
-  // 2. Auto-fetch latest tunnel URL from Google Drive persistent vault
-  try {
-    const res = await fetch(GDRIVE_DIRECT_URL, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(3500),
+  const activeUrl = await getActiveTunnelUrl();
+  if (activeUrl) {
+    return NextResponse.json({
+      url: activeUrl,
+      is_alive: true,
+      source: "verified_registry",
     });
-    if (res.ok) {
-      const rawText = await res.text();
-      const match = rawText.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
-      if (match) {
-        const discoveredUrl = match[0];
-        try {
-          const healthCheck = await fetch(`${discoveredUrl}/api/health`, {
-            signal: AbortSignal.timeout(3000),
-          });
-          if (healthCheck.ok) {
-            cachedTunnelUrl = discoveredUrl;
-            return NextResponse.json({
-              url: discoveredUrl,
-              is_alive: true,
-              source: "gdrive_vault",
-            });
-          }
-        } catch {
-          return NextResponse.json({
-            url: null,
-            is_alive: false,
-            last_known: discoveredUrl,
-          });
-        }
-      }
-    }
-  } catch (err: any) {
-    console.error("Tunnel auto-discovery error:", err);
   }
 
   return NextResponse.json({ url: null, is_alive: false });
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    if (body.url && typeof body.url === "string") {
-      cachedTunnelUrl = body.url.trim().replace(/\/+$/, "");
-      lastRegisteredAt = Date.now();
-      return NextResponse.json({
-        status: "registered",
-        url: cachedTunnelUrl,
-      });
+  const body = await req.json();
+  if (body.url && typeof body.url === "string") {
+    const cleanUrl = body.url.trim().replace(/\/+$/, "");
+    setMemoryCachedTunnel(cleanUrl);
+
+    // Persist to Vercel Edge Config in background if configured
+    if (VERCEL_TOKEN && EDGE_CONFIG_ID) {
+      fetch(edgeConfigUrl(), {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${VERCEL_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            items: [
+              { operation: "upsert", key: "tunnel_url", value: cleanUrl },
+              { operation: "upsert", key: "last_updated", value: Date.now() },
+            ],
+          }),
+        }
+      ).catch((e) => console.warn("Edge config save note:", e));
     }
-    return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+
+    return NextResponse.json({
+      status: "registered",
+      url: cleanUrl,
+    });
   }
+  return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
 }

@@ -7,6 +7,7 @@ import path from "node:path";
 import * as backendStartRoute from "@/app/api/backend/start/route";
 import * as civitaiRoute from "@/app/api/civitai/route";
 import * as generateRoute from "@/app/api/generate/route";
+import * as editRoute from "@/app/api/edit/route";
 import * as sentinelEnhanceRoute from "@/app/api/sentinel/enhance/route";
 import * as sentinelVaultRoute from "@/app/api/sentinel/vault/route";
 import * as sentinelVerifyRoute from "@/app/api/sentinel/verify/route";
@@ -33,6 +34,7 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
     const routeModules: Record<string, any> = {
       "app/api/backend/start/route.ts": backendStartRoute,
       "app/api/civitai/route.ts": civitaiRoute,
+      "app/api/edit/route.ts": editRoute,
       "app/api/generate/route.ts": generateRoute,
       "app/api/sentinel/enhance/route.ts": sentinelEnhanceRoute,
       "app/api/sentinel/vault/route.ts": sentinelVaultRoute,
@@ -41,7 +43,7 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
       "app/api/vault/loras/route.ts": vaultLorasRoute,
     };
 
-    it("verifies all 8 core API route files exist on the filesystem", () => {
+    it("verifies all core API route files exist on the filesystem", () => {
       for (const routeRelPath of Object.keys(routeModules)) {
         const fullPath = path.join(process.cwd(), routeRelPath);
         expect(fs.existsSync(fullPath), `Expected ${routeRelPath} to exist`).toBe(true);
@@ -74,6 +76,7 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
     it("verifies exact expected HTTP method inventory per route", () => {
       expect(typeof backendStartRoute.POST).toBe("function");
       expect(typeof civitaiRoute.GET).toBe("function");
+      expect(typeof editRoute.POST).toBe("function");
       expect(typeof generateRoute.POST).toBe("function");
       expect(typeof sentinelEnhanceRoute.POST).toBe("function");
       expect(typeof sentinelVaultRoute.GET).toBe("function");
