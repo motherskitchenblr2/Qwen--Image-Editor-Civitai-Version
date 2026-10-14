@@ -171,6 +171,7 @@ export default function ImageEditorStudio() {
             setIsModelReady(false);
             setIsStartingGpu(false);
             setBootMessage("");
+            setBackendUrl("");
           }
         }
       }
@@ -317,12 +318,16 @@ export default function ImageEditorStudio() {
       const data = await res.json().catch(() => ({}));
       setIsConnected(false);
       setIsModelReady(false);
+      setIsStartingGpu(false);
+      setBootMessage("");
       setBackendUrl("");
       localStorage.removeItem("qwen_backend_url");
       alert(data.message || "✅ Kaggle GPU backend stopped and deallocated! All rolling GPU queues cleared.");
     } catch {
       setIsConnected(false);
       setIsModelReady(false);
+      setIsStartingGpu(false);
+      setBootMessage("");
       setBackendUrl("");
       localStorage.removeItem("qwen_backend_url");
       alert("✅ Shutdown signal sent! Tunnel is disconnected and GPU is powering down.");
@@ -901,10 +906,15 @@ export default function ImageEditorStudio() {
                   </button>
                 </div>
               ) : isStartingGpu ? (
-                <span className="flex items-center gap-1 px-2 py-1 bg-amber-500/20 text-amber-300 rounded-lg text-[10px] font-semibold animate-pulse border border-amber-500/30">
-                  <RefreshCw className="w-3 h-3 animate-spin text-amber-400" />
-                  <span>Booting...</span>
-                </span>
+                <button
+                  onClick={handleShutdownGpu}
+                  disabled={isShuttingDown}
+                  title="GPU is booting on Kaggle. Tap to cancel and halt."
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/20 hover:bg-rose-600 border border-amber-500/40 hover:border-rose-500 text-amber-300 hover:text-white rounded-lg text-[10px] font-semibold animate-pulse transition active:scale-95 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 text-amber-400 ${isShuttingDown ? "animate-spin" : "animate-spin"}`} />
+                  <span>{isShuttingDown ? "Halting..." : "Booting (Stop)"}</span>
+                </button>
               ) : (
                 <button
                   onClick={() => handleStartGpu()}
@@ -1053,11 +1063,14 @@ export default function ImageEditorStudio() {
               </button>
             ) : isStartingGpu ? (
               <button
-                disabled
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 rounded-xl text-xs font-semibold shadow-[0_0_12px_rgba(245,158,11,0.2)] animate-pulse"
+                onClick={handleShutdownGpu}
+                disabled={isShuttingDown}
+                title="GPU is booting on Kaggle. Click to cancel and halt the session."
+                className="group flex items-center gap-2 px-3.5 py-1.5 bg-amber-500/15 hover:bg-rose-500/20 border border-amber-500/50 hover:border-rose-500/60 text-amber-300 hover:text-rose-200 rounded-xl text-xs font-semibold shadow-[0_0_12px_rgba(245,158,11,0.25)] hover:shadow-rose-900/30 transition-all active:scale-95 disabled:opacity-50"
               >
-                <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-400" />
-                <span>Power: Booting ({bootMessage.includes("~90s") ? "~90s" : "Warming"}...)</span>
+                <RefreshCw className={`w-3.5 h-3.5 text-amber-400 group-hover:text-rose-400 ${isShuttingDown ? "animate-spin" : "animate-spin"}`} />
+                <span className="group-hover:hidden">Power: Booting ({bootMessage.includes("~90s") ? "~90s" : "Warming"}...)</span>
+                <span className="hidden group-hover:inline text-rose-300">{isShuttingDown ? "Halting..." : "Cancel / Stop GPU"}</span>
               </button>
             ) : (
               <button

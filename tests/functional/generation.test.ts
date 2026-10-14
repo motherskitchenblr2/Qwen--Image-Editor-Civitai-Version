@@ -15,6 +15,20 @@ describe("Enterprise Resilient Generation Pipeline", () => {
       }),
     });
 
+    // Mock external third-party generation fetch to guarantee deterministic test execution
+    const mockFetch = vi.fn().mockImplementation(async (input: any) => {
+      const url = input?.toString() || "";
+      if (url.includes("image.pollinations.ai") || url.includes("cloudflare")) {
+        const dummyBuffer = Buffer.from("dummy_jpeg_binary_data");
+        return new Response(dummyBuffer, {
+          status: 200,
+          headers: { "Content-Type": "image/jpeg" },
+        });
+      }
+      return new Response("Not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
     const res = await generateRoute.POST(req);
     expect(res.status).toBe(200);
 
@@ -23,6 +37,8 @@ describe("Enterprise Resilient Generation Pipeline", () => {
     expect(data.image_base64).toBeDefined();
     expect(data.image_base64.startsWith("data:image/")).toBe(true);
     expect(data.prompt).toBe("A beautiful serene Japanese garden in autumn");
+
+    vi.unstubAllGlobals();
   }, 25000);
 
   it("handles missing prompt with 400 Bad Request", async () => {
