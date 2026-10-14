@@ -38,7 +38,29 @@ export async function GET() {
       }
     }
 
-    const isAlive = Boolean(activeUrl);
+    let isAlive = Boolean(activeUrl);
+    let modelReady = false;
+    let modelMessage = "";
+    let vramStats = null;
+
+    if (isAlive && activeUrl) {
+      try {
+        const hRes = await fetch(`${activeUrl}/api/health`, {
+          signal: AbortSignal.timeout(3000),
+        });
+        if (hRes.ok) {
+          const hData = await hRes.json();
+          modelReady = Boolean(hData.model_ready);
+          modelMessage = hData.message || "";
+          vramStats = hData.vram || null;
+        } else {
+          isAlive = false;
+        }
+      } catch (he) {
+        console.warn("Backend status health ping note:", he);
+        isAlive = false;
+      }
+    }
 
     // Derived coordinated lifecycle states:
     // "online" | "warming_up" | "queued" | "offline" | "error"
@@ -58,9 +80,12 @@ export async function GET() {
     return NextResponse.json({
       coordinated_state: coordinatedState,
       is_alive: isAlive,
-      tunnel_url: activeUrl,
+      tunnel_url: isAlive ? activeUrl : null,
       kernel_status: kernelStatus,
       failure_message: failureMessage,
+      model_ready: modelReady,
+      model_message: modelMessage,
+      vram: vramStats,
     });
   } catch (err: any) {
     return NextResponse.json(

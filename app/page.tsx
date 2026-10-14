@@ -118,25 +118,64 @@ export default function ImageEditorStudio() {
   const [isUploadingLocalLora, setIsUploadingLocalLora] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
 
-  // Auto-discover live backend from Google Drive & Vercel Registry
+  // Auto-discover live backend from Google Drive & Vercel Registry & Kaggle Session State
   const autoDiscoverBackend = async () => {
     try {
-      const res = await fetch("/api/tunnel", { cache: "no-store" });
+      const res = await fetch("/api/backend/status", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
-        if (data.is_alive && data.url) {
-          const cleanUrl = data.url.replace(/\/+$/, "");
+        const { coordinated_state, is_alive, tunnel_url, kernel_status, model_ready, model_message, vram } = data;
+
+        if (is_alive && tunnel_url) {
+          const cleanUrl = tunnel_url.replace(/\/+$/, "");
           setBackendUrl(cleanUrl);
           setIsConnected(true);
           setIsStartingGpu(false);
           setBootMessage("");
           localStorage.setItem("qwen_backend_url", cleanUrl);
-          checkBackend(cleanUrl);
+
+          const ready = Boolean(model_ready);
+          setIsModelReady(ready);
+          setModelStatusMessage(model_message || (ready ? "Dual Tesla T4 Ready" : "Warming up pipeline in GPU VRAM..."));
+          if (vram) setVramStats(vram);
+          fetchAvailableLoras(cleanUrl);
+
+          // Fetch idle timeout watchdog schedule from backend
+          try {
+            const idleRes = await fetch(`${cleanUrl}/api/settings/idle-timeout`);
+            if (idleRes.ok) {
+              const idleData = await idleRes.json();
+              setAutoShutdownEnabled(idleData.enabled);
+              setIdleTimeoutMinutes(idleData.timeout_minutes);
+              setTempAutoShutdownEnabled(idleData.enabled);
+              setTempIdleTimeoutMinutes(idleData.timeout_minutes);
+              setBackendIdleStatus(idleData);
+            }
+          } catch {}
+
           return cleanUrl;
+        } else if (coordinated_state === "warming_up" || kernel_status === "RUNNING") {
+          setIsStartingGpu(true);
+          setIsConnected(false);
+          setIsModelReady(false);
+          setBootMessage("Dual Tesla T4s active on Kaggle (~90s)... Auto-connecting tunnel.");
+        } else if (coordinated_state === "queued" || kernel_status === "QUEUED") {
+          setIsStartingGpu(true);
+          setIsConnected(false);
+          setIsModelReady(false);
+          setBootMessage("Kaggle GPU session queued... Waiting for worker allocation.");
+        } else {
+          // Offline / stopped
+          if (!isShuttingDown) {
+            setIsConnected(false);
+            setIsModelReady(false);
+            setIsStartingGpu(false);
+            setBootMessage("");
+          }
         }
       }
     } catch (e) {
-      console.warn("Auto-discovery check:", e);
+      console.warn("Backend status coordinator check error:", e);
     }
     return null;
   };
@@ -187,7 +226,6 @@ export default function ImageEditorStudio() {
       if (savedBackend) {
         const cleanSaved = savedBackend.replace(/\/+$/, "");
         setBackendUrl(cleanSaved);
-        checkBackend(cleanSaved);
       }
     } catch {}
 
@@ -211,49 +249,15 @@ export default function ImageEditorStudio() {
 
     autoDiscoverBackend();
     const interval = setInterval(() => {
-      if (!isConnected) {
-        autoDiscoverBackend();
-      }
+      autoDiscoverBackend();
     }, 4000);
     return () => clearInterval(interval);
-  }, [isConnected]);
+  }, []);
 
   const checkBackend = async (urlToCheck?: string) => {
-    const target = urlToCheck || backendUrl;
-    if (!target) return;
     setIsCheckingHealth(true);
     try {
-      const cleanUrl = target.replace(/\/+$/, "");
-      const res = await fetch(`${cleanUrl}/api/health`, { method: "GET" });
-      if (res.ok) {
-        const data = await res.json();
-        setIsConnected(true);
-        const ready = Boolean(data.model_ready);
-        setIsModelReady(ready);
-        setModelStatusMessage(data.message || (ready ? "Model ready on Dual T4 GPUs" : "Warming up pipeline in GPU VRAM..."));
-        setVramStats(data.vram);
-        localStorage.setItem("qwen_backend_url", cleanUrl);
-        fetchAvailableLoras(cleanUrl);
-
-        // Fetch idle timeout watchdog schedule from backend
-        try {
-          const idleRes = await fetch(`${cleanUrl}/api/settings/idle-timeout`);
-          if (idleRes.ok) {
-            const idleData = await idleRes.json();
-            setAutoShutdownEnabled(idleData.enabled);
-            setIdleTimeoutMinutes(idleData.timeout_minutes);
-            setTempAutoShutdownEnabled(idleData.enabled);
-            setTempIdleTimeoutMinutes(idleData.timeout_minutes);
-            setBackendIdleStatus(idleData);
-          }
-        } catch {}
-      } else {
-        setIsConnected(false);
-        setIsModelReady(false);
-      }
-    } catch {
-      setIsConnected(false);
-      setIsModelReady(false);
+      await autoDiscoverBackend();
     } finally {
       setIsCheckingHealth(false);
     }
@@ -887,15 +891,17 @@ export default function ImageEditorStudio() {
                   <button
                     onClick={handleShutdownGpu}
                     disabled={isShuttingDown}
-                    title="Turn off GPU"
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[11px] font-semibold transition"
+                    title="GPU is ON. Click to stop and deallocate Kaggle GPU immediately."
+                    className="group flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/20 hover:bg-rose-600/90 border border-emerald-500/50 hover:border-rose-500 text-emerald-300 hover:text-white rounded-lg text-[11px] font-bold shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all active:scale-95 disabled:opacity-50"
                   >
-                    <Power className={`w-3 h-3 ${isShuttingDown ? "animate-spin" : ""}`} />
-                    <span>Stop</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 group-hover:bg-rose-300 animate-pulse" />
+                    <Power className={`w-3 h-3 text-emerald-400 group-hover:text-white ${isShuttingDown ? "animate-spin" : ""}`} />
+                    <span className="group-hover:hidden">Power: ON</span>
+                    <span className="hidden group-hover:inline">{isShuttingDown ? "Stopping" : "Stop"}</span>
                   </button>
                 </div>
               ) : isStartingGpu ? (
-                <span className="flex items-center gap-1 px-2 py-1 bg-amber-500/20 text-amber-300 rounded-lg text-[10px] font-semibold animate-pulse">
+                <span className="flex items-center gap-1 px-2 py-1 bg-amber-500/20 text-amber-300 rounded-lg text-[10px] font-semibold animate-pulse border border-amber-500/30">
                   <RefreshCw className="w-3 h-3 animate-spin text-amber-400" />
                   <span>Booting...</span>
                 </span>
@@ -903,10 +909,10 @@ export default function ImageEditorStudio() {
                 <button
                   onClick={() => handleStartGpu()}
                   title="Boot Kaggle GPU"
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 rounded-lg text-[11px] font-bold shadow-sm transition"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900 hover:bg-emerald-500/20 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-lg text-[11px] font-bold shadow-sm transition active:scale-95"
                 >
-                  <Zap className="w-3 h-3 fill-slate-950" />
-                  <span>Start GPU</span>
+                  <Power className="w-3 h-3 text-slate-400" />
+                  <span>Turn On GPU</span>
                 </button>
               )}
               <button
@@ -1034,27 +1040,32 @@ export default function ImageEditorStudio() {
               <button
                 onClick={handleShutdownGpu}
                 disabled={isShuttingDown}
-                title="Stop Kaggle GPU immediately to prevent burning quota"
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 text-white rounded-xl text-xs font-semibold shadow-md shadow-rose-900/30 transition active:scale-95 disabled:opacity-50"
+                title="GPU is ON. Click to stop Kaggle GPU immediately to preserve quota."
+                className="group flex items-center gap-2 px-3.5 py-1.5 bg-emerald-500/15 hover:bg-rose-500/20 border border-emerald-500/50 hover:border-rose-500/60 text-emerald-300 hover:text-rose-200 rounded-xl text-xs font-bold shadow-[0_0_15px_rgba(16,185,129,0.25)] hover:shadow-rose-900/30 transition-all active:scale-95 disabled:opacity-50"
               >
-                <Power className={`w-3.5 h-3.5 ${isShuttingDown ? "animate-spin" : ""}`} />
-                <span>{isShuttingDown ? "Stopping GPU..." : "Turn Off GPU"}</span>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 group-hover:bg-rose-400"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 group-hover:bg-rose-400"></span>
+                </span>
+                <Power className={`w-3.5 h-3.5 text-emerald-400 group-hover:text-rose-400 ${isShuttingDown ? "animate-spin" : ""}`} />
+                <span className="group-hover:hidden">Power: ON</span>
+                <span className="hidden group-hover:inline text-rose-300">{isShuttingDown ? "Stopping..." : "Turn Off GPU"}</span>
               </button>
             ) : isStartingGpu ? (
               <button
                 disabled
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 rounded-xl text-xs font-semibold"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 rounded-xl text-xs font-semibold shadow-[0_0_12px_rgba(245,158,11,0.2)] animate-pulse"
               >
                 <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-400" />
-                <span>Booting Dual T4s (~90s)...</span>
+                <span>Power: Booting ({bootMessage.includes("~90s") ? "~90s" : "Warming"}...)</span>
               </button>
             ) : (
               <button
                 onClick={() => handleStartGpu()}
                 title="One-click boot Kaggle Dual Tesla T4s and auto-connect tunnel"
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition active:scale-95"
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-emerald-500/20 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-xl text-xs font-bold transition active:scale-95 shadow-sm"
               >
-                <Zap className="w-3.5 h-3.5 fill-slate-950" />
+                <Power className="w-3.5 h-3.5 text-slate-400" />
                 <span>Turn On GPU</span>
               </button>
             )}
