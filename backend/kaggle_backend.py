@@ -107,15 +107,43 @@ def idle_watchdog():
                 pass
             os._exit(0)
 
-# ─── 1. GOOGLE DRIVE SYNC ENGINE ─────────────────────────────────────────────
+# ─── 1. STORAGE VAULT ENGINE (HUGGING FACE HUB & GOOGLE DRIVE HYBRID) ─────────
 
+# A. Hugging Face Hub Cloud Storage (Static Token, Zero OAuth Expiration)
+try:
+    from huggingface_hub import HfApi, hf_hub_download
+except ImportError:
+    HfApi = None
+    hf_hub_download = None
+
+HF_TOKEN = os.environ.get("HF_TOKEN", "")
+HF_STORAGE_REPO = os.environ.get("HF_STORAGE_REPO", "")
+HF_REPO_TYPE = os.environ.get("HF_REPO_TYPE", "dataset")
+
+try:
+    from kaggle_secrets import UserSecretsClient
+    _user_sec = UserSecretsClient()
+    if not HF_TOKEN:
+        HF_TOKEN = _user_sec.get_secret("HF_TOKEN") or ""
+    if not HF_STORAGE_REPO:
+        HF_STORAGE_REPO = _user_sec.get_secret("HF_STORAGE_REPO") or ""
+    if not os.environ.get("HF_REPO_TYPE"):
+        HF_REPO_TYPE = _user_sec.get_secret("HF_REPO_TYPE") or "dataset"
+except Exception:
+    pass
+
+HF_ENABLED: bool = bool(HF_TOKEN and HF_STORAGE_REPO and HfApi)
+hf_api = HfApi(token=HF_TOKEN) if HF_ENABLED else None
+if HF_ENABLED:
+    logger.info(f"🤗 [HF Storage Vault] Connected to Hugging Face repo: {HF_STORAGE_REPO} (type={HF_REPO_TYPE})")
+
+# B. Google Drive Cloud Storage (rclone OAuth fallback)
 GDRIVE_REMOTE = "gdrive"
 GDRIVE_ROOT = "AI_Storage"
 
 GDRIVE_CLIENT_ID_FALLBACK = os.environ.get("GDRIVE_CLIENT_ID", "")
 GDRIVE_CLIENT_SECRET_FALLBACK = os.environ.get("GDRIVE_CLIENT_SECRET", "")
 GDRIVE_TOKEN_FALLBACK = os.environ.get("GDRIVE_TOKEN_JSON", "")
-
 
 RCLONE_CONF_FILE: Optional[pathlib.Path] = None
 GDRIVE_ENABLED: bool = False
@@ -239,86 +267,173 @@ def _get_rclone_cmd(base_args: List[str]) -> List[str]:
     return cmd
 
 
-def gdrive_sync_down(subfolder: str, local_dest: pathlib.Path):
-    """Sync assets from Google Drive to local Kaggle working directory."""
-    if not GDRIVE_ENABLED:
+# C. Native Hugging Face Hub Storage Routines
+def hf_sync_up(local_file: pathlib.Path, subfolder: str):
+    """Uploads file to Hugging Face Hub repo."""
+    if not hf_api or not HF_STORAGE_REPO or not local_file.exists():
         return
     try:
-        ensure_rclone_installed()
-        cmd = _get_rclone_cmd(["copy", f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}", str(local_dest)])
-        subprocess.run(cmd, check=False)
+        path_in_repo = f"{subfolder}/{local_file.name}"
+        hf_api.upload_file(
+            path_or_fileobj=str(local_file),
+            path_in_repo=path_in_repo,
+            repo_id=HF_STORAGE_REPO,
+            repo_type=HF_REPO_TYPE,
+            commit_message=f"Upload {local_file.name}"
+        )
+        logger.info(f"✅ [HF Vault] Uploaded {local_file.name} to {path_in_repo}")
     except Exception as e:
-        logger.warning(f"gdrive_sync_down failed: {e}")
+        logger.warning(f"HF upload failed for {local_file.name}: {e}")
 
 
-def gdrive_sync_metadata(subfolder: str, local_dest: pathlib.Path):
-    """Sync only lightweight metadata (.meta.json) from Google Drive without heavy weights."""
-    if not GDRIVE_ENABLED:
+def hf_upload_and_clean(local_file: pathlib.Path, subfolder: str, keep_local: bool = False):
+    """Uploads file to HF Hub and purges local copy to conserve Kaggle disk space."""
+    if not local_file.exists():
         return
-    try:
-        ensure_rclone_installed()
-        cmd = _get_rclone_cmd(["copy", f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}", str(local_dest), "--include", "*.meta.json"])
-        subprocess.run(cmd, check=False)
-    except Exception as e:
-        logger.warning(f"gdrive_sync_metadata failed: {e}")
+    hf_sync_up(local_file, subfolder)
+    if not keep_local:
+        try:
+            local_file.unlink()
+            logger.info(f"🧹 [HF AutoClean] Purged local copy {local_file.name}")
+        except Exception as e:
+            logger.warning(f"Failed to remove local copy: {e}")
 
 
-def gdrive_sync_up(local_src: pathlib.Path, subfolder: str):
-    """Sync generated assets, models, or LoRAs to Google Drive."""
-    if not GDRIVE_ENABLED:
-        return
-    try:
-        ensure_rclone_installed()
-        cmd = _get_rclone_cmd(["copy", str(local_src), f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}"])
-        subprocess.run(cmd, check=False)
-    except Exception as e:
-        logger.warning(f"gdrive_sync_up failed: {e}")
-
-
-def gdrive_upload_and_clean(local_src: pathlib.Path, subfolder: str, keep_local: bool = False):
-    """Upload to Google Drive Vault and immediately auto-clean local storage once verified."""
-    if not local_src.exists():
-        return
-    if not GDRIVE_ENABLED:
-        # Preserve local copy since cloud vault is not active
-        return
-    try:
-        ensure_rclone_installed()
-        filename = local_src.name
-        logger.info(f"📤 [Storage Vault] Uploading {filename} to Google Drive {subfolder}...")
-        cmd = _get_rclone_cmd(["copy", str(local_src), f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}"])
-        res = subprocess.run(cmd, check=False)
-        if res.returncode == 0:
-            check_cmd = _get_rclone_cmd(["lsf", f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}/{filename}"])
-            check_res = subprocess.run(check_cmd, capture_output=True, text=True)
-            if filename in check_res.stdout:
-                logger.info(f"✅ [Storage Vault] Verified in Google Drive: {filename}")
-                if not keep_local:
-                    try:
-                        local_src.unlink()
-                        logger.info(f"🧹 [AutoClean] Purged {filename} from local storage to keep disk at 0 MB.")
-                    except Exception as ce:
-                        logger.warning(f"Could not remove local copy: {ce}")
-            else:
-                logger.warning(f"Verification pending for {filename} in Google Drive.")
-    except Exception as e:
-        logger.warning(f"gdrive_upload_and_clean failed: {e}")
-
-
-def gdrive_fetch_on_demand(filename: str, subfolder: str, local_dest: pathlib.Path) -> pathlib.Path:
-    """Fetch a specific asset on-demand from Google Drive if not present locally."""
+def hf_fetch_on_demand(filename: str, subfolder: str, local_dest: pathlib.Path) -> pathlib.Path:
+    """Pulls requested LoRA or config from HF Hub if not present locally."""
     target = local_dest / filename
     if target.exists() and target.stat().st_size > 1000:
         return target
-    if not GDRIVE_ENABLED:
+    if not HF_ENABLED or not hf_hub_download:
         return target
     try:
-        ensure_rclone_installed()
-        logger.info(f"📥 [On-Demand] Fetching {filename} from Google Drive {subfolder}...")
-        cmd = _get_rclone_cmd(["copy", f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}/{filename}", str(local_dest)])
-        subprocess.run(cmd, check=False)
+        logger.info(f"📥 [HF Vault] Downloading {filename}...")
+        downloaded = hf_hub_download(
+            repo_id=HF_STORAGE_REPO,
+            filename=f"{subfolder}/{filename}",
+            repo_type=HF_REPO_TYPE,
+            local_dir=str(local_dest),
+            token=HF_TOKEN
+        )
+        return pathlib.Path(downloaded)
     except Exception as e:
-        logger.warning(f"gdrive_fetch_on_demand failed: {e}")
+        logger.warning(f"HF fetch on-demand note for {filename}: {e}")
+        return target
+
+
+# D. Unified Storage Routines (Hugging Face primary, Google Drive fallback)
+def gdrive_sync_down(subfolder: str, local_dest: pathlib.Path):
+    """Sync assets to local Kaggle working directory from active cloud vault."""
+    if HF_ENABLED and hf_api:
+        try:
+            files = hf_api.list_repo_files(repo_id=HF_STORAGE_REPO, repo_type=HF_REPO_TYPE)
+            for f in files:
+                if f.startswith(f"{subfolder}/"):
+                    hf_hub_download(
+                        repo_id=HF_STORAGE_REPO,
+                        filename=f,
+                        repo_type=HF_REPO_TYPE,
+                        local_dir=str(local_dest),
+                        token=HF_TOKEN
+                    )
+            return
+        except Exception as e:
+            logger.warning(f"HF sync_down failed: {e}")
+    if GDRIVE_ENABLED:
+        try:
+            ensure_rclone_installed()
+            cmd = _get_rclone_cmd(["copy", f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}", str(local_dest)])
+            subprocess.run(cmd, check=False)
+        except Exception as e:
+            logger.warning(f"gdrive_sync_down failed: {e}")
+
+
+def gdrive_sync_metadata(subfolder: str, local_dest: pathlib.Path):
+    """Sync only lightweight metadata (.meta.json) from active cloud vault."""
+    if HF_ENABLED and hf_api:
+        try:
+            files = hf_api.list_repo_files(repo_id=HF_STORAGE_REPO, repo_type=HF_REPO_TYPE)
+            for f in files:
+                if f.startswith(f"{subfolder}/") and f.endswith(".meta.json"):
+                    hf_hub_download(
+                        repo_id=HF_STORAGE_REPO,
+                        filename=f,
+                        repo_type=HF_REPO_TYPE,
+                        local_dir=str(local_dest),
+                        token=HF_TOKEN
+                    )
+            return
+        except Exception as e:
+            logger.warning(f"HF sync_metadata failed: {e}")
+    if GDRIVE_ENABLED:
+        try:
+            ensure_rclone_installed()
+            cmd = _get_rclone_cmd(["copy", f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}", str(local_dest), "--include", "*.meta.json"])
+            subprocess.run(cmd, check=False)
+        except Exception as e:
+            logger.warning(f"gdrive_sync_metadata failed: {e}")
+
+
+def gdrive_sync_up(local_src: pathlib.Path, subfolder: str):
+    """Sync file up to active cloud vault (HF Hub if configured, else Google Drive)."""
+    if not local_src.exists():
+        return
+    if HF_ENABLED:
+        hf_sync_up(local_src, subfolder)
+        return
+    if GDRIVE_ENABLED:
+        try:
+            ensure_rclone_installed()
+            cmd = _get_rclone_cmd(["copy", str(local_src), f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}"])
+            subprocess.run(cmd, check=False)
+        except Exception as e:
+            logger.warning(f"gdrive_sync_up failed: {e}")
+
+
+def gdrive_upload_and_clean(local_src: pathlib.Path, subfolder: str, keep_local: bool = False):
+    """Upload to active cloud vault and immediately purge local copy to keep disk clear."""
+    if not local_src.exists():
+        return
+    if HF_ENABLED:
+        hf_upload_and_clean(local_src, subfolder, keep_local)
+        return
+    if GDRIVE_ENABLED:
+        try:
+            ensure_rclone_installed()
+            filename = local_src.name
+            logger.info(f"📤 [Storage Vault] Uploading {filename} to Google Drive {subfolder}...")
+            cmd = _get_rclone_cmd(["copy", str(local_src), f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}"])
+            res = subprocess.run(cmd, check=False)
+            if res.returncode == 0:
+                check_cmd = _get_rclone_cmd(["lsf", f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}/{filename}"])
+                check_res = subprocess.run(check_cmd, capture_output=True, text=True)
+                if filename in check_res.stdout:
+                    logger.info(f"✅ [Storage Vault] Verified in Google Drive: {filename}")
+                    if not keep_local:
+                        try:
+                            local_src.unlink()
+                            logger.info(f"🧹 [AutoClean] Purged {filename} from local storage.")
+                        except Exception as ce:
+                            logger.warning(f"Could not remove local copy: {ce}")
+        except Exception as e:
+            logger.warning(f"gdrive_upload_and_clean failed: {e}")
+
+
+def gdrive_fetch_on_demand(filename: str, subfolder: str, local_dest: pathlib.Path) -> pathlib.Path:
+    """Fetch a specific asset on-demand from active cloud vault if not present locally."""
+    target = local_dest / filename
+    if target.exists() and target.stat().st_size > 1000:
+        return target
+    if HF_ENABLED:
+        return hf_fetch_on_demand(filename, subfolder, local_dest)
+    if GDRIVE_ENABLED:
+        try:
+            ensure_rclone_installed()
+            logger.info(f"📥 [On-Demand] Fetching {filename} from Google Drive {subfolder}...")
+            cmd = _get_rclone_cmd(["copy", f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}/{filename}", str(local_dest)])
+            subprocess.run(cmd, check=False)
+        except Exception as e:
+            logger.warning(f"gdrive_fetch_on_demand failed: {e}")
     return target
 
 
@@ -883,7 +998,7 @@ def list_loras():
                     "is_active": stem in orchestrator.active_loras,
                     "scale": orchestrator.active_loras.get(stem, 0.8),
                     "trigger_words": meta.get("trigger_words", ""),
-                    "storage": "Google Drive Vault (AutoCleaned)",
+                    "storage": "Hugging Face Vault" if HF_ENABLED else "Google Drive Vault (AutoCleaned)",
                 }
         except Exception:
             pass
