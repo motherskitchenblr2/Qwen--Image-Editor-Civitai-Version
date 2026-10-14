@@ -327,30 +327,30 @@ export default function CivitaiLoraHub({
   return (
     <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto p-6 animate-fadeIn">
       {/* ── Header Banner ────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-slate-950/90 border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] rounded-3xl p-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-full text-xs font-semibold text-cyan-300">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/15 border border-cyan-400 rounded-full text-xs font-bold text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
                 Civitai.red Live LoRA Explorer
               </div>
               {isConnected && (
-                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                   isModelReady
-                    ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
-                    : "bg-amber-500/10 border border-amber-500/30 text-amber-300 animate-pulse"
+                    ? "bg-emerald-500/20 border border-emerald-400 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-neon-emerald"
+                    : "bg-amber-500/20 border border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.3)] animate-neon-amber"
                 }`}>
                   <span className={`w-2 h-2 rounded-full ${isModelReady ? "bg-emerald-400" : "bg-amber-400 animate-ping"}`} />
                   <span>{isModelReady ? "Dual T4 GPU Ready" : "Dual T4 Warming Up (~60s)"}</span>
                 </div>
               )}
             </div>
-            <h2 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-              Browse, Download & Fuse LoRAs to 5 TB Vault
+            <h2 className="text-2xl lg:text-3xl font-black bg-gradient-to-r from-white via-cyan-100 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
+              Browse, Download &amp; Fuse LoRAs to 5 TB Vault
             </h2>
-            <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+            <p className="text-xs text-cyan-200/80 max-w-2xl leading-relaxed">
               Explore thousands of community-crafted LoRAs directly from Civitai.red. Download in seconds straight to
               your persistent Google Drive Vault (`AI_Storage/loras/`) and inject them dynamically into the Dual Tesla T4
               pipeline with zero restart.
@@ -567,7 +567,7 @@ export default function CivitaiLoraHub({
             return (
               <div
                 key={model.id}
-                className="group bg-slate-900/60 hover:bg-slate-900 border border-slate-800/90 hover:border-slate-700/80 rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-1"
+                className="group bg-slate-950/85 hover:bg-slate-950 border border-cyan-500/35 hover:border-cyan-400 rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-[0_0_25px_rgba(6,182,212,0.35)] hover:-translate-y-1"
               >
                 {/* ── Large Thumbnail with Overlay Badges ── */}
                 <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-950">

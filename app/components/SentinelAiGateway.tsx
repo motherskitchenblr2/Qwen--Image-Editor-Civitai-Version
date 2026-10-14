@@ -454,25 +454,25 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
       )}
 
       {/* Sentinel Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 md:p-8 shadow-2xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] bg-slate-950/90 p-6 md:p-8">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-gradient-to-br from-cyan-500 to-indigo-600 text-black shadow-lg shadow-cyan-500/20">
+              <div className="p-2.5 rounded-2xl bg-gradient-to-br from-cyan-400 via-teal-400 to-indigo-600 text-black shadow-[0_0_20px_rgba(6,182,212,0.5)]">
                 <Shield className="w-6 h-6 stroke-[2.5]" />
               </div>
               <div>
-                <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2.5">
+                <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2.5 drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
                   Sentinel: AI Gateway &amp; Key Vault
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-widest flex items-center gap-1">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/25 text-emerald-300 border border-emerald-400/60 uppercase tracking-widest flex items-center gap-1 shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                     <Lock className="w-3 h-3" /> Auto-Encrypting Vercel Env
                   </span>
                 </h2>
-                <p className="text-xs text-slate-400">
-                  When you paste an API key, it instantly encrypts into <span className="font-mono text-emerald-400 font-bold">*************</span> stars and automatically syncs to your app&apos;s Vercel Project Environment.
+                <p className="text-xs text-cyan-200/80">
+                  When you paste an API key, it instantly encrypts into <span className="font-mono text-emerald-300 font-extrabold drop-shadow-[0_0_6px_rgba(16,185,129,0.6)]">*************</span> stars and automatically syncs to your app&apos;s Vercel Project Environment.
                 </p>
               </div>
             </div>
@@ -480,10 +480,10 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
 
           {/* Quick Metrics & Save All */}
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="bg-slate-900/90 border border-slate-800 px-3.5 py-2 rounded-xl text-xs flex items-center gap-2">
+            <div className="bg-black/80 border border-cyan-500/35 px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 shadow-[0_0_10px_rgba(6,182,212,0.15)]">
               <Lock className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-slate-400">In Vercel Env:</span>
-              <span className="font-mono font-bold text-emerald-300">
+              <span className="text-slate-300">In Vercel Env:</span>
+              <span className="font-mono font-extrabold text-emerald-300 drop-shadow-[0_0_6px_rgba(16,185,129,0.5)]">
                 {configuredCount} / {PROVIDERS.length}
               </span>
             </div>
@@ -491,10 +491,10 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
             <button
               onClick={handleSaveAll}
               disabled={isSavingAll}
-              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-black font-extrabold rounded-xl text-xs shadow-lg shadow-emerald-500/20 transition active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-black font-extrabold rounded-xl text-xs shadow-[0_0_20px_rgba(16,185,129,0.45)] transition active:scale-95 disabled:opacity-50"
             >
               {isSavingAll ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
+                <RefreshCw className="w-4 h-4 animate-spin text-black" />
               ) : (
                 <Save className="w-4 h-4" />
               )}
@@ -505,16 +505,16 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
       </div>
 
       {/* Cloudflare MCP & R2 Status Card */}
-      <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/20 via-slate-900/60 to-slate-950/80 p-5 backdrop-blur-xl shadow-lg">
+      <div className="rounded-2xl border border-amber-500/40 bg-black/80 shadow-[0_0_20px_rgba(245,158,11,0.15)] p-5 backdrop-blur-xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mt-0.5">
-              <Cloud className="w-5 h-5" />
+            <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-400 text-amber-300 mt-0.5 shadow-[0_0_10px_rgba(245,158,11,0.3)]">
+              <Cloud className="w-5 h-5 animate-pulse" />
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-100">Cloudflare MCP &amp; R2 Storage Active</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                <span className="text-sm font-extrabold text-white">Cloudflare MCP &amp; R2 Storage Active</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/25 text-amber-300 border border-amber-400/50 shadow-[0_0_8px_rgba(245,158,11,0.3)]">
                   Account: {vaultInfo["cloudflare_ai"]?.configured ? "Connected" : "Configured"}
                 </span>
               </div>

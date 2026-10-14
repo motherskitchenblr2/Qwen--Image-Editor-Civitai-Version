@@ -228,16 +228,16 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
   return (
     <div className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-6 space-y-6 animate-fadeIn">
       {/* ── Top Header Banner ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900/90 to-indigo-950/60 border border-slate-800 rounded-3xl p-6 lg:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
+      <div className="bg-slate-950/90 border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] rounded-3xl p-6 lg:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
         <div className="space-y-2 z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400 text-cyan-300 text-xs font-bold shadow-[0_0_10px_rgba(6,182,212,0.3)]">
             <Sparkles className="w-3.5 h-3.5 fill-cyan-400" />
             <span>Multi-Model AI Generator Hub</span>
           </div>
-          <h2 className="text-2xl lg:text-3xl font-black bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+          <h2 className="text-2xl lg:text-3xl font-black bg-gradient-to-r from-white via-cyan-100 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
             AI Image Generator &amp; Precision Editor Hub
           </h2>
-          <p className="text-xs lg:text-sm text-slate-400 leading-relaxed">
+          <p className="text-xs lg:text-sm text-cyan-200/80 leading-relaxed">
             Generate and edit images instantly across Alibaba Qwen Cloud, Nano Banana Turbo, and Cloudflare Workers AI edge.
             Switch models freely and pipe results directly into the Studio Editor.
           </p>
@@ -245,24 +245,24 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
 
         {/* Quick Stats Pill */}
         <div className="flex flex-wrap md:flex-col gap-2 z-10 w-full md:w-auto">
-          <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800/80 px-3.5 py-2 rounded-xl text-xs">
-            <Zap className="w-4 h-4 text-amber-400" />
-            <span className="text-slate-400">Nano Banana:</span>
-            <span className="text-amber-300 font-bold font-mono">1.5s Ultra-Fast</span>
+          <div className="flex items-center gap-2 bg-black/80 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.2)] px-3.5 py-2 rounded-xl text-xs">
+            <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
+            <span className="text-slate-300">Nano Banana:</span>
+            <span className="text-amber-300 font-extrabold font-mono drop-shadow-[0_0_6px_rgba(245,158,11,0.5)]">1.5s Ultra-Fast</span>
           </div>
-          <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800/80 px-3.5 py-2 rounded-xl text-xs">
+          <div className="flex items-center gap-2 bg-black/80 border border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.2)] px-3.5 py-2 rounded-xl text-xs">
             <Cpu className="w-4 h-4 text-cyan-400" />
-            <span className="text-slate-400">Qwen Cloud:</span>
-            <span className="text-cyan-300 font-bold font-mono">qwen-image / edit</span>
+            <span className="text-slate-300">Qwen Cloud:</span>
+            <span className="text-cyan-300 font-extrabold font-mono drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]">qwen-image / edit</span>
           </div>
         </div>
       </div>
 
       {/* ── Mode Selection & Model Switcher: Equal-Size Inline Bar ── */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 sm:p-4 space-y-4">
+      <div className="bg-slate-950/85 border border-cyan-500/35 shadow-[0_0_20px_rgba(6,182,212,0.15)] rounded-2xl p-3 sm:p-4 space-y-4">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Mode Switcher: Equal-Sized Buttons in One Line */}
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-950 p-1 sm:p-1.5 rounded-xl border border-slate-800 w-full md:w-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-black/80 p-1 sm:p-1.5 rounded-xl border border-cyan-500/35 shadow-[0_0_10px_rgba(6,182,212,0.12)] w-full md:w-auto">
             <button
               onClick={() => setActiveMode("generate")}
               className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-5 h-9 rounded-lg text-xs font-bold transition-all ${
@@ -340,14 +340,14 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
       {/* ── Main Studio Grid: Controls & Output ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Form: 5 cols */}
-        <div className="lg:col-span-5 bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-              <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+        <div className="lg:col-span-5 bg-slate-950/85 border border-cyan-500/40 shadow-[0_0_25px_rgba(6,182,212,0.18)] hover:shadow-[0_0_35px_rgba(6,182,212,0.28)] rounded-2xl p-5 space-y-4 transition-all duration-300">
+          <div className="flex items-center justify-between border-b border-cyan-500/30 pb-3">
+            <span className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+              <Sliders className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
               {activeMode === "generate" ? "Text-to-Image Parameters" : "Image-to-Image Parameters"}
             </span>
-            <span className="text-[11px] text-slate-400 font-mono">
-              Engine: <strong className="text-cyan-400">{selectedModel}</strong>
+            <span className="text-[11px] text-cyan-300 font-mono font-bold">
+              Engine: <strong className="text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">{selectedModel}</strong>
             </span>
           </div>
 
@@ -462,19 +462,19 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
           )}
 
           {/* ── Equal Size Action Buttons Row (UI-UX-PRO-MAX Standard) ── */}
-          <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
+          <div className="pt-2 border-t border-cyan-500/30 flex items-center gap-2">
             <button
               onClick={handleExecute}
               disabled={isGenerating}
-              className={`flex-1 h-10 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md ${
+              className={`flex-1 h-10 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition active:scale-95 ${
                 isGenerating
-                  ? "bg-slate-800 text-slate-500 cursor-not-allowed"
-                  : "bg-gradient-to-r from-cyan-400 via-teal-400 to-indigo-500 text-black hover:opacity-95 shadow-cyan-500/25"
+                  ? "bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800"
+                  : "bg-gradient-to-r from-cyan-400 via-teal-300 to-fuchsia-500 hover:from-cyan-300 hover:via-teal-200 hover:to-fuchsia-400 text-black shadow-[0_0_25px_rgba(6,182,212,0.55)] hover:shadow-[0_0_35px_rgba(236,72,153,0.7)] animate-neon-button"
               }`}
             >
               {isGenerating ? (
                 <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-black" />
                   <span>Synthesizing...</span>
                 </>
               ) : (
@@ -495,7 +495,7 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
                 setErrorMessage("");
               }}
               title="Reset fields"
-              className="h-10 px-3.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition"
+              className="h-10 px-3.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition"
             >
               ↺ Reset
             </button>
@@ -503,14 +503,14 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
         </div>
 
         {/* Right Preview & Pipe Canvas: 7 cols */}
-        <div className="lg:col-span-7 bg-slate-900/30 border border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between min-h-[460px]">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <span className="text-xs font-semibold text-slate-300 flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-cyan-400" />
+        <div className="lg:col-span-7 bg-slate-950/85 border-2 border-purple-500/40 hover:border-purple-400 shadow-[0_0_30px_rgba(168,85,247,0.2)] hover:shadow-[0_0_45px_rgba(168,85,247,0.35)] rounded-2xl p-5 flex flex-col justify-between min-h-[460px] transition-all duration-300">
+          <div className="flex items-center justify-between border-b border-purple-500/30 pb-3">
+            <span className="text-xs font-extrabold text-white flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-purple-400 animate-pulse" />
               Generator Output Preview
             </span>
             {lastLatency !== null && (
-              <span className="text-[11px] font-mono bg-emerald-950/60 border border-emerald-800/80 text-emerald-300 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-mono bg-emerald-950/80 border border-emerald-400/80 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)] px-2.5 py-0.5 rounded-full font-bold">
                 ⚡ Generated in {(lastLatency / 1000).toFixed(2)}s &bull; {lastModelUsed}
               </span>
             )}

@@ -859,22 +859,22 @@ export default function ImageEditorStudio() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-black">
+    <div className="flex flex-col min-h-screen bg-transparent text-slate-100 font-sans selection:bg-cyan-500 selection:text-black relative">
       {/* ── Top Header ────────────────────────────────────────── */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl px-3 sm:px-6 py-2.5 lg:py-3 sticky top-0 z-50 shadow-md w-full max-w-full">
+      <header className="border-b border-cyan-500/40 bg-slate-950/90 backdrop-blur-2xl px-3 sm:px-6 py-2.5 lg:py-3 sticky top-0 z-50 shadow-[0_4px_30px_rgba(6,182,212,0.18)] w-full max-w-full">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-2.5 lg:gap-4 w-full">
           {/* Top Row on Mobile: Brand on Left, Quick GPU Controls on Right */}
           <div className="flex items-center justify-between w-full lg:w-auto gap-3">
             {/* Brand Logo & Name */}
             <div className="flex items-center gap-2.5">
-              <div className="bg-gradient-to-tr from-cyan-500 to-indigo-500 p-2 rounded-xl text-black shadow-lg shadow-cyan-500/25 shrink-0">
+              <div className="bg-gradient-to-tr from-cyan-400 via-teal-400 to-indigo-500 p-2 rounded-xl text-black shadow-[0_0_20px_rgba(6,182,212,0.55)] shrink-0 animate-neon-cyan">
                 <Sparkles className="w-4 h-4 fill-black" />
               </div>
               <div>
-                <h1 className="font-extrabold text-sm sm:text-base lg:text-lg leading-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                <h1 className="font-extrabold text-sm sm:text-base lg:text-lg leading-tight bg-gradient-to-r from-white via-cyan-200 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
                   Qwen Image Editor Studio
                 </h1>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Dual Tesla T4 &bull; 5 TB Google Drive Vault</p>
+                <p className="text-[10px] sm:text-[11px] text-cyan-300/80 font-medium tracking-wide">Dual Tesla T4 &bull; 5 TB Google Drive Vault</p>
               </div>
             </div>
 
@@ -886,8 +886,8 @@ export default function ImageEditorStudio() {
                     title={modelStatusMessage}
                     className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold ${
                       isModelReady
-                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/60 shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-neon-emerald"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-400/60 shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-neon-amber"
                     }`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${isModelReady ? "bg-emerald-400" : "bg-amber-400 animate-ping"}`} />
@@ -897,10 +897,10 @@ export default function ImageEditorStudio() {
                     onClick={handleShutdownGpu}
                     disabled={isShuttingDown}
                     title="GPU is ON. Click to stop and deallocate Kaggle GPU immediately."
-                    className="group flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/20 hover:bg-rose-600/90 border border-emerald-500/50 hover:border-rose-500 text-emerald-300 hover:text-white rounded-lg text-[11px] font-bold shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all active:scale-95 disabled:opacity-50"
+                    className="group flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/25 hover:bg-rose-600/90 border border-emerald-400 hover:border-rose-400 text-emerald-200 hover:text-white rounded-lg text-[11px] font-bold shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all active:scale-95 disabled:opacity-50"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 group-hover:bg-rose-300 animate-pulse" />
-                    <Power className={`w-3 h-3 text-emerald-400 group-hover:text-white ${isShuttingDown ? "animate-spin" : ""}`} />
+                    <Power className={`w-3 h-3 text-emerald-300 group-hover:text-white ${isShuttingDown ? "animate-spin" : ""}`} />
                     <span className="group-hover:hidden">Power: ON</span>
                     <span className="hidden group-hover:inline">{isShuttingDown ? "Stopping" : "Stop"}</span>
                   </button>
@@ -910,24 +910,24 @@ export default function ImageEditorStudio() {
                   onClick={handleShutdownGpu}
                   disabled={isShuttingDown}
                   title="GPU is booting on Kaggle. Tap to cancel and halt."
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/20 hover:bg-rose-600 border border-amber-500/40 hover:border-rose-500 text-amber-300 hover:text-white rounded-lg text-[10px] font-semibold animate-pulse transition active:scale-95 disabled:opacity-50"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/20 hover:bg-rose-600 border border-amber-400/80 hover:border-rose-400 text-amber-200 hover:text-white rounded-lg text-[10px] font-semibold animate-neon-amber transition active:scale-95 disabled:opacity-50"
                 >
-                  <RefreshCw className={`w-3 h-3 text-amber-400 ${isShuttingDown ? "animate-spin" : "animate-spin"}`} />
+                  <RefreshCw className={`w-3 h-3 text-amber-300 ${isShuttingDown ? "animate-spin" : "animate-spin"}`} />
                   <span>{isShuttingDown ? "Halting..." : "Booting (Stop)"}</span>
                 </button>
               ) : (
                 <button
                   onClick={() => handleStartGpu()}
                   title="Boot Kaggle GPU"
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900 hover:bg-emerald-500/20 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-lg text-[11px] font-bold shadow-sm transition active:scale-95"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900/90 hover:bg-emerald-500/20 border border-cyan-500/40 hover:border-emerald-400 text-cyan-200 hover:text-emerald-300 rounded-lg text-[11px] font-bold shadow-[0_0_10px_rgba(6,182,212,0.2)] transition active:scale-95"
                 >
-                  <Power className="w-3 h-3 text-slate-400" />
+                  <Power className="w-3 h-3 text-cyan-400" />
                   <span>Turn On GPU</span>
                 </button>
               )}
               <button
                 onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
-                className="p-1.5 bg-slate-900 border border-slate-800 text-slate-400 rounded-lg"
+                className="p-1.5 bg-slate-900/90 border border-cyan-500/30 text-cyan-400 rounded-lg shadow-sm hover:border-cyan-400 transition"
               >
                 <Settings className="w-3.5 h-3.5" />
               </button>
@@ -936,13 +936,13 @@ export default function ImageEditorStudio() {
 
           {/* Tab Switcher Navigation - Full width with clean horizontal swipe on mobile, center on desktop */}
           <div className="w-full lg:w-auto overflow-x-auto no-scrollbar py-0.5">
-            <div className="flex items-center gap-1 sm:gap-1.5 bg-slate-950/90 p-1 sm:p-1.5 rounded-2xl border border-slate-800/80 shadow-inner w-max mx-auto lg:mx-0">
+            <div className="flex items-center gap-1 sm:gap-1.5 bg-black/80 p-1 sm:p-1.5 rounded-2xl border border-cyan-500/35 shadow-[0_0_18px_rgba(6,182,212,0.18)] w-max mx-auto lg:mx-0">
               <button
                 onClick={() => setActiveTab("studio")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
                   activeTab === "studio"
-                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 shrink-0" />
@@ -952,13 +952,13 @@ export default function ImageEditorStudio() {
                 onClick={() => setActiveTab("generators")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
                   activeTab === "generators"
-                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
                 }`}
               >
                 <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span>AI Generators</span>
-                <span className="px-1.5 py-0.2 bg-amber-500/20 border border-amber-500/40 rounded-full text-[9px] text-amber-300 font-bold">
+                <span className="px-1.5 py-0.2 bg-amber-500/20 border border-amber-400/60 rounded-full text-[9px] text-amber-300 font-bold shadow-[0_0_8px_rgba(245,158,11,0.3)]">
                   NEW
                 </span>
               </button>
@@ -966,14 +966,14 @@ export default function ImageEditorStudio() {
                 onClick={() => setActiveTab("loras")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
                   activeTab === "loras"
-                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
                 }`}
               >
                 <Layers className="w-3.5 h-3.5 shrink-0" />
                 <span>Civitai LoRA Hub</span>
                 {availableLoras.length > 0 && (
-                  <span className="px-1.5 py-0.2 bg-slate-900 border border-slate-700/80 rounded-full text-[10px] text-cyan-300 font-mono font-bold">
+                  <span className="px-1.5 py-0.2 bg-slate-900 border border-cyan-500/40 rounded-full text-[10px] text-cyan-300 font-mono font-bold shadow-[0_0_8px_rgba(6,182,212,0.25)]">
                     {availableLoras.length}
                   </span>
                 )}
@@ -982,8 +982,8 @@ export default function ImageEditorStudio() {
                 onClick={() => setActiveTab("gallery")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
                   activeTab === "gallery"
-                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
                 }`}
               >
                 <ImageIcon className="w-3.5 h-3.5 shrink-0" />
@@ -998,8 +998,8 @@ export default function ImageEditorStudio() {
                 onClick={() => setActiveTab("sentinel")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
                   activeTab === "sentinel"
-                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/20"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
                 }`}
               >
                 <Shield className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
@@ -1016,18 +1016,18 @@ export default function ImageEditorStudio() {
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold backdrop-blur-md transition ${
                 isConnected
                   ? isModelReady
-                    ? "bg-emerald-950/60 border-emerald-700/80 text-emerald-300 shadow-sm shadow-emerald-900/20"
-                    : "bg-amber-950/60 border-amber-700/80 text-amber-300 animate-pulse"
+                    ? "bg-emerald-950/80 border-emerald-500/70 text-emerald-200 shadow-[0_0_18px_rgba(16,185,129,0.35)] animate-neon-emerald"
+                    : "bg-amber-950/80 border-amber-500/70 text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.35)] animate-neon-amber"
                   : isStartingGpu
-                  ? "bg-amber-950/60 border-amber-700/80 text-amber-300 animate-pulse"
-                  : "bg-slate-900/80 border-slate-800 text-slate-400"
+                  ? "bg-amber-950/80 border-amber-500/70 text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.35)] animate-neon-amber"
+                  : "bg-slate-900/90 border border-cyan-500/30 text-slate-300 shadow-[0_0_10px_rgba(6,182,212,0.1)]"
               }`}
             >
               <div
                 className={`w-2 h-2 rounded-full ${
                   isConnected
                     ? isModelReady
-                      ? "bg-emerald-400 shadow-sm shadow-emerald-400/50"
+                      ? "bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
                       : "bg-amber-400 animate-ping"
                     : isStartingGpu
                     ? "bg-amber-400 animate-pulse"
@@ -1051,13 +1051,13 @@ export default function ImageEditorStudio() {
                 onClick={handleShutdownGpu}
                 disabled={isShuttingDown}
                 title="GPU is ON. Click to stop Kaggle GPU immediately to preserve quota."
-                className="group flex items-center gap-2 px-3.5 py-1.5 bg-emerald-500/15 hover:bg-rose-500/20 border border-emerald-500/50 hover:border-rose-500/60 text-emerald-300 hover:text-rose-200 rounded-xl text-xs font-bold shadow-[0_0_15px_rgba(16,185,129,0.25)] hover:shadow-rose-900/30 transition-all active:scale-95 disabled:opacity-50"
+                className="group flex items-center gap-2 px-3.5 py-1.5 bg-emerald-500/20 hover:bg-rose-500/25 border border-emerald-400 hover:border-rose-400 text-emerald-200 hover:text-rose-200 rounded-xl text-xs font-bold shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] animate-neon-emerald transition-all active:scale-95 disabled:opacity-50"
               >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 group-hover:bg-rose-400"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 group-hover:bg-rose-400"></span>
                 </span>
-                <Power className={`w-3.5 h-3.5 text-emerald-400 group-hover:text-rose-400 ${isShuttingDown ? "animate-spin" : ""}`} />
+                <Power className={`w-3.5 h-3.5 text-emerald-300 group-hover:text-rose-400 ${isShuttingDown ? "animate-spin" : ""}`} />
                 <span className="group-hover:hidden">Power: ON</span>
                 <span className="hidden group-hover:inline text-rose-300">{isShuttingDown ? "Stopping..." : "Turn Off GPU"}</span>
               </button>
@@ -1066,9 +1066,9 @@ export default function ImageEditorStudio() {
                 onClick={handleShutdownGpu}
                 disabled={isShuttingDown}
                 title="GPU is booting on Kaggle. Click to cancel and halt the session."
-                className="group flex items-center gap-2 px-3.5 py-1.5 bg-amber-500/15 hover:bg-rose-500/20 border border-amber-500/50 hover:border-rose-500/60 text-amber-300 hover:text-rose-200 rounded-xl text-xs font-semibold shadow-[0_0_12px_rgba(245,158,11,0.25)] hover:shadow-rose-900/30 transition-all active:scale-95 disabled:opacity-50"
+                className="group flex items-center gap-2 px-3.5 py-1.5 bg-amber-500/20 hover:bg-rose-500/25 border border-amber-400 hover:border-rose-400 text-amber-200 hover:text-rose-200 rounded-xl text-xs font-semibold shadow-[0_0_20px_rgba(245,158,11,0.4)] animate-neon-amber transition-all active:scale-95 disabled:opacity-50"
               >
-                <RefreshCw className={`w-3.5 h-3.5 text-amber-400 group-hover:text-rose-400 ${isShuttingDown ? "animate-spin" : "animate-spin"}`} />
+                <RefreshCw className={`w-3.5 h-3.5 text-amber-300 group-hover:text-rose-400 ${isShuttingDown ? "animate-spin" : "animate-spin"}`} />
                 <span className="group-hover:hidden">Power: Booting ({bootMessage.includes("~90s") ? "~90s" : "Warming"}...)</span>
                 <span className="hidden group-hover:inline text-rose-300">{isShuttingDown ? "Halting..." : "Cancel / Stop GPU"}</span>
               </button>
@@ -1076,9 +1076,9 @@ export default function ImageEditorStudio() {
               <button
                 onClick={() => handleStartGpu()}
                 title="One-click boot Kaggle Dual Tesla T4s and auto-connect tunnel"
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-emerald-500/20 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-xl text-xs font-bold transition active:scale-95 shadow-sm"
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-900/90 hover:bg-emerald-500/20 border border-cyan-500/40 hover:border-emerald-400 text-slate-200 hover:text-emerald-300 rounded-xl text-xs font-bold transition active:scale-95 shadow-[0_0_12px_rgba(6,182,212,0.18)] hover:shadow-[0_0_18px_rgba(16,185,129,0.3)]"
               >
-                <Power className="w-3.5 h-3.5 text-slate-400" />
+                <Power className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Turn On GPU</span>
               </button>
             )}
@@ -1087,16 +1087,16 @@ export default function ImageEditorStudio() {
             <button
               onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
               title="Advanced: Inspect or override tunnel URL"
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 rounded-lg transition"
+              className="p-1.5 bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/30 hover:border-cyan-400 text-cyan-400 hover:text-cyan-200 rounded-lg shadow-sm transition"
             >
               <Settings className="w-3.5 h-3.5" />
             </button>
 
             {/* Storage Badge */}
-            <div className="hidden xl:flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg text-xs">
+            <div className="hidden xl:flex items-center gap-2 bg-slate-900/90 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs shadow-[0_0_10px_rgba(6,182,212,0.1)]">
               <Database className="w-3.5 h-3.5 text-cyan-400" />
               <span className="text-slate-400">Vault:</span>
-              <span className="text-slate-200 font-medium">5.0 TiB Google Drive</span>
+              <span className="text-cyan-200 font-medium">5.0 TiB Google Drive</span>
             </div>
           </div>
         </div>
@@ -1115,39 +1115,39 @@ export default function ImageEditorStudio() {
 
       {/* ── Settings: GPU Configuration Card ── */}
       {showAdvancedUrl && (
-        <div className="bg-slate-900/98 border-b border-cyan-500/30 shadow-[0_10px_30px_rgba(0,0,0,0.6)] px-6 py-5 backdrop-blur-xl animate-fadeIn">
+        <div className="bg-slate-950/95 border-b border-cyan-500/50 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_25px_rgba(6,182,212,0.2)] px-6 py-5 backdrop-blur-2xl animate-fadeIn">
           <div className="max-w-4xl mx-auto space-y-5">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center justify-between border-b border-cyan-500/30 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
-                  <Settings className="w-4 h-4" />
+                <div className="p-2 rounded-xl bg-cyan-500/15 border border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.35)]">
+                  <Settings className="w-4 h-4 animate-spin-slow" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                  <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
                     Settings: GPU Configuration Card
                   </h3>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-cyan-300/70">
                     Configure backend ingress and schedule automatic GPU shutdown to preserve your quota.
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleCancelIdleTimeout}
-                className="text-slate-400 hover:text-slate-200 text-xs px-2.5 py-1 rounded-md hover:bg-slate-800 transition"
+                className="text-slate-400 hover:text-cyan-300 text-xs px-2.5 py-1 rounded-lg hover:bg-cyan-950/50 hover:border hover:border-cyan-500/40 transition"
               >
                 ✕ Close
               </button>
             </div>
 
             {/* Ingress Link Connection */}
-            <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3.5 space-y-2">
+            <div className="bg-black/70 border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.12)] rounded-xl p-3.5 space-y-2">
               <div className="flex justify-between items-center text-xs">
-                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                <span className="font-semibold text-slate-200 flex items-center gap-1.5">
                   <ExternalLink className="w-3.5 h-3.5 text-cyan-400" /> Cloudflare Tunnel Ingress URL
                 </span>
-                <span className={`text-[11px] font-mono px-2 py-0.5 rounded font-bold ${
-                  isConnected ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                <span className={`text-[11px] font-mono px-2 py-0.5 rounded font-bold shadow-sm ${
+                  isConnected ? "bg-emerald-500/25 text-emerald-300 border border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-neon-emerald" : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                 }`}>
                   {isConnected ? "● Tunnel Active" : "○ Disconnected"}
                 </span>
@@ -1158,12 +1158,12 @@ export default function ImageEditorStudio() {
                   placeholder="https://your-tunnel.trycloudflare.com (Auto-discovered from Drive Vault)"
                   value={backendUrl}
                   onChange={(e) => setBackendUrl(e.target.value)}
-                  className="flex-1 bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-1.5 text-slate-200 text-xs font-mono focus:ring-1 focus:ring-cyan-500 focus:outline-none"
+                  className="flex-1 bg-slate-900/90 border border-cyan-500/30 rounded-lg px-3 py-1.5 text-slate-200 text-xs font-mono focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(6,182,212,0.3)] focus:outline-none"
                 />
                 <button
                   onClick={() => checkBackend()}
                   disabled={isCheckingHealth}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-medium border border-slate-700 transition text-xs"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-300 rounded-lg font-semibold border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)] transition text-xs"
                 >
                   <RefreshCw className={`w-3 h-3 ${isCheckingHealth ? "animate-spin" : ""}`} />
                   Verify Link
@@ -1172,48 +1172,48 @@ export default function ImageEditorStudio() {
             </div>
 
             {/* ── Auto-Shutdown Watchdog Schedule Card ── */}
-            <div className="bg-gradient-to-br from-slate-950/90 to-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-4">
+            <div className="bg-black/70 border border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.12)] rounded-xl p-4 space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Power className="w-4 h-4 text-amber-400" />
-                    <span className="text-xs font-bold text-slate-200 uppercase tracking-wide">
+                    <Power className="w-4 h-4 text-amber-400 animate-pulse" />
+                    <span className="text-xs font-extrabold text-white uppercase tracking-wide">
                       Schedule Turn Off GPU Automatically if Not Used
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-400/50 shadow-[0_0_10px_rgba(245,158,11,0.25)]">
                       Quota Protection
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="text-xs text-slate-300 leading-relaxed">
                     Automatically stops and terminates the Kaggle GPU container if no edits or API requests are made within the scheduled inactivity time window.
                   </p>
                 </div>
               </div>
 
               {/* Master Checkbox */}
-              <label className="flex items-center gap-2.5 cursor-pointer select-none bg-slate-900/60 border border-slate-800/80 px-3 py-2 rounded-lg hover:border-slate-700 transition">
+              <label className="flex items-center gap-2.5 cursor-pointer select-none bg-slate-900/80 border border-cyan-500/30 px-3 py-2 rounded-lg hover:border-cyan-400 transition">
                 <input
                   type="checkbox"
                   checked={tempAutoShutdownEnabled}
                   onChange={(e) => setTempAutoShutdownEnabled(e.target.checked)}
-                  className="w-4 h-4 accent-cyan-500 rounded bg-slate-950 cursor-pointer"
+                  className="w-4 h-4 accent-cyan-400 rounded bg-black cursor-pointer"
                 />
-                <span className="text-xs font-semibold text-slate-200">
+                <span className="text-xs font-semibold text-white">
                   Enable Automatic GPU Turn Off when Inactive
                 </span>
               </label>
 
               {/* Checkbox Options Grid: 5, 10, 15, 30 minutes */}
               <div className="space-y-1.5">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                <div className="text-[11px] font-semibold text-cyan-300/80 uppercase tracking-wider">
                   Select Inactivity Duration (Minutes):
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {[
-                    { m: 5, label: "5 Minutes", badge: "Default (Recommended)", isDefault: true, color: "text-emerald-400", desc: "Recommended default quota saver" },
-                    { m: 10, label: "10 Minutes", badge: "Quick Edits", isDefault: false, color: "text-cyan-400", desc: "Turns off after 10m idle" },
+                    { m: 5, label: "5 Minutes", badge: "Default (Recommended)", isDefault: true, color: "text-emerald-300", desc: "Recommended default quota saver" },
+                    { m: 10, label: "10 Minutes", badge: "Quick Edits", isDefault: false, color: "text-cyan-300", desc: "Turns off after 10m idle" },
                     { m: 15, label: "15 Minutes", badge: "Standard", isDefault: false, color: "text-cyan-300", desc: "Turns off after 15m idle" },
-                    { m: 30, label: "30 Minutes", badge: "Extended Work", isDefault: false, color: "text-amber-400", desc: "Turns off after 30m idle" },
+                    { m: 30, label: "30 Minutes", badge: "Extended Work", isDefault: false, color: "text-amber-300", desc: "Turns off after 30m idle" },
                   ].map((opt) => {
                     const isSelected = tempAutoShutdownEnabled && tempIdleTimeoutMinutes === opt.m;
                     return (
@@ -1221,8 +1221,8 @@ export default function ImageEditorStudio() {
                         key={opt.m}
                         className={`flex flex-col p-2.5 rounded-xl border cursor-pointer select-none transition-all relative overflow-hidden ${
                           isSelected
-                            ? "bg-cyan-500/15 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.25)]"
-                            : "bg-slate-950/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60"
+                            ? "bg-cyan-500/20 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.35)]"
+                            : "bg-slate-950/80 border-slate-800 hover:border-cyan-500/40 hover:bg-slate-900/80"
                         } ${!tempAutoShutdownEnabled ? "opacity-40 cursor-not-allowed" : ""}`}
                       >
                         <div className="flex items-center justify-between mb-1">
@@ -1234,23 +1234,23 @@ export default function ImageEditorStudio() {
                               setTempAutoShutdownEnabled(true);
                               setTempIdleTimeoutMinutes(opt.m);
                             }}
-                            className="w-4 h-4 accent-cyan-500 rounded bg-slate-900 cursor-pointer"
+                            className="w-4 h-4 accent-cyan-400 rounded bg-black cursor-pointer"
                           />
                           <span className={`text-[10px] font-mono font-bold ${opt.color}`}>
                             {opt.badge}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-xs font-bold text-slate-200">
+                          <span className="text-xs font-bold text-white">
                             {opt.label}
                           </span>
                           {opt.isDefault && (
-                            <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded font-mono font-bold leading-none">
+                            <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/25 text-emerald-300 border border-emerald-400/60 rounded font-mono font-bold leading-none shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                               DEFAULT
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-slate-500 mt-0.5">
+                        <span className="text-[10px] text-slate-400 mt-0.5">
                           {opt.desc}
                         </span>
                       </label>
@@ -1261,15 +1261,15 @@ export default function ImageEditorStudio() {
 
               {/* Status and Active Info */}
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-1 border-t border-slate-800/80">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
                   <span>Active Schedule:</span>
-                  <span className="font-mono font-bold text-cyan-300">
+                  <span className="font-mono font-bold text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">
                     {autoShutdownEnabled ? `Auto-stop after ${idleTimeoutMinutes} minutes idle (Recommended Default: 5 min)` : "Disabled (Manual Stop Only)"}
                   </span>
                 </div>
                 {backendIdleStatus?.current_idle_seconds !== undefined && isConnected && (
-                  <span className="text-[11px] font-mono text-slate-500">
+                  <span className="text-[11px] font-mono text-cyan-400/80">
                     Current idle: {Math.round(backendIdleStatus.current_idle_seconds)}s
                   </span>
                 )}
@@ -1277,7 +1277,7 @@ export default function ImageEditorStudio() {
 
               {/* Success Notification */}
               {idleSaveSuccessMessage && (
-                <div className="bg-emerald-950/80 border border-emerald-600/60 px-3 py-2 rounded-lg text-xs text-emerald-300 flex items-center gap-2 animate-fadeIn font-medium">
+                <div className="bg-emerald-950/80 border border-emerald-500/80 px-3 py-2 rounded-lg text-xs text-emerald-200 flex items-center gap-2 animate-fadeIn font-semibold shadow-[0_0_15px_rgba(16,185,129,0.3)]">
                   <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                   <span>{idleSaveSuccessMessage}</span>
                 </div>
@@ -1290,7 +1290,7 @@ export default function ImageEditorStudio() {
                   onClick={handleShutdownGpu}
                   disabled={isShuttingDown}
                   title="Immediately supersedes and deallocates any running or queued Kaggle GPU workers to fix rolling icons"
-                  className="flex items-center gap-1.5 px-3 py-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-800/80 text-rose-300 rounded-lg text-xs font-semibold transition active:scale-95 disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/70 text-rose-200 rounded-lg text-xs font-semibold shadow-[0_0_15px_rgba(244,63,94,0.3)] transition active:scale-95 disabled:opacity-50"
                 >
                   <Power className={`w-3.5 h-3.5 ${isShuttingDown ? "animate-spin" : ""}`} />
                   <span>{isShuttingDown ? "Halting Kaggle..." : "Halt & Dismiss All Kaggle GPU Sessions"}</span>
@@ -1299,7 +1299,7 @@ export default function ImageEditorStudio() {
                   <button
                     type="button"
                     onClick={handleCancelIdleTimeout}
-                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition"
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition"
                   >
                     Cancel
                   </button>
@@ -1307,7 +1307,7 @@ export default function ImageEditorStudio() {
                     type="button"
                     onClick={handleSaveIdleTimeout}
                     disabled={isSavingIdleTimeout}
-                    className="flex items-center gap-1.5 px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-lg text-xs shadow-lg shadow-cyan-500/20 transition active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-black font-extrabold rounded-lg text-xs shadow-[0_0_20px_rgba(6,182,212,0.5)] hover:shadow-[0_0_30px_rgba(6,182,212,0.8)] transition active:scale-95 disabled:opacity-50"
                   >
                   {isSavingIdleTimeout ? (
                     <>
@@ -1352,17 +1352,17 @@ export default function ImageEditorStudio() {
         />
       ) : activeTab === "gallery" ? (
         <div className="flex-1 max-w-7xl mx-auto w-full p-6 space-y-6 animate-fadeIn">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div className="flex items-center justify-between border-b border-cyan-500/30 pb-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-cyan-400" />
+              <h2 className="text-xl font-extrabold text-white flex items-center gap-2 drop-shadow-[0_0_10px_rgba(6,182,212,0.4)]">
+                <ImageIcon className="w-5 h-5 text-cyan-400 animate-pulse" />
                 Persistent Output Gallery
               </h2>
-              <p className="text-xs text-slate-400">All outputs auto-sync to Google Drive `AI_Storage/outputs/`</p>
+              <p className="text-xs text-cyan-300/80">All outputs auto-sync to Google Drive `AI_Storage/outputs/`</p>
             </div>
             <button
               onClick={() => setActiveTab("studio")}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition"
+              className="px-4 py-2 bg-slate-900 hover:bg-cyan-950/60 border border-cyan-500/40 rounded-xl text-xs font-bold text-cyan-300 flex items-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.2)] transition active:scale-95"
             >
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
               <span>Back to Editor</span>
@@ -1370,15 +1370,15 @@ export default function ImageEditorStudio() {
           </div>
 
           {gallery.length === 0 ? (
-            <div className="bg-slate-900/30 border border-slate-800 rounded-3xl p-16 text-center space-y-3">
-              <ImageIcon className="w-12 h-12 text-slate-600 mx-auto" />
-              <p className="text-sm font-medium text-slate-300">No images generated in this session yet</p>
-              <p className="text-xs text-slate-500">
+            <div className="bg-black/60 border border-cyan-500/35 shadow-[0_0_25px_rgba(6,182,212,0.15)] rounded-3xl p-16 text-center space-y-3">
+              <ImageIcon className="w-12 h-12 text-cyan-500/50 mx-auto animate-pulse" />
+              <p className="text-sm font-bold text-white">No images generated in this session yet</p>
+              <p className="text-xs text-slate-300">
                 Uploaded images and edits are automatically mirrored to your 5 TB Google Drive Vault.
               </p>
               <button
                 onClick={() => setActiveTab("studio")}
-                className="mt-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-500 text-black font-bold text-xs rounded-xl transition"
+                className="mt-2 px-6 py-2.5 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-extrabold text-xs rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.7)] transition active:scale-95"
               >
                 Create First Edit
               </button>
@@ -1388,13 +1388,13 @@ export default function ImageEditorStudio() {
               {gallery.map((img, idx) => (
                 <div
                   key={idx}
-                  className="group bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden flex flex-col hover:border-cyan-500/40 transition shadow-lg"
+                  className="group bg-slate-950/90 border border-cyan-500/35 hover:border-cyan-400 rounded-2xl overflow-hidden flex flex-col hover:shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all duration-300"
                 >
-                  <div className="aspect-square bg-slate-950 relative overflow-hidden">
+                  <div className="aspect-square bg-black relative overflow-hidden">
                     <img src={img} alt={`Output ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
                   </div>
-                  <div className="p-3 bg-slate-900/90 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-mono text-slate-400">Creation #{gallery.length - idx}</span>
+                  <div className="p-3 bg-slate-950 flex items-center justify-between gap-2 border-t border-slate-800">
+                    <span className="text-[11px] font-mono text-cyan-300/80">Creation #{gallery.length - idx}</span>
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => {
@@ -1402,7 +1402,7 @@ export default function ImageEditorStudio() {
                           setEditedImage(null);
                           setActiveTab("studio");
                         }}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-200 rounded-lg transition"
+                        className="px-2.5 py-1 bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-500/50 text-[11px] font-semibold text-slate-200 hover:text-cyan-200 rounded-lg transition"
                         title="Send back to editor for iterative refinement"
                       >
                         Refine
@@ -1410,7 +1410,7 @@ export default function ImageEditorStudio() {
                       <a
                         href={img}
                         download={`qwen_creation_${idx + 1}.png`}
-                        className="p-1.5 bg-cyan-500 hover:bg-cyan-400 text-black rounded-lg transition"
+                        className="p-1.5 bg-cyan-400 hover:bg-cyan-300 text-black rounded-lg shadow-[0_0_10px_rgba(6,182,212,0.4)] transition"
                         title="Download full quality PNG"
                       >
                         <Download className="w-3.5 h-3.5" />
@@ -1428,22 +1428,22 @@ export default function ImageEditorStudio() {
         /* ── STUDIO & EDITOR TAB ───────────────────────────────── */
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 p-3 sm:p-6 max-w-7xl mx-auto w-full max-w-full overflow-hidden animate-fadeIn">
           {/* Left: Input & Tuning Panel (4 cols) */}
-          <section className="lg:col-span-4 flex flex-col gap-4 sm:gap-5 bg-slate-900/40 border border-slate-800/80 p-3.5 sm:p-5 rounded-2xl w-full max-w-full overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <span className="text-sm font-semibold flex items-center gap-2 text-slate-200">
-                <Sliders className="w-4 h-4 text-cyan-400" /> Generation Settings
+          <section className="lg:col-span-4 flex flex-col gap-4 sm:gap-5 bg-slate-950/85 border border-cyan-500/40 shadow-[0_0_25px_rgba(6,182,212,0.18)] hover:shadow-[0_0_35px_rgba(6,182,212,0.28)] p-3.5 sm:p-5 rounded-2xl w-full max-w-full overflow-hidden transition-all duration-300">
+            <div className="flex items-center justify-between border-b border-cyan-500/30 pb-3">
+              <span className="text-sm font-extrabold flex items-center gap-2 text-white">
+                <Sliders className="w-4 h-4 text-cyan-400 animate-pulse" /> Generation Settings
               </span>
             </div>
 
             {/* ── Mode Selection: Equal-Sized Buttons in One Line (UI-UX-PRO-MAX) ── */}
-            <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 w-full">
+            <div className="flex items-center gap-1.5 bg-black/80 p-1 rounded-xl border border-cyan-500/35 shadow-[0_0_12px_rgba(6,182,212,0.15)] w-full">
               <button
                 type="button"
                 onClick={() => setStudioMode("generate")}
-                className={`flex-1 h-9 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                className={`flex-1 h-9 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
                   studioMode === "generate"
-                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/25"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "text-slate-300 hover:text-cyan-300"
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 shrink-0" />
@@ -1453,10 +1453,10 @@ export default function ImageEditorStudio() {
               <button
                 type="button"
                 onClick={() => setStudioMode("edit")}
-                className={`flex-1 h-9 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                className={`flex-1 h-9 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
                   studioMode === "edit"
-                    ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/25"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "text-slate-300 hover:text-cyan-300"
                 }`}
               >
                 <ImageIcon className="w-3.5 h-3.5 shrink-0" />
@@ -1468,18 +1468,18 @@ export default function ImageEditorStudio() {
             {/* ── AI Engine Model Selector ── */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
-                <label className="font-medium text-slate-300 flex items-center gap-1.5">
+                <label className="font-bold text-white flex items-center gap-1.5">
                   <Cpu className="w-3.5 h-3.5 text-cyan-400" />
                   AI Engine Model
                 </label>
-                <span className="text-[10px] text-cyan-400 font-mono">
+                <span className="text-[10px] text-cyan-300 font-mono font-bold drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]">
                   {selectedStudioModel === "nano-banana" ? "⚡ Sub-2s" : selectedStudioModel === "kaggle-gpu" ? "Dual T4s" : "Cloud API"}
                 </span>
               </div>
               <select
                 value={selectedStudioModel}
                 onChange={(e) => setSelectedStudioModel(e.target.value as any)}
-                className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl px-3 h-9 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 cursor-pointer"
+                className="w-full bg-slate-900/90 border border-cyan-500/35 hover:border-cyan-400 rounded-xl px-3 h-9 text-xs text-white focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_12px_rgba(6,182,212,0.3)] cursor-pointer font-medium"
               >
                 <option value="kaggle-gpu">Dual Tesla T4 (Kaggle GPU + LoRA Vault)</option>
                 <option value="qwen-cloud">Alibaba Qwen Cloud ({studioMode === "generate" ? "qwen-image" : "qwen-image-edit"})</option>
@@ -1493,14 +1493,14 @@ export default function ImageEditorStudio() {
             {/* Edit / Generation Instruction Prompt */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-slate-300">
+                <label className="text-xs font-bold text-white">
                   {studioMode === "generate" ? "Generation Prompt" : "Edit Prompt"}
                 </label>
                 <button
                   type="button"
                   onClick={handleEnhancePrompt}
                   disabled={isEnhancingPrompt || !prompt.trim()}
-                  className="flex items-center gap-1.5 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 bg-cyan-950/60 border border-cyan-800/80 px-2.5 py-0.5 rounded-lg transition active:scale-95 disabled:opacity-40"
+                  className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-300 hover:text-white bg-cyan-950/70 border border-cyan-500/60 hover:border-cyan-400 px-2.5 py-0.5 rounded-lg shadow-[0_0_10px_rgba(6,182,212,0.25)] transition active:scale-95 disabled:opacity-40"
                   title="Enhance prompt with active Sentinel AI copilot"
                 >
                   <Sparkles className={`w-3 h-3 ${isEnhancingPrompt ? "animate-spin text-cyan-400" : "fill-cyan-400"}`} />
@@ -1512,23 +1512,23 @@ export default function ImageEditorStudio() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="e.g. Turn the jacket into red leather, add cyberpunk neon highlights"
-                className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full bg-slate-900/90 border border-cyan-500/35 hover:border-cyan-400/70 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition"
               />
             </div>
 
             {/* Negative Prompt */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-400">Negative Prompt</label>
+              <label className="text-xs font-semibold text-slate-300">Negative Prompt</label>
               <input
                 type="text"
                 value={negativePrompt}
                 onChange={(e) => setNegativePrompt(e.target.value)}
-                className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full bg-slate-900/90 border border-slate-700/80 hover:border-cyan-500/40 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(6,182,212,0.2)] transition"
               />
             </div>
 
             {/* ── LoRA Selection Dropdown & Dynamic GPU Fusing Hub ── */}
-            <div className="space-y-2.5 pt-2 border-t border-slate-800/60">
+            <div className="space-y-2.5 pt-2 border-t border-cyan-500/30">
               <input
                 type="file"
                 ref={localLoraInputRef}
@@ -1538,15 +1538,15 @@ export default function ImageEditorStudio() {
               />
 
               <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-cyan-400" />
+                <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-purple-400" />
                   LoRA Model Dropdown
                 </label>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => localLoraInputRef.current?.click()}
                     disabled={isUploadingLocalLora || !isConnected}
-                    className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition font-medium disabled:opacity-40"
+                    className="text-[11px] text-emerald-300 hover:text-emerald-200 flex items-center gap-1 transition font-bold disabled:opacity-40"
                     title="Upload and fuse a locally downloaded .safetensors LoRA"
                   >
                     <FolderOpen className="w-3 h-3" />
@@ -1554,7 +1554,7 @@ export default function ImageEditorStudio() {
                   </button>
                   <button
                     onClick={() => setActiveTab("loras")}
-                    className="text-[11px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition font-medium"
+                    className="text-[11px] text-cyan-300 hover:text-white flex items-center gap-1 transition font-bold"
                     title="Explore Civitai LoRAs"
                   >
                     <span>Civitai Hub</span>
@@ -1565,17 +1565,17 @@ export default function ImageEditorStudio() {
 
               {/* Upload Progress Indicator */}
               {isUploadingLocalLora && (
-                <div className="p-2.5 rounded-xl border border-emerald-800/80 bg-emerald-950/70 text-xs text-emerald-200 flex flex-col gap-1.5 animate-pulse">
+                <div className="p-2.5 rounded-xl border border-emerald-500/80 bg-emerald-950/80 text-xs text-emerald-200 flex flex-col gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] animate-neon-emerald">
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 font-medium">
+                    <span className="flex items-center gap-1.5 font-bold">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
                       Uploading Local LoRA to GPU Storage...
                     </span>
                     <span className="font-mono font-bold text-emerald-300">{uploadProgress}%</span>
                   </div>
-                  <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-1.5 rounded-full transition-all duration-300"
+                      className="bg-gradient-to-r from-emerald-400 to-cyan-400 h-1.5 rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(16,185,129,0.7)]"
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
@@ -1587,7 +1587,7 @@ export default function ImageEditorStudio() {
                 <select
                   value={selectedDropdownLora}
                   onChange={(e) => handleSelectLoraFromDropdown(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 cursor-pointer"
+                  className="w-full bg-slate-900/90 border border-purple-500/40 hover:border-purple-400 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-400 focus:shadow-[0_0_12px_rgba(168,85,247,0.3)] cursor-pointer font-medium"
                 >
                   <option value="">
                     {availableLoras.length === 0
@@ -1607,12 +1607,12 @@ export default function ImageEditorStudio() {
                 <div
                   className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
                     isFusingLora
-                      ? "bg-cyan-950/70 border-cyan-800/80 text-cyan-200 animate-pulse"
-                      : "bg-emerald-950/60 border-emerald-800/80 text-emerald-300"
+                      ? "bg-purple-950/80 border-purple-500/80 text-purple-200 shadow-[0_0_15px_rgba(168,85,247,0.35)] animate-neon-purple"
+                      : "bg-emerald-950/80 border-emerald-500/80 text-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.35)]"
                   }`}
                 >
                   {isFusingLora ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-400" />
                   ) : (
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   )}
@@ -1624,20 +1624,20 @@ export default function ImageEditorStudio() {
               {activeLoras.length > 0 && (
                 <div className="space-y-2 mt-1">
                   {activeLoras.map((lora, idx) => (
-                    <div key={idx} className="bg-slate-950/90 border border-slate-800 p-2.5 rounded-xl space-y-2">
+                    <div key={idx} className="bg-black/75 border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.18)] p-2.5 rounded-xl space-y-2">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-slate-200 truncate max-w-[180px]">{lora.name}</span>
+                        <span className="font-bold text-white truncate max-w-[180px]">{lora.name}</span>
                         <button
                           onClick={() => setActiveLoras((prev) => prev.filter((_, i) => i !== idx))}
-                          className="text-slate-500 hover:text-rose-400 transition"
+                          className="text-slate-400 hover:text-rose-400 transition"
                           title="Remove from stack"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-400">Scale / Weight:</span>
-                        <span className="text-cyan-400 font-mono font-semibold">{lora.scale}</span>
+                        <span className="text-slate-300">Scale / Weight:</span>
+                        <span className="text-purple-300 font-mono font-bold drop-shadow-[0_0_6px_rgba(168,85,247,0.5)]">{lora.scale}</span>
                       </div>
                       <input
                         type="range"
@@ -1651,7 +1651,7 @@ export default function ImageEditorStudio() {
                             prev.map((item, i) => (i === idx ? { ...item, scale: newScale } : item))
                           );
                         }}
-                        className="w-full accent-cyan-500 h-1 bg-slate-800 rounded-lg cursor-pointer"
+                        className="w-full accent-purple-400 h-1 bg-slate-800 rounded-lg cursor-pointer"
                       />
                     </div>
                   ))}
@@ -1662,7 +1662,7 @@ export default function ImageEditorStudio() {
                       onClick={() => handleFuseLora(activeLoras)}
                       disabled={isFusingLora || !isConnected || !isModelReady}
                       title={!isModelReady && isConnected ? `GPU pipeline is warming up: ${modelStatusMessage}` : "Fuse selected LoRA into GPU"}
-                      className="flex-1 py-1.5 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black text-xs font-bold rounded-lg transition shadow-md shadow-cyan-500/10 flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40"
+                      className="flex-1 py-1.5 bg-gradient-to-r from-cyan-400 via-teal-300 to-purple-500 hover:from-cyan-300 hover:to-purple-400 text-black text-xs font-black rounded-lg transition shadow-[0_0_18px_rgba(6,182,212,0.4)] flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40"
                     >
                       {isFusingLora ? (
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -1683,7 +1683,7 @@ export default function ImageEditorStudio() {
                       onClick={handleUnloadLoras}
                       disabled={isFusingLora || !isConnected}
                       title="Unload all LoRAs from GPU"
-                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg transition"
+                      className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold rounded-lg transition"
                     >
                       Reset
                     </button>
@@ -1693,11 +1693,11 @@ export default function ImageEditorStudio() {
             </div>
 
             {/* Sliders: True-CFG, Guidance, Steps */}
-            <div className="space-y-4 pt-2 border-t border-slate-800/60">
+            <div className="space-y-4 pt-2 border-t border-cyan-500/30">
               <div>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-300">Qwen True-CFG Scale</span>
-                  <span className="font-semibold text-cyan-400">{trueCfgScale}</span>
+                  <span className="text-white font-medium">Qwen True-CFG Scale</span>
+                  <span className="font-bold text-cyan-300 drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]">{trueCfgScale}</span>
                 </div>
                 <input
                   type="range"
@@ -1706,14 +1706,14 @@ export default function ImageEditorStudio() {
                   step="0.5"
                   value={trueCfgScale}
                   onChange={(e) => setTrueCfgScale(parseFloat(e.target.value))}
-                  className="w-full accent-cyan-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                  className="w-full accent-cyan-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
                 />
               </div>
 
               <div>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-300">Guidance Scale</span>
-                  <span className="font-semibold text-cyan-400">{guidanceScale}</span>
+                  <span className="text-white font-medium">Guidance Scale</span>
+                  <span className="font-bold text-cyan-300 drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]">{guidanceScale}</span>
                 </div>
                 <input
                   type="range"
@@ -1722,20 +1722,20 @@ export default function ImageEditorStudio() {
                   step="0.1"
                   value={guidanceScale}
                   onChange={(e) => setGuidanceScale(parseFloat(e.target.value))}
-                  className="w-full accent-cyan-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                  className="w-full accent-cyan-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
                 />
               </div>
 
               <div>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-300">Inference Steps</span>
+                  <span className="text-white font-medium">Inference Steps</span>
                   <div className="flex items-center gap-1.5">
                     {steps === 4 && (
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold border border-emerald-500/30">
+                      <span className="text-[10px] bg-emerald-500/25 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold border border-emerald-400/60 shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                         ⚡ Rapid (13-25s)
                       </span>
                     )}
-                    <span className="font-semibold text-cyan-400">{steps}</span>
+                    <span className="font-bold text-cyan-300 drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]">{steps}</span>
                   </div>
                 </div>
                 <input
@@ -1745,7 +1745,7 @@ export default function ImageEditorStudio() {
                   step="1"
                   value={steps}
                   onChange={(e) => setSteps(parseInt(e.target.value))}
-                  className="w-full accent-cyan-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                  className="w-full accent-cyan-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
                 />
                 {/* Step Quick Presets */}
                 <div className="grid grid-cols-4 gap-1.5 mt-2">
@@ -1761,30 +1761,30 @@ export default function ImageEditorStudio() {
                       onClick={() => setSteps(preset.s)}
                       className={`py-1 px-1 rounded text-center border transition-all ${
                         steps === preset.s
-                          ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold shadow-[0_0_10px_rgba(6,182,212,0.3)]"
-                          : "bg-slate-900/80 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                          ? "bg-cyan-500/25 border-cyan-400 text-cyan-200 font-extrabold shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+                          : "bg-slate-900/80 border-slate-800 text-slate-300 hover:border-cyan-500/40 hover:text-white"
                       }`}
                     >
-                      <div className="text-[11px] font-semibold leading-tight">{preset.label}</div>
-                      <div className="text-[9px] text-slate-500 leading-tight">{preset.sub}</div>
+                      <div className="text-[11px] font-bold leading-tight">{preset.label}</div>
+                      <div className="text-[9px] text-cyan-300/70 leading-tight">{preset.sub}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="flex items-center justify-between gap-2 pt-1">
-                <label className="text-xs text-slate-300">Seed</label>
+                <label className="text-xs text-white font-medium">Seed</label>
                 <div className="flex gap-2">
                   <input
                     type="number"
                     placeholder="Random"
                     value={seed}
                     onChange={(e) => setSeed(e.target.value === "" ? "" : parseInt(e.target.value))}
-                    className="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-300"
+                    className="w-24 bg-slate-900/90 border border-slate-700/80 rounded-lg px-2 py-1 text-xs text-white focus:border-cyan-400 focus:outline-none"
                   />
                   <button
                     onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
-                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg text-slate-300 transition"
+                    className="px-2 py-1 bg-slate-900 hover:bg-cyan-950 border border-cyan-500/30 text-xs rounded-lg text-cyan-300 transition"
                   >
                     🎲
                   </button>
@@ -1793,7 +1793,7 @@ export default function ImageEditorStudio() {
             </div>
 
             {/* ── Action Buttons Row: Smaller, Equal-Sized Consistency (UI-UX-PRO-MAX) ── */}
-            <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+            <div className="flex items-center gap-2 pt-2 border-t border-cyan-500/30">
               <button
                 onClick={handleGenerate}
                 disabled={
@@ -1801,17 +1801,17 @@ export default function ImageEditorStudio() {
                   (selectedStudioModel === "kaggle-gpu" && (!originalImage || !isConnected)) ||
                   (studioMode === "edit" && !originalImage && selectedStudioModel !== "kaggle-gpu")
                 }
-                className={`flex-1 h-9 px-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-md ${
+                className={`flex-1 h-9 px-3.5 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition active:scale-95 ${
                   isGenerating ||
                   (selectedStudioModel === "kaggle-gpu" && (!originalImage || !isConnected)) ||
                   (studioMode === "edit" && !originalImage && selectedStudioModel !== "kaggle-gpu")
-                    ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
-                    : "bg-gradient-to-r from-cyan-400 via-teal-400 to-indigo-500 text-black hover:opacity-95 shadow-cyan-500/25"
+                    ? "bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800"
+                    : "bg-gradient-to-r from-cyan-400 via-teal-300 to-fuchsia-500 hover:from-cyan-300 hover:via-teal-200 hover:to-fuchsia-400 text-black shadow-[0_0_25px_rgba(6,182,212,0.55)] hover:shadow-[0_0_35px_rgba(236,72,153,0.7)] animate-neon-button"
                 }`}
               >
                 {isGenerating ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-black" />
                     <span>Processing...</span>
                   </>
                 ) : studioMode === "generate" ? (
@@ -1832,7 +1832,7 @@ export default function ImageEditorStudio() {
                 onClick={handleEnhancePrompt}
                 disabled={isEnhancingPrompt || !prompt.trim()}
                 title="AI Enhance Prompt"
-                className="h-9 px-3 bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-800/80 text-cyan-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-40"
+                className="h-9 px-3 bg-cyan-950/70 hover:bg-cyan-900/80 border border-cyan-500/60 text-cyan-200 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.25)] transition active:scale-95 disabled:opacity-40"
               >
                 <Sparkles className={`w-3.5 h-3.5 ${isEnhancingPrompt ? "animate-spin text-cyan-400" : "fill-cyan-400"}`} />
                 <span>{isEnhancingPrompt ? "..." : "Enhance"}</span>
@@ -1842,7 +1842,7 @@ export default function ImageEditorStudio() {
                 type="button"
                 onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
                 title="Randomize seed"
-                className="h-9 px-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1 transition"
+                className="h-9 px-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1 transition"
               >
                 <span>🎲</span>
                 <span>Seed</span>
@@ -1851,21 +1851,21 @@ export default function ImageEditorStudio() {
 
             {/* Progress Bar & Status */}
             {isGenerating && (
-              <div className="bg-slate-950 border border-slate-800/90 p-3 rounded-xl space-y-2">
+              <div className="bg-black/80 border border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.2)] p-3 rounded-xl space-y-2 animate-neon-cyan">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-cyan-400 font-medium truncate max-w-[200px]">{generationStatusText}</span>
+                  <span className="text-cyan-300 font-bold truncate max-w-[200px]">{generationStatusText}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-emerald-400 text-[11px] font-mono">{generationElapsed}s</span>
-                    <span className="text-slate-300 font-mono font-semibold">{generationProgress}%</span>
+                    <span className="text-emerald-300 text-[11px] font-mono font-bold">{generationElapsed}s</span>
+                    <span className="text-white font-mono font-extrabold">{generationProgress}%</span>
                   </div>
                 </div>
-                <div className="w-full bg-slate-800/80 h-2 rounded-full overflow-hidden p-0.5">
+                <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden p-0.5 border border-cyan-500/30">
                   <div
-                    className="bg-gradient-to-r from-cyan-500 via-teal-400 to-indigo-500 h-full rounded-full transition-all duration-300 ease-out"
+                    className="bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-500 h-full rounded-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(6,182,212,0.8)]"
                     style={{ width: `${Math.max(4, Math.min(100, generationProgress))}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-[11px] text-slate-500">
+                <div className="flex justify-between text-[11px] text-cyan-300/80">
                   <span>{steps <= 4 ? "⚡ Rapid 4-Step Pipeline (~15-25s)" : "Standard DiT Pipeline"}</span>
                   <span>{generationElapsed > 0 ? `${generationElapsed}s elapsed` : "Starting..."}</span>
                 </div>
@@ -1875,21 +1875,24 @@ export default function ImageEditorStudio() {
 
           {/* Center: Canvas & Image Comparison (5 cols) */}
           <section className="lg:col-span-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between bg-slate-900/40 border border-slate-800/80 px-4 py-2.5 rounded-xl">
-              <span className="text-xs font-semibold text-slate-300">Canvas Preview</span>
-              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+            <div className="flex items-center justify-between bg-slate-950/85 border border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.18)] px-4 py-2.5 rounded-xl">
+              <span className="text-xs font-extrabold text-white flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-purple-400 animate-pulse" />
+                Canvas Preview
+              </span>
+              <div className="flex items-center gap-1 bg-black/80 p-1 rounded-lg border border-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.15)]">
                 <button
                   onClick={() => setViewMode("result")}
-                  className={`px-2.5 py-1 text-xs rounded-md font-medium transition ${
-                    viewMode === "result" ? "bg-cyan-500 text-black shadow" : "text-slate-400 hover:text-slate-200"
+                  className={`px-3 py-1 text-xs rounded-md font-extrabold transition ${
+                    viewMode === "result" ? "bg-gradient-to-r from-cyan-400 to-teal-400 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]" : "text-slate-300 hover:text-white"
                   }`}
                 >
                   Result
                 </button>
                 <button
                   onClick={() => setViewMode("original")}
-                  className={`px-2.5 py-1 text-xs rounded-md font-medium transition ${
-                    viewMode === "original" ? "bg-cyan-500 text-black shadow" : "text-slate-400 hover:text-slate-200"
+                  className={`px-3 py-1 text-xs rounded-md font-extrabold transition ${
+                    viewMode === "original" ? "bg-gradient-to-r from-cyan-400 to-teal-400 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]" : "text-slate-300 hover:text-white"
                   }`}
                 >
                   Original
@@ -1898,19 +1901,19 @@ export default function ImageEditorStudio() {
             </div>
 
             {/* Main Visual Display */}
-            <div className="flex-1 bg-slate-900/30 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center min-h-[420px] relative overflow-hidden group">
+            <div className="flex-1 bg-slate-950/90 border-2 border-purple-500/45 hover:border-purple-400/80 shadow-[0_0_30px_rgba(168,85,247,0.2)] hover:shadow-[0_0_45px_rgba(168,85,247,0.35)] rounded-2xl flex flex-col items-center justify-center min-h-[420px] relative overflow-hidden group transition-all duration-300">
               {viewMode === "result" && editedImage ? (
-                <img src={editedImage} alt="Edited result" className="max-h-[460px] w-auto object-contain rounded-xl shadow-2xl" />
+                <img src={editedImage} alt="Edited result" className="max-h-[460px] w-auto object-contain rounded-xl shadow-[0_0_35px_rgba(0,0,0,0.8)]" />
               ) : originalImage ? (
-                <img src={originalImage} alt="Source upload" className="max-h-[460px] w-auto object-contain rounded-xl shadow-2xl" />
+                <img src={originalImage} alt="Source upload" className="max-h-[460px] w-auto object-contain rounded-xl shadow-[0_0_35px_rgba(0,0,0,0.8)]" />
               ) : studioMode === "generate" ? (
                 <div className="flex flex-col items-center gap-3 p-8 text-center max-w-sm">
-                  <div className="p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-400 shadow-lg shadow-cyan-500/10">
+                  <div className="p-4 bg-purple-500/15 border border-purple-400/60 rounded-full text-purple-300 shadow-[0_0_25px_rgba(168,85,247,0.35)] animate-neon-purple">
                     <Sparkles className="w-8 h-8" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-200">Text-to-Image Generation Mode</p>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-sm font-extrabold text-white">Text-to-Image Generation Mode</p>
+                    <p className="text-xs text-purple-200/80 mt-1">
                       Type your creative prompt and click &quot;Generate Image&quot; below. No source image required!
                     </p>
                   </div>
@@ -1918,14 +1921,14 @@ export default function ImageEditorStudio() {
               ) : (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-slate-800 hover:border-cyan-500/50 rounded-2xl cursor-pointer transition"
+                  className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-cyan-400/60 hover:border-cyan-300 hover:shadow-[0_0_30px_rgba(6,182,212,0.35)] bg-cyan-950/25 rounded-2xl cursor-pointer transition-all duration-300"
                 >
-                  <div className="p-4 bg-slate-900 rounded-full text-slate-400 group-hover:text-cyan-400 transition">
+                  <div className="p-4 bg-slate-900 rounded-full text-cyan-400 group-hover:text-white shadow-[0_0_15px_rgba(6,182,212,0.3)] transition">
                     <Upload className="w-8 h-8" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium text-slate-200">Upload source image</p>
-                    <p className="text-xs text-slate-500 mt-0.5">PNG, JPG or WebP (max 10MB)</p>
+                    <p className="text-sm font-bold text-white">Upload source image</p>
+                    <p className="text-xs text-cyan-300/80 mt-0.5">PNG, JPG or WebP (max 10MB)</p>
                   </div>
                 </div>
               )}
@@ -1934,11 +1937,11 @@ export default function ImageEditorStudio() {
 
               {/* Quick Actions overlay */}
               {editedImage && (
-                <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-slate-950/80 backdrop-blur-md p-1.5 rounded-xl border border-slate-800">
+                <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-black/85 backdrop-blur-md p-1.5 rounded-xl border border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
                   <a
                     href={editedImage}
                     download="qwen_masterpiece.png"
-                    className="p-2 bg-cyan-500 hover:bg-cyan-400 text-black rounded-lg transition"
+                    className="p-2 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-black font-bold rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.5)] transition"
                     title="Download Image"
                   >
                     <Download className="w-4 h-4" />
@@ -1949,14 +1952,14 @@ export default function ImageEditorStudio() {
           </section>
 
           {/* Right: LoRA Vault & Quick Downloader (3 cols) */}
-          <section className="lg:col-span-3 flex flex-col gap-5 bg-slate-900/40 border border-slate-800/80 p-5 rounded-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <span className="text-sm font-semibold flex items-center gap-2 text-slate-200">
-                <Database className="w-4 h-4 text-cyan-400" /> Vault LoRAs ({availableLoras.length})
+          <section className="lg:col-span-3 flex flex-col gap-5 bg-slate-950/85 border border-emerald-500/40 shadow-[0_0_25px_rgba(16,185,129,0.18)] hover:shadow-[0_0_35px_rgba(16,185,129,0.28)] p-5 rounded-2xl transition-all duration-300">
+            <div className="flex items-center justify-between border-b border-emerald-500/30 pb-3">
+              <span className="text-sm font-extrabold flex items-center gap-2 text-white">
+                <Database className="w-4 h-4 text-emerald-400 animate-pulse" /> Vault LoRAs ({availableLoras.length})
               </span>
               <button
                 onClick={() => setActiveTab("loras")}
-                className="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold"
+                className="text-[11px] text-emerald-300 hover:text-white font-bold drop-shadow-[0_0_6px_rgba(16,185,129,0.4)]"
               >
                 Browse Hub &rarr;
               </button>
@@ -1966,7 +1969,7 @@ export default function ImageEditorStudio() {
             <button
               onClick={() => localLoraInputRef.current?.click()}
               disabled={isUploadingLocalLora || !isConnected}
-              className="w-full py-2 px-3 bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-800/80 rounded-xl text-xs font-semibold text-emerald-300 flex items-center justify-center gap-2 transition shadow-sm active:scale-95 disabled:opacity-40"
+              className="w-full py-2 px-3 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-400/80 rounded-xl text-xs font-bold text-emerald-200 flex items-center justify-center gap-2 transition shadow-[0_0_15px_rgba(16,185,129,0.25)] active:scale-95 disabled:opacity-40"
               title="Upload a .safetensors LoRA from local storage to Vault"
             >
               <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
@@ -1974,29 +1977,29 @@ export default function ImageEditorStudio() {
             </button>
 
             {/* Quick Civitai URL Downloader */}
-            <div className="space-y-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-              <span className="text-xs font-medium text-slate-300">Quick URL Download</span>
+            <div className="space-y-2 bg-black/75 p-3 rounded-xl border border-emerald-500/35 shadow-[0_0_15px_rgba(16,185,129,0.12)]">
+              <span className="text-xs font-bold text-white">Quick URL Download</span>
               <input
                 type="text"
                 placeholder="Paste Civitai / Civitai.red URL or ID"
                 value={civitaiUrl}
                 onChange={(e) => setCivitaiUrl(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full bg-slate-900/90 border border-slate-700/80 hover:border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:shadow-[0_0_10px_rgba(16,185,129,0.3)] transition"
               />
               <input
                 type="text"
                 placeholder="Custom Name (optional)"
                 value={loraCustomName}
                 onChange={(e) => setLoraCustomName(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full bg-slate-900/90 border border-slate-700/80 hover:border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:shadow-[0_0_10px_rgba(16,185,129,0.3)] transition"
               />
               <button
                 onClick={handleQuickDownloadLora}
                 disabled={!civitaiUrl || !isConnected || isDownloadingLora}
-                className={`w-full py-1.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition ${
+                className={`w-full py-1.5 text-xs font-extrabold rounded-lg flex items-center justify-center gap-1.5 transition ${
                   !civitaiUrl || !isConnected || isDownloadingLora
-                    ? "bg-slate-800 text-slate-500 cursor-not-allowed"
-                    : "bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black font-bold"
+                    ? "bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800"
+                    : "bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-black shadow-[0_0_20px_rgba(16,185,129,0.45)]"
                 }`}
               >
                 {isDownloadingLora ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
@@ -2006,16 +2009,16 @@ export default function ImageEditorStudio() {
 
             {/* Downloaded LoRAs in Vault */}
             <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[380px] pr-1">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-emerald-300/80 uppercase tracking-wider">
                 Google Drive Cached LoRAs
               </span>
               {availableLoras.length === 0 ? (
                 <div className="text-center p-4 border border-dashed border-slate-800 rounded-xl space-y-2">
                   <Layers className="w-6 h-6 text-slate-600 mx-auto" />
-                  <p className="text-xs text-slate-500">No LoRAs in Vault yet.</p>
+                  <p className="text-xs text-slate-400">No LoRAs in Vault yet.</p>
                   <button
                     onClick={() => setActiveTab("loras")}
-                    className="text-xs text-cyan-400 hover:underline font-medium"
+                    className="text-xs text-emerald-400 hover:underline font-bold"
                   >
                     Open Civitai.red Hub &rarr;
                   </button>
@@ -2024,15 +2027,15 @@ export default function ImageEditorStudio() {
                 availableLoras.map((lora, idx) => (
                   <div
                     key={idx}
-                    className="bg-slate-950/80 border border-slate-800 hover:border-slate-700 p-2.5 rounded-xl space-y-1.5 transition"
+                    className="bg-black/75 border border-slate-800 hover:border-emerald-500/60 hover:shadow-[0_0_15px_rgba(16,185,129,0.25)] p-2.5 rounded-xl space-y-1.5 transition"
                   >
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-200 truncate max-w-[150px]">{lora.name}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">{lora.size_mb} MB</span>
+                      <span className="font-bold text-white truncate max-w-[150px]">{lora.name}</span>
+                      <span className="text-[10px] text-emerald-300/90 font-mono font-bold">{lora.size_mb} MB</span>
                     </div>
 
                     {lora.trigger_words && (
-                      <p className="text-[10px] text-cyan-400/80 truncate font-mono">
+                      <p className="text-[10px] text-cyan-300/90 truncate font-mono">
                         Trigger: {lora.trigger_words}
                       </p>
                     )}
@@ -2040,7 +2043,7 @@ export default function ImageEditorStudio() {
                     <div className="flex items-center gap-1.5 pt-1">
                       <button
                         onClick={() => handleSelectLoraFromDropdown(lora.filename)}
-                        className="flex-1 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] rounded-lg font-medium transition"
+                        className="flex-1 py-1 bg-slate-900 hover:bg-emerald-950/70 border border-slate-700 hover:border-emerald-500/50 text-slate-200 hover:text-emerald-200 text-[11px] rounded-lg font-bold transition"
                       >
                         + Add to Stack
                       </button>
