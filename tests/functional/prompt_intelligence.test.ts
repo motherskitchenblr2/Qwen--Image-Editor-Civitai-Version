@@ -3,6 +3,8 @@ import {
   generateSmartNegativePrompt,
   getRandomPromptArchetype,
   PROMPT_ARCHETYPES,
+  brainstormPrompt,
+  reformUserPrompt,
 } from "@/app/lib/promptIntelligence";
 
 describe("Prompt Intelligence & Smart Negative Engine", () => {
@@ -74,5 +76,51 @@ describe("Prompt Intelligence & Smart Negative Engine", () => {
     const random = getRandomPromptArchetype();
     expect(random).toBeDefined();
     expect(random.prompt).toBeDefined();
+  });
+
+  it("brainstorms masterwork prompts from short seed topics or empty panes", () => {
+    // 1. Empty topic defaults to master archetype
+    const emptyResult = brainstormPrompt("");
+    expect(emptyResult.prompt.length).toBeGreaterThan(25);
+    expect(emptyResult.suggestedNegative.length).toBeGreaterThan(15);
+
+    // 2. Specific seed topic (car) synthesizes commercial automotive composition
+    const carResult = brainstormPrompt("sports car");
+    expect(carResult.prompt.toLowerCase()).toContain("sports car");
+    expect(carResult.prompt.toLowerCase()).toContain("cinematic commercial photography");
+    expect(carResult.suggestedNegative.toLowerCase()).toContain("cartoon");
+
+    // 3. Cyberpunk seed topic
+    const cyberResult = brainstormPrompt("cyberpunk warrior");
+    expect(cyberResult.prompt.toLowerCase()).toContain("cyberpunk warrior");
+    expect(cyberResult.prompt.toLowerCase()).toContain("unreal engine 5");
+  });
+
+  it("reforms casual, improper, or imaginative user text into balanced professional tone", () => {
+    const raw = "please can you generate a picture of a mechanical dragon flying over city";
+    const reformed = reformUserPrompt(raw);
+
+    // Strips conversational preamble
+    expect(reformed.toLowerCase()).not.toContain("please can you");
+    expect(reformed.toLowerCase()).not.toContain("generate a picture of");
+
+    // Enriches with balanced professional descriptors
+    expect(reformed).toContain("mechanical dragon flying over city");
+    expect(reformed).toContain("balanced cinematic composition");
+    expect(reformed).toContain("8k resolution, professional studio finish");
+  });
+
+  it("prioritizes Qwen2-VL Junior GGUF model at index 0 of Hugging Face provider", async () => {
+    const { BASE_PROVIDERS } = await import("@/app/lib/aiModelRegistry");
+    const { QWEN2_VL_JUNIOR_MODEL } = await import("@/app/lib/promptIntelligence");
+
+    expect(QWEN2_VL_JUNIOR_MODEL.id).toBe("mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF");
+    expect(QWEN2_VL_JUNIOR_MODEL.badge).toContain("JUNIOR VL");
+
+    const hfProvider = BASE_PROVIDERS.find((p) => p.id === "huggingface");
+    expect(hfProvider).toBeDefined();
+    expect(hfProvider?.defaultFreeModelId).toBe("mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF");
+    expect(hfProvider?.models[0].id).toBe("mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF");
+    expect(hfProvider?.models[0].badge).toContain("JUNIOR VL");
   });
 });

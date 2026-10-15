@@ -311,3 +311,89 @@ export function getRandomPromptArchetype(): PromptArchetype {
   const idx = Math.floor(Math.random() * PROMPT_ARCHETYPES.length);
   return PROMPT_ARCHETYPES[idx];
 }
+
+/**
+ * Priority Junior VL Model identifier from Hugging Face
+ */
+export const QWEN2_VL_JUNIOR_MODEL = {
+  id: "mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF",
+  name: "Qwen2-VL 2B Junior Copilot (GGUF)",
+  provider: "mradermacher / Hugging Face",
+  badge: "⚡ JUNIOR VL • LOADS FIRST",
+  type: "both" as const,
+  latency: "~1.1s",
+  status: "active" as const,
+  description: "Abliterated Junior Vision-Language model (2B parameter GGUF) for ultra-fast visual comprehension, prompt rewriting, and image reasoning. Prioritized to load first before heavier DiT engines.",
+  accentColor: "from-cyan-400 to-blue-500",
+  sourceUrl: "https://huggingface.co/mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF",
+};
+
+/**
+ * Brain-Storm Engine: Composes a complete, professional, master-grade prompt
+ * from a few words, a subject, or an empty text pane.
+ */
+export function brainstormPrompt(seedTopic?: string): { prompt: string; suggestedNegative: string } {
+  const cleanSeed = (seedTopic || "").trim().toLowerCase();
+
+  // If empty or purely generic, roll a master archetype
+  if (!cleanSeed) {
+    const arch = getRandomPromptArchetype();
+    return {
+      prompt: arch.prompt,
+      suggestedNegative: arch.suggestedNegative,
+    };
+  }
+
+  // If seed topic contains specific keywords, synthesize tailored professional compositions:
+  if (cleanSeed.includes("car") || cleanSeed.includes("auto") || cleanSeed.includes("vehicle") || cleanSeed.includes("supercar")) {
+    return {
+      prompt: `Cinematic commercial photography of an exotic high-performance ${cleanSeed} parked on a rain-slicked mountain pass at golden hour, dynamic 3/4 low angle, sharp reflections on metallic pearlescent clearcoat, glowing LED taillight ribbons, wet asphalt spray, shot on 50mm f/1.8 anamorphic lens, 8k resolution masterwork`,
+      suggestedNegative: "cartoon, anime, 3d render, clay, plastic toy, lowres, blurry, distorted wheel geometry, bad lighting, watermark, signature",
+    };
+  }
+
+  if (cleanSeed.includes("portrait") || cleanSeed.includes("girl") || cleanSeed.includes("woman") || cleanSeed.includes("man") || cleanSeed.includes("person") || cleanSeed.includes("face")) {
+    return {
+      prompt: `Exquisite studio editorial portrait of ${cleanSeed}, dramatic cinematic Rembrandt lighting, delicate rim highlight tracing facial contours, authentic skin pores with soft subsurface scattering, sharp optical focus on expressive iris, shot on Hasselblad 100mm f/2.2 medium format, hyper-detailed Vogue magazine cover quality`,
+      suggestedNegative: "cartoon, anime, 3d render, clay, silicon, plastic, doll, CGI, smooth plastic skin, airbrushed, bad anatomy, deformed hands, extra fingers, cross-eyed, blurry, watermark",
+    };
+  }
+
+  if (cleanSeed.includes("cyberpunk") || cleanSeed.includes("sci-fi") || cleanSeed.includes("robot") || cleanSeed.includes("mech") || cleanSeed.includes("futuristic")) {
+    return {
+      prompt: `High-fidelity sci-fi concept art of ${cleanSeed} in a towering neo-Tokyo megacity, torrential rain cascading over weathered carbon-composite armor, luminescent turquoise and magenta neon illumination, volumetric haze, intricate mechanical joints and hydraulic cabling, 8k Unreal Engine 5 render`,
+      suggestedNegative: "medieval, rustic, vintage sepia, cartoon, anime, clay, low-poly, washed out flat lighting, blurry, low resolution, watermark",
+    };
+  }
+
+  if (cleanSeed.includes("landscape") || cleanSeed.includes("mountain") || cleanSeed.includes("nature") || cleanSeed.includes("forest") || cleanSeed.includes("ocean") || cleanSeed.includes("sunset")) {
+    return {
+      prompt: `Breathtaking National Geographic landscape photograph of ${cleanSeed}, captured during golden hour alpenglow, atmospheric depth with soft mist winding through valleys, crystalline foreground water reflections, ultra-sharp edge-to-edge detail, shot on Phase One 150MP camera with polarizer filter`,
+      suggestedNegative: "modern buildings, clutter, cartoon, 3d render, oversaturated, blurry foreground, low resolution, blown out sky, text, watermark",
+    };
+  }
+
+  // Universal Topic Expansion for any arbitrary 1-5 word seed
+  return {
+    prompt: `Masterpiece visual composition featuring ${cleanSeed}, beautifully framed in cinematic volumetric atmosphere, balanced three-point studio illumination with subtle color grading, intricate textures and tactile material fidelity, 8k resolution, photorealistic depth and artistic harmony`,
+    suggestedNegative: "cartoon, anime, 3d render, clay, silicon, plastic, doll, CGI, blurry, low resolution, deformed, bad proportions, watermark, signature",
+  };
+}
+
+/**
+ * Prompt Reformer: Transforms casual, improper, or raw imaginative user text
+ * into a balanced, professional prompt with image enhancing descriptors.
+ */
+export function reformUserPrompt(rawText: string): string {
+  if (!rawText || !rawText.trim()) return "";
+
+  let cleaned = rawText.trim();
+
+  // Strip common conversational chat preambles
+  cleaned = cleaned.replace(/^(please\s+)?(can\s+you\s+)?(i\s+want\s+(a\s+)?|create\s+(a\s+)?|make\s+(a\s+)?|draw\s+(a\s+)?|generate\s+(a\s+)?|show\s+me\s+(a\s+)?|picture\s+of\s+|photo\s+of\s+)/i, "");
+  cleaned = cleaned.replace(/[.!?]+$/, ""); // strip trailing punctuation
+
+  // Build balanced professional prompt
+  return `Artfully crafted masterpiece of ${cleaned}, balanced cinematic composition, rich ambient lighting with delicate contrast, crisp photographic depth of field, hyper-detailed natural textures, 8k resolution, professional studio finish`;
+}
+

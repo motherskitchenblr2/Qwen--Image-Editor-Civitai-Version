@@ -321,7 +321,7 @@ export const BASE_PROVIDERS: AiProviderPlatform[] = [
     category: "Vision & Edge",
     description: "World's largest community model hub. Access open weights and serverless inference for Stable Diffusion and DiT.",
     hasFreeModels: true,
-    defaultFreeModelId: "stabilityai/stable-diffusion-xl-base-1.0",
+    defaultFreeModelId: "mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF",
     docsUrl: "https://huggingface.co/models?pipeline_tag=text-to-image",
     color: {
       accent: "from-yellow-400 to-amber-500",
@@ -330,6 +330,23 @@ export const BASE_PROVIDERS: AiProviderPlatform[] = [
       text: "text-yellow-400",
     },
     models: [
+      {
+        id: "mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF",
+        name: "Qwen2-VL 2B Junior Copilot (GGUF)",
+        providerId: "huggingface",
+        providerName: "Hugging Face Hub",
+        type: "both",
+        badge: "⚡ JUNIOR VL • LOADS FIRST",
+        latency: "~1.1s",
+        description: "Abliterated Junior Vision-Language model (2B parameter GGUF) for ultra-fast visual comprehension, prompt rewriting, and image reasoning. Prioritized to load first before heavier DiT engines.",
+        accentColor: "from-cyan-400 to-blue-500",
+        isFree: true,
+        isFreeTier: true,
+        requiresApiKey: false,
+        pricingLabel: "$0.00 • 100% Free Open GGUF",
+        status: "active",
+        sourceUrl: "https://huggingface.co/mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF",
+      },
       {
         id: "stabilityai/stable-diffusion-xl-base-1.0",
         name: "SDXL Base 1.0 (Hugging Face)",

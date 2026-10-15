@@ -282,10 +282,16 @@ export async function POST(req: NextRequest) {
     // ─────────────────────────────────────────────────────────────
     try {
       const fallbackImageBase64 = await generateWithTurboNeural(prompt, size, seed, model);
+      let resolvedModelName = `Nano Banana Engine (${model})`;
+      if (model === "nano-banana") {
+        resolvedModelName = "Nano Banana Turbo (Neural Edge)";
+      } else if (model.includes("Qwen2-VL") || model.includes("mradermacher")) {
+        resolvedModelName = "Qwen2-VL 2B Junior Copilot (mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF)";
+      }
       return NextResponse.json({
         success: true,
         image_base64: fallbackImageBase64,
-        model: model === "nano-banana" ? "Nano Banana Turbo (Neural Edge)" : `Nano Banana Engine (${model})`,
+        model: resolvedModelName,
         prompt,
       });
     } catch (fallbackErr: any) {

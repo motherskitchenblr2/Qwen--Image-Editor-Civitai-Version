@@ -141,6 +141,18 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
       expect(validRes.status).toBe(200);
       const validJson = await validRes.json();
       expect(validJson.enhancedPrompt).toContain("cyberpunk cat");
+
+      // 3. Brainstorm mode handles short seeds and returns isBrainstormed flag
+      const bsReq = new NextRequest("http://localhost:3000/api/sentinel/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: "supercar", mode: "brainstorm" }),
+      });
+      const bsRes = await sentinelEnhanceRoute.POST(bsReq);
+      expect(bsRes.status).toBe(200);
+      const bsJson = await bsRes.json();
+      expect(bsJson.enhancedPrompt.toLowerCase()).toContain("supercar");
+      expect(bsJson.isBrainstormed).toBe(true);
     });
 
     it("/api/sentinel/verify POST handles missing provider (400) and instant offline provider nanobanana (200)", async () => {

@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PROVIDER_ENV_MAP } from "@/app/lib/sentinelConfig";
+import { brainstormPrompt, reformUserPrompt } from "@/app/lib/promptIntelligence";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, provider, apiKey } = await req.json();
+    const { prompt = "", provider, apiKey, mode = "enhance" } = await req.json();
 
-    if (!prompt || !prompt.trim()) {
+    const isBrainstorm = mode === "brainstorm";
+
+    // For enhance mode, prompt text is required
+    if (!isBrainstorm && (!prompt || !prompt.trim())) {
       return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
     }
 
@@ -17,10 +21,11 @@ export async function POST(req: NextRequest) {
       effectiveKey = (envKey && process.env[envKey]) ? process.env[envKey] : "";
     }
 
-    const systemInstruction =
-      "You are a master image editing prompt engineer for Qwen-Image-Edit and Stable Diffusion DiT pipelines. " +
-      "Rewrite and enrich the user's edit instruction to be vivid, high-detail, visually striking, with exact lighting, texture, and composition details. " +
-      "Return ONLY the enhanced prompt string without explanations, quotes, or markdown preambles.";
+    const systemInstruction = isBrainstorm
+      ? "You are a master concept artist and prompt writer. Given a short topic, subject, or phrase (or an empty subject), brainstorm and compose an extraordinary, complete, highly detailed professional image prompt ready for synthesis. Include camera settings, lighting, texture, color palette, and mood. Return ONLY the prompt string without explanations."
+      : "You are an expert prompt engineer. The user has written an image generation or editing prompt in casual language, incomplete phrasing, or raw imagination. Analyze and reform this text into a balanced, professional prompt with precise artistic framing, lighting, textures, and balancing descriptors while faithfully keeping the user's intended subject. Return ONLY the enhanced prompt string without explanations.";
+
+    const inputTopic = prompt.trim() || "cyberpunk visionary masterwork";
 
     if (provider === "gemini" && effectiveKey) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${effectiveKey}`;
@@ -32,7 +37,7 @@ export async function POST(req: NextRequest) {
             {
               parts: [
                 {
-                  text: `${systemInstruction}\n\nOriginal prompt: "${prompt}"\n\nEnhanced prompt:`,
+                  text: `${systemInstruction}\n\nInput subject/prompt: "${inputTopic}"\n\nResult prompt:`,
                 },
               ],
             },
@@ -43,9 +48,13 @@ export async function POST(req: NextRequest) {
 
       if (res.ok) {
         const data = await res.json();
-        const enhanced = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (enhanced) {
-          return NextResponse.json({ enhancedPrompt: enhanced });
+        const result = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (result) {
+          return NextResponse.json({
+            enhancedPrompt: result,
+            mode,
+            isBrainstormed: isBrainstorm,
+          });
         }
       }
     }
@@ -61,19 +70,23 @@ export async function POST(req: NextRequest) {
           model: "llama-3.3-70b-versatile",
           messages: [
             { role: "system", content: systemInstruction },
-            { role: "user", content: `Original prompt: "${prompt}"\n\nEnhanced prompt:` },
+            { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
           ],
-          max_tokens: 150,
-          temperature: 0.7,
+          max_tokens: 180,
+          temperature: isBrainstorm ? 0.8 : 0.6,
         }),
         signal: AbortSignal.timeout(8000),
       });
 
       if (res.ok) {
         const data = await res.json();
-        const enhanced = data.choices?.[0]?.message?.content?.trim();
-        if (enhanced) {
-          return NextResponse.json({ enhancedPrompt: enhanced });
+        const result = data.choices?.[0]?.message?.content?.trim();
+        if (result) {
+          return NextResponse.json({
+            enhancedPrompt: result,
+            mode,
+            isBrainstormed: isBrainstorm,
+          });
         }
       }
     }
@@ -89,18 +102,22 @@ export async function POST(req: NextRequest) {
           model: "deepseek/deepseek-r1:free",
           messages: [
             { role: "system", content: systemInstruction },
-            { role: "user", content: `Original prompt: "${prompt}"\n\nEnhanced prompt:` },
+            { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
           ],
-          max_tokens: 150,
+          max_tokens: 180,
         }),
         signal: AbortSignal.timeout(8000),
       });
 
       if (res.ok) {
         const data = await res.json();
-        const enhanced = data.choices?.[0]?.message?.content?.trim();
-        if (enhanced) {
-          return NextResponse.json({ enhancedPrompt: enhanced });
+        const result = data.choices?.[0]?.message?.content?.trim();
+        if (result) {
+          return NextResponse.json({
+            enhancedPrompt: result,
+            mode,
+            isBrainstormed: isBrainstorm,
+          });
         }
       }
     }
@@ -116,29 +133,46 @@ export async function POST(req: NextRequest) {
           model: "open-mistral-nemo",
           messages: [
             { role: "system", content: systemInstruction },
-            { role: "user", content: `Original prompt: "${prompt}"\n\nEnhanced prompt:` },
+            { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
           ],
-          max_tokens: 150,
-          temperature: 0.7,
+          max_tokens: 180,
+          temperature: isBrainstorm ? 0.8 : 0.6,
         }),
         signal: AbortSignal.timeout(8000),
       });
 
       if (res.ok) {
         const data = await res.json();
-        const enhanced = data.choices?.[0]?.message?.content?.trim();
-        if (enhanced) {
-          return NextResponse.json({ enhancedPrompt: enhanced });
+        const result = data.choices?.[0]?.message?.content?.trim();
+        if (result) {
+          return NextResponse.json({
+            enhancedPrompt: result,
+            mode,
+            isBrainstormed: isBrainstorm,
+          });
         }
       }
     }
 
-    // Default fast rule-based enhancer fallback
-    const cyberpunkKeywords = "photorealistic, hyper-detailed, volumetric cinematic lighting, 8k resolution, raytracing reflections, masterwork";
+    // Default fast intelligent fallback using promptIntelligence engine
+    if (isBrainstorm) {
+      const bs = brainstormPrompt(prompt);
+      return NextResponse.json({
+        enhancedPrompt: bs.prompt,
+        suggestedNegative: bs.suggestedNegative,
+        mode: "brainstorm",
+        isBrainstormed: true,
+      });
+    }
+
+    // Reform casual user text into balanced professional prompt
+    const reformed = reformUserPrompt(prompt);
     return NextResponse.json({
-      enhancedPrompt: `${prompt.trim()}, ${cyberpunkKeywords}`,
+      enhancedPrompt: reformed,
+      mode: "enhance",
+      isBrainstormed: false,
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to enhance prompt" }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Failed to process prompt" }, { status: 500 });
   }
 }

@@ -38,6 +38,17 @@ export interface AiModelConfig {
 
 const AVAILABLE_MODELS: AiModelConfig[] = [
   {
+    id: "mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF",
+    name: "Qwen2-VL 2B Junior Copilot",
+    provider: "mradermacher / Hugging Face",
+    badge: "⚡ JUNIOR VL • LOADS FIRST",
+    type: "both",
+    latency: "~1.1s",
+    status: "active",
+    description: "Abliterated Junior Vision-Language model (2B parameter GGUF) for ultra-fast visual comprehension, prompt rewriting, and image reasoning. Prioritized to load first before heavier DiT engines.",
+    accentColor: "from-cyan-400 to-blue-500",
+  },
+  {
     id: "nano-banana",
     name: "Nano Banana Turbo",
     provider: "Nano Neural Edge",
@@ -134,7 +145,7 @@ interface AiGeneratorHubProps {
 export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) {
   // Mode selection: "generate" (Text-to-Image) vs "edit" (Image-to-Image)
   const [activeMode, setActiveMode] = useState<"generate" | "edit">("generate");
-  const [selectedModel, setSelectedModel] = useState<string>("nano-banana");
+  const [selectedModel, setSelectedModel] = useState<string>("mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF");
 
   // Inputs
   const [prompt, setPrompt] = useState<string>("Cyberpunk street samurai in neon rain, volumetric fog, 8k masterpiece");
