@@ -15,6 +15,7 @@ import * as sentinelVaultRoute from "@/app/api/sentinel/vault/route";
 import * as sentinelVerifyRoute from "@/app/api/sentinel/verify/route";
 import * as tunnelRoute from "@/app/api/tunnel/route";
 import * as vaultLorasRoute from "@/app/api/vault/loras/route";
+import * as modelsLiveRoute from "@/app/api/models/live/route";
 
 const HTTP_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
 const ALLOWED_CONFIGS = new Set(["dynamic", "dynamicParams", "revalidate", "fetchCache", "runtime", "preferredRegion", "maxDuration"]);
@@ -40,6 +41,7 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
       "app/api/civitai/route.ts": civitaiRoute,
       "app/api/edit/route.ts": editRoute,
       "app/api/generate/route.ts": generateRoute,
+      "app/api/models/live/route.ts": modelsLiveRoute,
       "app/api/sentinel/enhance/route.ts": sentinelEnhanceRoute,
       "app/api/sentinel/vault/route.ts": sentinelVaultRoute,
       "app/api/sentinel/verify/route.ts": sentinelVerifyRoute,
@@ -91,6 +93,8 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
       expect(typeof tunnelRoute.POST).toBe("function");
       expect(typeof vaultLorasRoute.GET).toBe("function");
       expect(typeof vaultLorasRoute.POST).toBe("function");
+      expect(typeof modelsLiveRoute.GET).toBe("function");
+      expect(typeof modelsLiveRoute.POST).toBe("function");
     });
   });
 
@@ -206,6 +210,39 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
       expect(postRes.status).toBe(400);
       const postJson = await postRes.json();
       expect(postJson.error).toBe("Missing filename in payload");
+    });
+
+    it("/api/models/live GET returns live providers and enforces free-tier safeguard", async () => {
+      const req = new NextRequest("http://localhost:3000/api/models/live?free_only=true");
+      const res = await modelsLiveRoute.GET(req);
+      expect(res.status).toBe(200);
+
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.safeguard_active).toBe(true);
+      expect(Array.isArray(json.providers)).toBe(true);
+      expect(json.providers.length).toBeGreaterThan(0);
+      expect(Array.isArray(json.models)).toBe(true);
+      expect(json.models.length).toBeGreaterThan(0);
+
+      // Verify every model returned in safe mode is free or free-tier
+      for (const model of json.models) {
+        expect(model.isFree || model.isFreeTier).toBe(true);
+      }
+    });
+
+    it("/api/models/live POST refreshes registry cache successfully", async () => {
+      const req = new NextRequest("http://localhost:3000/api/models/live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force_refresh: true }),
+      });
+      const res = await modelsLiveRoute.POST(req);
+      expect(res.status).toBe(200);
+
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.providers).toBeDefined();
     });
   });
 });

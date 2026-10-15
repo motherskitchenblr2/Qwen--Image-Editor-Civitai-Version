@@ -9,7 +9,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_STUDI
  * High-Speed Resilient Fallback: Synthesize with Turbo Neural FLUX/SDXL
  * Completely free, zero API key required, zero quota expiration.
  */
-async function generateWithTurboNeural(prompt: string, size = "1024*1024", seed?: number | null) {
+async function generateWithTurboNeural(prompt: string, size = "1024*1024", seed?: number | null, modelName = "turbo") {
   let width = 768;
   let height = 768;
   if (size === "1280*720" || size === "16:9") {
@@ -24,10 +24,13 @@ async function generateWithTurboNeural(prompt: string, size = "1024*1024", seed?
     ? Number(seed)
     : Math.floor(Math.random() * 900000) + 100000;
 
-  const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.trim())}?width=${width}&height=${height}&seed=${numericSeed}&nologo=true&model=turbo`;
+  let cleanModel = (modelName || "turbo").replace(/^pollinations\//, "").trim();
+  if (!cleanModel || cleanModel === "nano-banana") cleanModel = "turbo";
+
+  const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.trim())}?width=${width}&height=${height}&seed=${numericSeed}&nologo=true&model=${encodeURIComponent(cleanModel)}`;
 
   const res = await fetch(pollUrl, {
-    signal: AbortSignal.timeout(12000),
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!res.ok) {
@@ -278,7 +281,7 @@ export async function POST(req: NextRequest) {
     // 4. GUARANTEED ZERO-FAIL TURBO NEURAL ENGINE (POLLINATIONS FLUX/SDXL)
     // ─────────────────────────────────────────────────────────────
     try {
-      const fallbackImageBase64 = await generateWithTurboNeural(prompt, size, seed);
+      const fallbackImageBase64 = await generateWithTurboNeural(prompt, size, seed, model);
       return NextResponse.json({
         success: true,
         image_base64: fallbackImageBase64,

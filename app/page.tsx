@@ -34,6 +34,8 @@ import {
 import CivitaiLoraHub from "./components/CivitaiLoraHub";
 import SentinelAiGateway from "./components/SentinelAiGateway";
 import AiGeneratorHub from "./components/AiGeneratorHub";
+import LiveAiModelSelector from "./components/LiveAiModelSelector";
+import { LiveAiModel } from "./lib/aiModelRegistry";
 
 interface LoRAItem {
   name: string;
@@ -53,7 +55,7 @@ export default function ImageEditorStudio() {
   // Navigation Tabs: Studio & Editor | AI Generator Hub | Civitai.red LoRA Hub | Outputs Gallery | Sentinel Gateway
   const [activeTab, setActiveTab] = useState<"studio" | "generators" | "loras" | "gallery" | "sentinel">("studio");
   const [studioMode, setStudioMode] = useState<"edit" | "generate">("edit");
-  const [selectedStudioModel, setSelectedStudioModel] = useState<"kaggle-gpu" | "qwen-cloud" | "nano-banana" | "google-imagen" | "cf-lucid" | "cf-flux">("kaggle-gpu");
+  const [selectedStudioModel, setSelectedStudioModel] = useState<string>("kaggle-gpu");
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState<boolean>(false);
 
   // Backend connection
@@ -1559,30 +1561,13 @@ export default function ImageEditorStudio() {
               </button>
             </div>
 
-            {/* ── AI Engine Model Selector ── */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <label className="font-bold text-white flex items-center gap-1.5">
-                  <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-                  AI Engine Model
-                </label>
-                <span className="text-[10px] text-cyan-300 font-mono font-bold drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]">
-                  {selectedStudioModel === "nano-banana" ? "⚡ Sub-2s" : selectedStudioModel === "kaggle-gpu" ? "Dual T4s" : "Cloud API"}
-                </span>
-              </div>
-              <select
-                value={selectedStudioModel}
-                onChange={(e) => setSelectedStudioModel(e.target.value as any)}
-                className="w-full bg-slate-900/90 border border-cyan-500/35 hover:border-cyan-400 rounded-xl px-3 h-9 text-xs text-white focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_12px_rgba(6,182,212,0.3)] cursor-pointer font-medium"
-              >
-                <option value="kaggle-gpu">Dual Tesla T4 (Kaggle GPU + LoRA Vault)</option>
-                <option value="qwen-cloud">Alibaba Qwen Cloud ({studioMode === "generate" ? "qwen-image" : "qwen-image-edit"})</option>
-                <option value="nano-banana">⚡ Nano Banana Turbo (~1.5s Ultra-Fast)</option>
-                <option value="google-imagen">Google Imagen 3 (Google AI Studio)</option>
-                <option value="cf-lucid">Cloudflare Lucid Origin (~3s Edge)</option>
-                <option value="cf-flux">Cloudflare Flux 1 Schnell (~3.5s DiT)</option>
-              </select>
-            </div>
+            {/* ── AI Engine Model Selector with Live Provider Platforms ── */}
+            <LiveAiModelSelector
+              activeModelId={selectedStudioModel}
+              onSelectModel={(m: LiveAiModel) => setSelectedStudioModel(m.id)}
+              mode={studioMode}
+              compact={true}
+            />
 
             {/* Edit / Generation Instruction Prompt */}
             <div className="space-y-1.5">

@@ -20,6 +20,8 @@ import {
   Flame,
   Plus,
 } from "lucide-react";
+import LiveAiModelSelector from "./LiveAiModelSelector";
+import { LiveAiModel } from "@/app/lib/aiModelRegistry";
 
 export interface AiModelConfig {
   id: string;
@@ -258,84 +260,38 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
         </div>
       </div>
 
-      {/* ── Mode Selection & Model Switcher: Equal-Size Inline Bar ── */}
-      <div className="bg-slate-950/85 border border-cyan-500/35 shadow-[0_0_20px_rgba(6,182,212,0.15)] rounded-2xl p-3 sm:p-4 space-y-4">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          {/* Mode Switcher: Equal-Sized Buttons in One Line */}
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-black/80 p-1 sm:p-1.5 rounded-xl border border-cyan-500/35 shadow-[0_0_10px_rgba(6,182,212,0.12)] w-full md:w-auto">
-            <button
-              onClick={() => setActiveMode("generate")}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-5 h-9 rounded-lg text-xs font-bold transition-all ${
-                activeMode === "generate"
-                  ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/25"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 shrink-0" />
-              <span>🎨 Generate</span>
-              <span className="hidden sm:inline"> Image (Text-to-Image)</span>
-            </button>
-            <button
-              onClick={() => setActiveMode("edit")}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-5 h-9 rounded-lg text-xs font-bold transition-all ${
-                activeMode === "edit"
-                  ? "bg-gradient-to-r from-cyan-500 to-indigo-500 text-black shadow-md shadow-cyan-500/25"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <ImageIcon className="w-3.5 h-3.5 shrink-0" />
-              <span>✨ Edit</span>
-              <span className="hidden sm:inline"> Image (Image-to-Image)</span>
-            </button>
-          </div>
-
-          {/* Model Selection Dropdown or Pill */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Active Model:</span>
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full sm:w-auto bg-slate-950 border border-slate-700 hover:border-cyan-500/60 text-slate-200 rounded-xl px-3 h-9 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-cyan-500 cursor-pointer"
-            >
-              {filteredModels.map((m) => (
-                <option key={m.id} value={m.id} disabled={m.status === "coming_soon"}>
-                  {m.name} ({m.provider}) &bull; {m.latency} {m.status === "coming_soon" ? "[SOON]" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Model Quick Switcher Chips */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 pt-2 border-t border-slate-800/60">
-          {filteredModels.map((m) => {
-            const isSelected = selectedModel === m.id;
-            return (
-              <button
-                key={m.id}
-                onClick={() => m.status !== "coming_soon" && setSelectedModel(m.id)}
-                disabled={m.status === "coming_soon"}
-                className={`flex flex-col text-left p-2.5 rounded-xl border transition-all ${
-                  isSelected
-                    ? "bg-cyan-950/40 border-cyan-400 text-cyan-200 shadow-md shadow-cyan-500/10"
-                    : m.status === "coming_soon"
-                    ? "bg-slate-950/40 border-slate-900 opacity-50 cursor-not-allowed text-slate-500"
-                    : "bg-slate-950/60 border-slate-800/80 text-slate-300 hover:border-slate-700 hover:text-slate-100"
-                }`}
-              >
-                <div className="flex items-center justify-between w-full mb-1">
-                  <span className="text-[11px] font-bold truncate">{m.name}</span>
-                  {isSelected && <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />}
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-slate-400">
-                  <span className="truncate">{m.badge}</span>
-                  <span className="font-mono text-cyan-400">{m.latency}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+      {/* ── Mode Selection Toolbar ── */}
+      <div className="flex items-center gap-2 bg-black/80 p-1.5 rounded-2xl border border-cyan-500/35 shadow-[0_0_18px_rgba(6,182,212,0.18)] w-full sm:w-max">
+        <button
+          onClick={() => setActiveMode("generate")}
+          className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 h-9 rounded-xl text-xs font-bold transition-all ${
+            activeMode === "generate"
+              ? "bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-500 text-black shadow-md shadow-cyan-500/25"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+          <span>🎨 Text-to-Image Generation</span>
+        </button>
+        <button
+          onClick={() => setActiveMode("edit")}
+          className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 h-9 rounded-xl text-xs font-bold transition-all ${
+            activeMode === "edit"
+              ? "bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-500 text-black shadow-md shadow-cyan-500/25"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+          <span>✨ Image-to-Image Editing</span>
+        </button>
       </div>
+
+      {/* ── Live AI Providers Platforms & Free Tier Model Selector ── */}
+      <LiveAiModelSelector
+        activeModelId={selectedModel}
+        onSelectModel={(m: LiveAiModel) => setSelectedModel(m.id)}
+        mode={activeMode}
+      />
 
       {/* ── Main Studio Grid: Controls & Output ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
