@@ -25,6 +25,7 @@ import {
   Globe,
   Sliders,
 } from "lucide-react";
+import { LiveAiModel, BASE_PROVIDERS } from "@/app/lib/aiModelRegistry";
 
 export interface ProviderConfig {
   id: string;
@@ -257,8 +258,44 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
     }
   };
 
+  // Live AI models mapped by provider ID
+  const [liveModelsByProvider, setLiveModelsByProvider] = useState<Record<string, LiveAiModel[]>>(() => {
+    const initMap: Record<string, LiveAiModel[]> = {};
+    for (const p of BASE_PROVIDERS) {
+      initMap[p.id] = p.models;
+    }
+    return initMap;
+  });
+  const [selectedModelByProvider, setSelectedModelByProvider] = useState<Record<string, string>>({});
+  const [copiedModelId, setCopiedModelId] = useState<string | null>(null);
+  const [isLiveSyncing, setIsLiveSyncing] = useState<boolean>(false);
+  const [liveSyncTime, setLiveSyncTime] = useState<string>("Live Synced");
+
+  const fetchLiveModelsForSentinel = async (forceRefresh = false) => {
+    setIsLiveSyncing(true);
+    try {
+      const res = await fetch(`/api/models/live?free_only=false&refresh=${forceRefresh}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.providers && Array.isArray(data.providers)) {
+          const map: Record<string, LiveAiModel[]> = {};
+          for (const p of data.providers) {
+            map[p.id] = p.models;
+          }
+          setLiveModelsByProvider((prev) => ({ ...prev, ...map }));
+          setLiveSyncTime(new Date().toLocaleTimeString());
+        }
+      }
+    } catch (err) {
+      console.warn("Notice: Sentinel live models fetch error:", err);
+    } finally {
+      setIsLiveSyncing(false);
+    }
+  };
+
   useEffect(() => {
     fetchVaultStatus();
+    fetchLiveModelsForSentinel(false);
     try {
       const savedCopilot = localStorage.getItem("sentinel_active_copilot");
       if (savedCopilot) setActiveCopilot(savedCopilot);
@@ -582,6 +619,33 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
         </div>
       </div>
 
+      {/* Live AI Models Synchronization Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/90 border border-cyan-500/30 p-3 sm:px-4 sm:py-3 rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.12)]">
+        <div className="flex items-center gap-2">
+          <Cpu className="w-4 h-4 text-cyan-400 animate-pulse shrink-0" />
+          <span className="text-xs font-bold text-white">Live AI Provider Model Catalogs:</span>
+          <span className="text-[11px] text-slate-300 hidden md:inline">
+            Real-time model lists synchronized across all API cards below.
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-2.5 py-1 rounded-xl flex items-center gap-1 font-bold">
+            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+            <span>Upstream: {liveSyncTime}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => fetchLiveModelsForSentinel(true)}
+            disabled={isLiveSyncing}
+            className="px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-cyan-500/40 hover:border-cyan-300 text-cyan-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+            title="Refresh models live from upstream APIs"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLiveSyncing ? "animate-spin text-cyan-400" : ""}`} />
+            <span>{isLiveSyncing ? "Syncing..." : "Sync Live Models"}</span>
+          </button>
+        </div>
+      </div>
+
       {/* Provider Keys Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {PROVIDERS.map((provider) => {
@@ -634,17 +698,124 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
                 {/* Description */}
                 <p className="text-xs text-slate-400 leading-relaxed">{provider.description}</p>
 
-                {/* Recommended Models */}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {provider.recommendedModels.map((m) => (
-                    <span
-                      key={m}
-                      className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-slate-950 border border-slate-800 text-slate-400"
-                    >
-                      {m}
-                    </span>
-                  ))}
-                </div>
+                {/* ── Live AI Models Catalog & Dynamic Badges ── */}
+                {(() => {
+                  const liveList = liveModelsByProvider[provider.id] || [];
+                  const freeCount = liveList.filter((m) => m.isFree || m.isFreeTier).length;
+                  const displayBadges =
+                    liveList.length > 0
+                      ? liveList.slice(0, 6)
+                      : provider.recommendedModels.map((m) => ({
+                          id: m,
+                          name: m,
+                          isFree: m.includes("free") || m.includes("turbo") || m.includes("nano") || m.includes("flash"),
+                          isFreeTier: true,
+                          latency: "",
+                          pricingLabel: "Catalog Model",
+                        }));
+
+                  return (
+                    <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                          <span>Live Models:</span>
+                          <span className="text-[10px] font-mono text-cyan-300 font-semibold">
+                            {liveList.length > 0
+                              ? `${liveList.length} Models (${freeCount} Free Tier)`
+                              : `${provider.recommendedModels.length} Models`}
+                          </span>
+                        </span>
+                        <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                          🟢 Live Synced
+                        </span>
+                      </div>
+
+                      {/* Interactive Live Model Dropdown */}
+                      {liveList.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <div className="relative flex-1">
+                            <select
+                              value={selectedModelByProvider[provider.id] || liveList[0]?.id || ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedModelByProvider((prev) => ({ ...prev, [provider.id]: val }));
+                              }}
+                              className="w-full bg-slate-950 border border-slate-800 hover:border-cyan-500/50 text-slate-200 rounded-xl px-2.5 py-1 text-[11px] font-mono focus:ring-1 focus:ring-cyan-500 cursor-pointer appearance-none pr-6"
+                            >
+                              {liveList.map((m) => (
+                                <option key={m.id} value={m.id} className="bg-slate-950 text-white">
+                                  {m.name} &bull; {m.pricingLabel} &bull; {m.latency}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-cyan-400 text-[9px] font-bold">
+                              ▼
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const chosenId = selectedModelByProvider[provider.id] || liveList[0]?.id;
+                              if (chosenId) {
+                                navigator.clipboard.writeText(chosenId);
+                                setCopiedModelId(chosenId);
+                                showToast(`Copied ${chosenId} to clipboard!`, "info");
+                                setTimeout(() => setCopiedModelId(null), 2500);
+                              }
+                            }}
+                            className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-[10px] font-mono shrink-0 flex items-center gap-1 transition"
+                            title="Copy selected model ID"
+                          >
+                            {copiedModelId === (selectedModelByProvider[provider.id] || liveList[0]?.id) ? (
+                              <Check className="w-3 h-3 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3 h-3 text-cyan-400" />
+                            )}
+                            <span>{copiedModelId === (selectedModelByProvider[provider.id] || liveList[0]?.id) ? "Copied" : "Copy"}</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Dynamic Live Model Badges with Free/Latency Highlights */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {displayBadges.map((badgeItem: any) => {
+                          const isFree = Boolean(badgeItem.isFree || badgeItem.isFreeTier);
+                          const isCopied = copiedModelId === badgeItem.id;
+                          return (
+                            <button
+                              key={badgeItem.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedModelByProvider((prev) => ({ ...prev, [provider.id]: badgeItem.id }));
+                                navigator.clipboard.writeText(badgeItem.id);
+                                setCopiedModelId(badgeItem.id);
+                                showToast(`Copied ${badgeItem.id} to clipboard!`, "info");
+                                setTimeout(() => setCopiedModelId(null), 2500);
+                              }}
+                              className={`group inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
+                                isFree
+                                  ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:border-emerald-400 hover:bg-emerald-950/70 shadow-sm"
+                                  : "bg-slate-950 border-slate-800 text-slate-400 hover:border-cyan-500/40 hover:text-cyan-300"
+                              }`}
+                              title={`Click to copy: ${badgeItem.id} (${badgeItem.pricingLabel || "Model"})`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${isFree ? "bg-emerald-400 animate-pulse" : "bg-cyan-400"}`} />
+                              <span className="truncate max-w-[150px] font-semibold">{badgeItem.name}</span>
+                              {badgeItem.latency && (
+                                <span className="text-[9px] text-slate-500 group-hover:text-cyan-400">
+                                  {badgeItem.latency}
+                                </span>
+                              )}
+                              {isCopied && <Check className="w-2.5 h-2.5 text-emerald-400 shrink-0 ml-0.5" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Custom Endpoint (for Ollama/AgentRouter) */}
                 {provider.defaultEndpoint && (
