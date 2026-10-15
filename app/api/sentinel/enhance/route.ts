@@ -1,18 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PROVIDER_ENV_MAP } from "@/app/lib/sentinelConfig";
 import { brainstormPrompt, reformUserPrompt } from "@/app/lib/promptIntelligence";
+import { isNsfwContent } from "@/app/lib/nsfwFilter";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt = "", provider, apiKey, mode = "enhance" } = await req.json();
+    const body = await req.json();
+    const { prompt = "", provider, apiKey, mode = "enhance", nsfw_enabled = false } = body;
 
     const isBrainstorm = mode === "brainstorm";
 
     // For enhance mode, prompt text is required
     if (!isBrainstorm && (!prompt || !prompt.trim())) {
       return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
+    }
+
+    // NSFW / SFW Mode Guard: Strict admin block when in SFW mode
+    if (!nsfw_enabled && isNsfwContent(prompt)) {
+      return NextResponse.json({ error: "NSFW Blocked by Admin" }, { status: 403 });
     }
 
     const envKey = provider ? PROVIDER_ENV_MAP[provider] : null;

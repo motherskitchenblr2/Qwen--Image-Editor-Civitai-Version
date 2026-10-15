@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { SubsystemHealth, HealthIssue } from "@/app/api/sentinel/health/route";
 import { generateSmartNegativePrompt } from "@/app/lib/promptIntelligence";
+import { isNsfwContent, isNsfwModeActive, triggerNsfwBlockedModal } from "@/app/lib/nsfwFilter";
 
 interface AgenticHealthGuardianModalProps {
   onNavigateTab?: (tab: "studio" | "loras" | "generators" | "sentinel" | "gallery") => void;
@@ -144,6 +145,27 @@ export default function AgenticHealthGuardianModal({
     if (!inputMessage.trim()) return;
     const userText = inputMessage.trim();
     setInputMessage("");
+
+    const nsfwMode = isNsfwModeActive();
+    if (!nsfwMode && isNsfwContent(userText)) {
+      triggerNsfwBlockedModal();
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          sender: "user",
+          text: userText,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+        {
+          id: (Date.now() + 1).toString(),
+          sender: "guardian",
+          text: "NSFW Blocked by Admin",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+      return;
+    }
 
     const newMsg: ChatMessage = {
       id: Date.now().toString(),

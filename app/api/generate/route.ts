@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isNsfwContent } from "@/app/lib/nsfwFilter";
 
 const DASHSCOPE_API_KEY = process.env.DASHSCOPE_API_KEY || process.env.ALIBABA_API_KEY || "";
 const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID || "";
@@ -58,6 +59,11 @@ export async function POST(req: NextRequest) {
 
     if (!prompt || !prompt.trim()) {
       return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
+    }
+
+    const nsfwEnabled = Boolean(body.nsfw_enabled);
+    if (!nsfwEnabled && (isNsfwContent(prompt) || isNsfwContent(negative_prompt))) {
+      return NextResponse.json({ error: "NSFW Blocked by Admin" }, { status: 403 });
     }
 
     // ─────────────────────────────────────────────────────────────

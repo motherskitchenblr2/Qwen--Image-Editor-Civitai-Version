@@ -23,6 +23,12 @@ import {
 import LiveAiModelSelector from "./LiveAiModelSelector";
 import PromptActionButtons from "./PromptActionButtons";
 import { LiveAiModel } from "@/app/lib/aiModelRegistry";
+import {
+  isNsfwContent,
+  isImageFileNsfw,
+  isNsfwModeActive,
+  triggerNsfwBlockedModal,
+} from "@/app/lib/nsfwFilter";
 
 export interface AiModelConfig {
   id: string;
@@ -164,14 +170,23 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
 
   const handleEnhancePrompt = async () => {
     if (!prompt.trim()) return;
+    const nsfwMode = isNsfwModeActive();
+    if (!nsfwMode && isNsfwContent(prompt)) {
+      triggerNsfwBlockedModal();
+      return;
+    }
     setIsEnhancingPrompt(true);
     try {
       const activeCopilot = typeof window !== "undefined" ? (localStorage.getItem("sentinel_active_copilot") || "mistral") : "mistral";
       const res = await fetch("/api/sentinel/enhance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, provider: activeCopilot }),
+        body: JSON.stringify({ prompt, provider: activeCopilot, nsfw_enabled: nsfwMode }),
       });
+      if (res.status === 403) {
+        triggerNsfwBlockedModal();
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (data.enhancedPrompt) {
@@ -196,6 +211,11 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
   const handleSourceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!isNsfwModeActive() && isImageFileNsfw(file.name)) {
+        triggerNsfwBlockedModal();
+        e.target.value = "";
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => setSourceImage(reader.result as string);
       reader.readAsDataURL(file);
@@ -207,6 +227,12 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
       setErrorMessage("Please enter an image prompt.");
       return;
     }
+    const nsfwMode = isNsfwModeActive();
+    if (!nsfwMode && (isNsfwContent(prompt) || isNsfwContent(negativePrompt))) {
+      triggerNsfwBlockedModal();
+      return;
+    }
+
     if (activeMode === "edit" && !sourceImage) {
       setErrorMessage("Please upload a source image for Image-to-Image editing.");
       return;
@@ -225,6 +251,7 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
         mode: activeMode,
         size: aspectRatio,
         seed: seed === "" ? null : Number(seed),
+        nsfw_enabled: nsfwMode,
       };
 
       if (activeMode === "edit" && sourceImage) {
@@ -238,6 +265,12 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
       });
 
       const data = await res.json().catch(() => ({}));
+
+      if (res.status === 403 || data.error === "NSFW Blocked by Admin") {
+        triggerNsfwBlockedModal();
+        setIsGenerating(false);
+        return;
+      }
 
       if (!res.ok) {
         if (data.code === "QUOTA_EXHAUSTED" || res.status === 402) {

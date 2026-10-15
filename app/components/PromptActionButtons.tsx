@@ -21,6 +21,7 @@ import {
   brainstormPrompt,
   reformUserPrompt,
 } from "@/app/lib/promptIntelligence";
+import { isNsfwContent, isNsfwModeActive, triggerNsfwBlockedModal } from "@/app/lib/nsfwFilter";
 
 interface PromptActionButtonsProps {
   prompt: string;
@@ -157,6 +158,13 @@ export default function PromptActionButtons({
   // ─────────────────────────────────────────────────────────────
   const handleBrainstorm = async () => {
     if (!isBrainstormActive) return;
+
+    const nsfwMode = isNsfwModeActive();
+    if (!nsfwMode && isNsfwContent(cleanPrompt)) {
+      triggerNsfwBlockedModal();
+      return;
+    }
+
     setIsBrainstorming(true);
 
     try {
@@ -172,8 +180,15 @@ export default function PromptActionButtons({
           prompt: cleanPrompt,
           provider: activeCopilot,
           mode: "brainstorm",
+          nsfw_enabled: nsfwMode,
         }),
       });
+
+      if (res.status === 403) {
+        triggerNsfwBlockedModal();
+        setIsBrainstorming(false);
+        return;
+      }
 
       let resultingPrompt = "";
       let resultingNegative = "";
@@ -186,7 +201,12 @@ export default function PromptActionButtons({
 
       // Offline deterministic fallback if needed
       if (!resultingPrompt) {
-        const bsFallback = brainstormPrompt(cleanPrompt);
+        const bsFallback = brainstormPrompt(cleanPrompt, nsfwMode);
+        if (bsFallback.error) {
+          triggerNsfwBlockedModal();
+          setIsBrainstorming(false);
+          return;
+        }
         resultingPrompt = bsFallback.prompt;
         resultingNegative = bsFallback.suggestedNegative;
       }
@@ -208,7 +228,12 @@ export default function PromptActionButtons({
         }
       }
     } catch (err) {
-      const bsFallback = brainstormPrompt(cleanPrompt);
+      const bsFallback = brainstormPrompt(cleanPrompt, nsfwMode);
+      if (bsFallback.error) {
+        triggerNsfwBlockedModal();
+        setIsBrainstorming(false);
+        return;
+      }
       const trimmed = bsFallback.prompt.trim();
       onUpdatePrompt(trimmed);
       setLastBrainstormedPrompt(trimmed);
@@ -233,6 +258,12 @@ export default function PromptActionButtons({
   // ─────────────────────────────────────────────────────────────
   const handleEnhance = async () => {
     if (!isEnhanceActive) return;
+
+    const nsfwMode = isNsfwModeActive();
+    if (!nsfwMode && isNsfwContent(cleanPrompt)) {
+      triggerNsfwBlockedModal();
+      return;
+    }
 
     if (onEnhance) {
       try {
@@ -259,8 +290,15 @@ export default function PromptActionButtons({
           prompt: cleanPrompt,
           provider: activeCopilot,
           mode: "enhance",
+          nsfw_enabled: nsfwMode,
         }),
       });
+
+      if (res.status === 403) {
+        triggerNsfwBlockedModal();
+        setIsEnhancingLocal(false);
+        return;
+      }
 
       let reformed = "";
       if (res.ok) {
@@ -269,7 +307,13 @@ export default function PromptActionButtons({
       }
 
       if (!reformed) {
-        reformed = reformUserPrompt(cleanPrompt);
+        reformed = reformUserPrompt(cleanPrompt, nsfwMode);
+      }
+
+      if (reformed === "NSFW Blocked by Admin") {
+        triggerNsfwBlockedModal();
+        setIsEnhancingLocal(false);
+        return;
       }
 
       if (reformed) {
@@ -283,7 +327,12 @@ export default function PromptActionButtons({
         }
       }
     } catch (err) {
-      const reformed = reformUserPrompt(cleanPrompt);
+      const reformed = reformUserPrompt(cleanPrompt, nsfwMode);
+      if (reformed === "NSFW Blocked by Admin") {
+        triggerNsfwBlockedModal();
+        setIsEnhancingLocal(false);
+        return;
+      }
       const trimmed = reformed.trim();
       onUpdatePrompt(trimmed);
       setLastEnhancedPrompt(trimmed);

@@ -37,6 +37,14 @@ import AiGeneratorHub from "./components/AiGeneratorHub";
 import LiveAiModelSelector from "./components/LiveAiModelSelector";
 import PromptActionButtons from "./components/PromptActionButtons";
 import AgenticHealthGuardianModal from "./components/AgenticHealthGuardianModal";
+import NsfwBlockedModal from "./components/NsfwBlockedModal";
+import {
+  isNsfwContent,
+  isImageFileNsfw,
+  isNsfwModeActive,
+  setNsfwModeActive,
+  triggerNsfwBlockedModal,
+} from "./lib/nsfwFilter";
 import { LiveAiModel } from "./lib/aiModelRegistry";
 
 interface LoRAItem {
@@ -124,6 +132,31 @@ export default function ImageEditorStudio() {
   // Gallery
   const [gallery, setGallery] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"result" | "original">("result");
+
+  // NSFW / SFW Mode Controller state (Default: SFW safe mode)
+  const [isNsfwMode, setIsNsfwMode] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsNsfwMode(isNsfwModeActive());
+    const handleNsfwSync = (e: any) => {
+      setIsNsfwMode(Boolean(e.detail?.enabled));
+    };
+    window.addEventListener("nsfw-mode-changed", handleNsfwSync);
+    return () => window.removeEventListener("nsfw-mode-changed", handleNsfwSync);
+  }, []);
+
+  const handleToggleNsfwMode = (enabled: boolean) => {
+    setIsNsfwMode(enabled);
+    setNsfwModeActive(enabled);
+    if (showToast) {
+      showToast(
+        enabled
+          ? "⚠️ 18+ Unrestricted NSFW Mode Activated"
+          : "🛡️ SFW Mode Activated (Safe & Filtered)",
+        enabled ? "info" : "success"
+      );
+    }
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const localLoraInputRef = useRef<HTMLInputElement>(null);
@@ -517,6 +550,11 @@ export default function ImageEditorStudio() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!isNsfwMode && isImageFileNsfw(file.name)) {
+        triggerNsfwBlockedModal();
+        if (e.target) e.target.value = "";
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (uploadEvent) => {
         setOriginalImage(uploadEvent.target?.result as string);
@@ -528,6 +566,10 @@ export default function ImageEditorStudio() {
 
   const handleEnhancePrompt = async () => {
     if (!prompt.trim()) return;
+    if (!isNsfwMode && isNsfwContent(prompt)) {
+      triggerNsfwBlockedModal();
+      return;
+    }
     setIsEnhancingPrompt(true);
     try {
       const activeCopilot = localStorage.getItem("sentinel_active_copilot") || "gemini";
@@ -538,8 +580,14 @@ export default function ImageEditorStudio() {
         body: JSON.stringify({
           prompt,
           provider: activeCopilot,
+          nsfw_enabled: isNsfwMode,
         }),
       });
+
+      if (res.status === 403) {
+        triggerNsfwBlockedModal();
+        return;
+      }
 
       if (res.ok) {
         const data = await res.json();
@@ -799,6 +847,11 @@ export default function ImageEditorStudio() {
       return;
     }
 
+    if (!isNsfwMode && (isNsfwContent(prompt) || isNsfwContent(negativePrompt))) {
+      triggerNsfwBlockedModal();
+      return;
+    }
+
     setIsGenerating(true);
     setGenerationProgress(0);
     setGenerationStep(0);
@@ -831,9 +884,15 @@ export default function ImageEditorStudio() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...payload,
+            nsfw_enabled: isNsfwMode,
             backend_url: cleanUrl || undefined,
           }),
         });
+
+        if (res.status === 403) {
+          triggerNsfwBlockedModal();
+          return;
+        }
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -929,8 +988,14 @@ export default function ImageEditorStudio() {
             mode: studioMode,
             image_base64: studioMode === "edit" ? originalImage : undefined,
             seed: seed === "" ? null : Number(seed),
+            nsfw_enabled: isNsfwMode,
           }),
         });
+
+        if (res.status === 403) {
+          triggerNsfwBlockedModal();
+          return;
+        }
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -1031,6 +1096,17 @@ export default function ImageEditorStudio() {
                   <span>Turn On GPU</span>
                 </button>
               )}
+              <button
+                onClick={() => handleToggleNsfwMode(!isNsfwMode)}
+                title={isNsfwMode ? "NSFW Mode Active (Tap to enable SFW Safe Mode)" : "SFW Safe Mode Active (Tap to enable NSFW Mode)"}
+                className={`p-1.5 rounded-lg border text-[10px] font-bold transition flex items-center gap-1 ${
+                  isNsfwMode
+                    ? "bg-rose-500/20 border-rose-500/80 text-rose-300 animate-pulse"
+                    : "bg-emerald-500/15 border-emerald-500/60 text-emerald-300"
+                }`}
+              >
+                <span>{isNsfwMode ? "🔞" : "🛡️"}</span>
+              </button>
               <button
                 onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
                 className="p-1.5 bg-slate-900/90 border border-cyan-500/30 text-cyan-400 rounded-lg shadow-sm hover:border-cyan-400 transition"
@@ -1189,6 +1265,33 @@ export default function ImageEditorStudio() {
               </button>
             )}
 
+            {/* Quick NSFW/SFW Mode Switcher Badge */}
+            <button
+              onClick={() => handleToggleNsfwMode(!isNsfwMode)}
+              title={
+                isNsfwMode
+                  ? "NSFW Mode Active: Click to switch to Safe (SFW) Mode"
+                  : "SFW Safe Mode Active: Click to unlock 18+ NSFW Mode"
+              }
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition active:scale-95 ${
+                isNsfwMode
+                  ? "bg-rose-500/20 hover:bg-rose-500/30 border-rose-500/80 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.35)] animate-pulse"
+                  : "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/60 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+              }`}
+            >
+              {isNsfwMode ? (
+                <>
+                  <span className="text-sm leading-none">🔞</span>
+                  <span className="font-extrabold tracking-wide">NSFW ON</span>
+                </>
+              ) : (
+                <>
+                  <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="font-extrabold tracking-wide">SFW SAFE</span>
+                </>
+              )}
+            </button>
+
             {/* Advanced / Manual URL Override Toggle */}
             <button
               onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
@@ -1274,6 +1377,95 @@ export default function ImageEditorStudio() {
                   <RefreshCw className={`w-3 h-3 ${isCheckingHealth ? "animate-spin" : ""}`} />
                   Verify Link
                 </button>
+              </div>
+            </div>
+
+            {/* ── Global NSFW / SFW Content Mode Controller Card ── */}
+            <div className="bg-black/70 border border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.15)] rounded-xl p-4 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Shield className={`w-4 h-4 ${isNsfwMode ? "text-rose-400 animate-pulse" : "text-emerald-400"}`} />
+                    <span className="text-xs font-extrabold text-white uppercase tracking-wide">
+                      Global Content Mode &amp; Safety Filter
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                      isNsfwMode
+                        ? "bg-rose-500/20 text-rose-300 border border-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse"
+                        : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.25)]"
+                    }`}>
+                      {isNsfwMode ? "🔞 18+ Unrestricted NSFW" : "🛡️ SFW Safe Mode"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Master toggle that comprehensively controls image generations, source uploads, prompt brainstorming, and Sentinel AI chat across the entire application.
+                  </p>
+                </div>
+              </div>
+
+              {/* SFW / NSFW Mode Selection Options */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* SFW Safe Mode Option */}
+                <label
+                  onClick={() => handleToggleNsfwMode(false)}
+                  className={`flex flex-col p-3 rounded-xl border cursor-pointer select-none transition-all ${
+                    !isNsfwMode
+                      ? "bg-emerald-500/15 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                      : "bg-slate-950/80 border-slate-800 hover:border-emerald-500/40 hover:bg-slate-900/80"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="nsfw_mode_selector"
+                        checked={!isNsfwMode}
+                        onChange={() => handleToggleNsfwMode(false)}
+                        className="w-4 h-4 accent-emerald-400 cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5 text-emerald-400" /> SFW Safe Mode
+                      </span>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/25 text-emerald-300 border border-emerald-400/60 rounded font-mono font-bold leading-none">
+                      DEFAULT
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 pl-6 leading-relaxed">
+                    Strict content safety. Blocks adult, explicit, or inappropriate prompts, uploads, and AI chat. Any attempt triggers <span className="font-mono text-cyan-300">&quot;NSFW Blocked by Admin&quot;</span> popup modal.
+                  </p>
+                </label>
+
+                {/* NSFW Unrestricted Mode Option */}
+                <label
+                  onClick={() => handleToggleNsfwMode(true)}
+                  className={`flex flex-col p-3 rounded-xl border cursor-pointer select-none transition-all ${
+                    isNsfwMode
+                      ? "bg-rose-500/20 border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.35)]"
+                      : "bg-slate-950/80 border-slate-800 hover:border-rose-500/40 hover:bg-slate-900/80"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="nsfw_mode_selector"
+                        checked={isNsfwMode}
+                        onChange={() => handleToggleNsfwMode(true)}
+                        className="w-4 h-4 accent-rose-400 cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span className="text-sm leading-none">🔞</span> 18+ Unrestricted NSFW Mode
+                      </span>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 bg-rose-500/25 text-rose-300 border border-rose-400/60 rounded font-mono font-bold leading-none">
+                      UNLOCKED
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 pl-6 leading-relaxed">
+                    Completely unlocks all generation engines, image edits, brainstorming, and AI chat for unfiltered adult &amp; creative workflows.
+                  </p>
+                </label>
               </div>
             </div>
 
@@ -2166,6 +2358,9 @@ export default function ImageEditorStudio() {
           setActiveTab("studio");
         }}
       />
+
+      {/* ── Strict NSFW Blocked by Admin Modal ── */}
+      <NsfwBlockedModal onOpenSettings={() => setShowAdvancedUrl(true)} />
 
       {/* ── Floating Toast Notification Banner ── */}
       {toastMessage && (

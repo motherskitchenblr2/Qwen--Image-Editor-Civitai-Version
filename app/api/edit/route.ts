@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getActiveTunnelUrl } from "../../lib/tunnelDiscovery";
+import { isNsfwContent } from "@/app/lib/nsfwFilter";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +20,11 @@ export async function POST(req: NextRequest) {
 
     if (!prompt || !prompt.trim()) {
       return NextResponse.json({ error: "Prompt is required for editing." }, { status: 400 });
+    }
+
+    const nsfwEnabled = Boolean(body.nsfw_enabled);
+    if (!nsfwEnabled && (isNsfwContent(prompt) || isNsfwContent(negative_prompt))) {
+      return NextResponse.json({ error: "NSFW Blocked by Admin" }, { status: 403 });
     }
 
     if (!image_base64) {

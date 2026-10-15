@@ -332,8 +332,21 @@ export const QWEN2_VL_JUNIOR_MODEL = {
  * Brain-Storm Engine: Composes a complete, professional, master-grade prompt
  * from a few words, a subject, or an empty text pane.
  */
-export function brainstormPrompt(seedTopic?: string): { prompt: string; suggestedNegative: string } {
+export function brainstormPrompt(
+  seedTopic?: string,
+  isNsfwAllowed: boolean = false
+): { prompt: string; suggestedNegative: string; error?: string } {
   const cleanSeed = (seedTopic || "").trim().toLowerCase();
+
+  // In SFW mode, strictly refuse and avoid generating NSFW content
+  const NSFW_REGEX = /\b(nsfw|nude|nudity|naked|porn|porno|pornography|xxx|hentai|erotic|erotica|sex|sexy|sexual|explicit|genitals|penis|vagina|boobs|breasts|topless|bottomless|fellatio|blowjob|masturbat\w*|cum|orgasm|bdsm|bondage|fetish|lewd|milf|waifu\s+nude|ecchi|r18|uncensored\s+nudity|uncensored\s+sex|gangbang|hardcore|softcore|anal|penetration|stripper|undressed|unclothed|erotic\s+art|naked\s+body|naked\s+woman|naked\s+man)\b/i;
+  if (!isNsfwAllowed && NSFW_REGEX.test(cleanSeed)) {
+    return {
+      prompt: "NSFW Blocked by Admin",
+      suggestedNegative: "",
+      error: "NSFW Blocked by Admin",
+    };
+  }
 
   // If empty or purely generic, roll a master archetype
   if (!cleanSeed) {
@@ -341,6 +354,14 @@ export function brainstormPrompt(seedTopic?: string): { prompt: string; suggeste
     return {
       prompt: arch.prompt,
       suggestedNegative: arch.suggestedNegative,
+    };
+  }
+
+  // If in NSFW mode and seed contains adult themes, generate artistic aesthetic masterwork
+  if (isNsfwAllowed && NSFW_REGEX.test(cleanSeed)) {
+    return {
+      prompt: `Sensual fine art masterpiece photography of ${cleanSeed}, dramatic chiaroscuro Rembrandt lighting, exquisite skin micro-textures and soft rim glow, high aesthetic fine-art gallery composition, 8k resolution, shot on 85mm f/1.2 lens`,
+      suggestedNegative: "low quality, blurry, deformed hands, extra fingers, cartoon, 3d render, watermark",
     };
   }
 
@@ -384,8 +405,14 @@ export function brainstormPrompt(seedTopic?: string): { prompt: string; suggeste
  * Prompt Reformer: Transforms casual, improper, or raw imaginative user text
  * into a balanced, professional prompt with image enhancing descriptors.
  */
-export function reformUserPrompt(rawText: string): string {
+export function reformUserPrompt(rawText: string, isNsfwAllowed: boolean = false): string {
   if (!rawText || !rawText.trim()) return "";
+
+  const NSFW_REGEX = /\b(nsfw|nude|nudity|naked|porn|porno|pornography|xxx|hentai|erotic|erotica|sex|sexy|sexual|explicit|genitals|penis|vagina|boobs|breasts|topless|bottomless|fellatio|blowjob|masturbat\w*|cum|orgasm|bdsm|bondage|fetish|lewd|milf|waifu\s+nude|ecchi|r18|uncensored\s+nudity|uncensored\s+sex|gangbang|hardcore|softcore|anal|penetration|stripper|undressed|unclothed|erotic\s+art|naked\s+body|naked\s+woman|naked\s+man)\b/i;
+
+  if (!isNsfwAllowed && NSFW_REGEX.test(rawText)) {
+    return "NSFW Blocked by Admin";
+  }
 
   let cleaned = rawText.trim();
 

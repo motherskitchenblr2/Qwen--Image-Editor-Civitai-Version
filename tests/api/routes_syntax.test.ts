@@ -184,7 +184,8 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
       // Mock global fetch to simulate offline Google Drive
       vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network offline"));
 
-      const getRes = await tunnelRoute.GET();
+      const getReq = new NextRequest("http://localhost:3000/api/tunnel");
+      const getRes = await tunnelRoute.GET(getReq);
       expect(getRes.status).toBe(200);
       const getJson = await getRes.json();
       expect(getJson.url).toBeNull();
