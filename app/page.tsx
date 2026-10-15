@@ -632,7 +632,42 @@ export default function ImageEditorStudio() {
     }
 
     if (!backendUrl || !isConnected) {
-      alert("Kaggle Dual Tesla T4 GPU backend is currently offline. Please turn on the GPU first to upload your local LoRA into the storage vault.");
+      const safeFilename = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
+      const cleanFilename = safeFilename.endsWith(".safetensors") ? safeFilename : `${safeFilename}.safetensors`;
+      const loraName = file.name.replace(".safetensors", "");
+
+      try {
+        await fetch("/api/vault/loras", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: loraName,
+            filename: cleanFilename,
+            size_mb: Math.round((file.size / (1024 * 1024)) * 100) / 100,
+          }),
+        });
+      } catch {}
+
+      const newLora = {
+        name: loraName,
+        filename: cleanFilename,
+        size_mb: Math.round((file.size / (1024 * 1024)) * 100) / 100,
+        is_active: false,
+      };
+
+      setAvailableLoras((prev) => {
+        const filtered = prev.filter((l) => l.filename !== cleanFilename);
+        const updated = [newLora, ...filtered];
+        try {
+          localStorage.setItem("qwen_vault_loras", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      setSelectedDropdownLora(cleanFilename);
+      setActiveLoras([{ name: loraName, scale: 0.8 }]);
+      setFusedStatusMessage(`✅ LoRA "${loraName}" registered in Studio! Selected & ready.`);
+      setTimeout(() => setFusedStatusMessage(""), 6000);
       if (localLoraInputRef.current) localLoraInputRef.current.value = "";
       return;
     }

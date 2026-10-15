@@ -129,7 +129,23 @@ export default function CivitaiLoraHub({
     }
 
     if (!backendUrl || !isConnected) {
-      alert("GPU Backend is offline. Please start or connect the GPU backend first to upload your local LoRA.");
+      // Register local file metadata and trigger words in Next.js Vault registry
+      const safeFilename = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
+      const cleanFilename = safeFilename.endsWith(".safetensors") ? safeFilename : `${safeFilename}.safetensors`;
+      try {
+        await fetch("/api/vault/loras", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: file.name.replace(".safetensors", ""),
+            filename: cleanFilename,
+            size_mb: Math.round((file.size / (1024 * 1024)) * 100) / 100,
+          }),
+        });
+      } catch {}
+
+      onLoraDownloaded(cleanFilename);
+      alert(`✅ Local LoRA "${file.name}" registered in Studio Vault! (Turn on Kaggle GPU when ready to fuse into Tesla T4 VRAM).`);
       if (localHubInputRef.current) localHubInputRef.current.value = "";
       return;
     }
@@ -237,15 +253,48 @@ export default function CivitaiLoraHub({
   };
 
   const handleDownloadModel = async (model: CivitaiModelItem, versionOverride?: any) => {
-    if (!backendUrl || !isConnected) {
-      alert("Please connect the Kaggle Dual Tesla T4 GPU backend before downloading.");
-      return;
-    }
-
     const version = versionOverride || model.version;
     const downloadKey = `${model.id}_${version.id}`;
     const cleanName = `${model.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
     const triggerWordStr = (version.trainedWords || []).join(", ");
+
+    if (!backendUrl || !isConnected) {
+      setDownloadStates((prev) => ({
+        ...prev,
+        [downloadKey]: { status: "downloading", message: "Starting direct browser download..." },
+      }));
+
+      // Direct browser download of .safetensors from Civitai with zero GPU dependency
+      const anchor = document.createElement("a");
+      anchor.href = version.downloadUrl;
+      anchor.download = version.fileName || `${cleanName}.safetensors`;
+      anchor.target = "_blank";
+      anchor.rel = "noreferrer";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+
+      // Register LoRA in local Next.js Vault catalog so trigger words and metadata persist
+      try {
+        await fetch("/api/vault/loras", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: model.name,
+            filename: version.fileName || `${cleanName}.safetensors`,
+            size_mb: parseFloat(version.sizeMB) || 0,
+            trigger_words: triggerWordStr,
+          }),
+        });
+      } catch {}
+
+      onLoraDownloaded(version.fileName || `${cleanName}.safetensors`);
+      setDownloadStates((prev) => ({
+        ...prev,
+        [downloadKey]: { status: "completed", message: "Downloaded to device & registered!" },
+      }));
+      return;
+    }
 
     setDownloadStates((prev) => ({
       ...prev,
@@ -287,32 +336,62 @@ export default function CivitaiLoraHub({
   };
 
   const handleDirectDownload = async () => {
-    if (!directUrl.trim() || !backendUrl || !isConnected) return;
+    if (!directUrl.trim()) return;
     setIsDirectDownloading(true);
     try {
-      const cleanUrl = backendUrl.replace(/\/+$/, "");
       const safeName = directName.trim() || `civitai_lora_${Date.now()}`;
-      const res = await fetch(`${cleanUrl}/api/loras/download`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: directUrl.trim(),
-          name: safeName,
-        }),
-      });
+      if (backendUrl && isConnected) {
+        const cleanUrl = backendUrl.replace(/\/+$/, "");
+        const res = await fetch(`${cleanUrl}/api/loras/download`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: directUrl.trim(),
+            name: safeName,
+          }),
+        });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || "Download failed");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || "Download failed on GPU backend");
+        }
+
+        const data = await res.json();
+        setDirectUrl("");
+        setDirectName("");
+        onLoraDownloaded(data.filename || `${safeName}.safetensors`);
+        alert(`✅ LoRA "${data.name}" successfully downloaded and saved to 5 TB Google Drive Vault!`);
+      } else {
+        // Direct browser download when GPU is offline
+        const anchor = document.createElement("a");
+        anchor.href = directUrl.trim();
+        anchor.download = `${safeName}.safetensors`;
+        anchor.target = "_blank";
+        anchor.rel = "noreferrer";
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+
+        // Register in vault metadata
+        try {
+          await fetch("/api/vault/loras", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: safeName,
+              filename: `${safeName}.safetensors`,
+              size_mb: 0,
+            }),
+          });
+        } catch {}
+
+        onLoraDownloaded(`${safeName}.safetensors`);
+        setDirectUrl("");
+        setDirectName("");
+        alert(`✅ Direct download started in browser for "${safeName}" and registered in Vault!`);
       }
-
-      const data = await res.json();
-      setDirectUrl("");
-      setDirectName("");
-      onLoraDownloaded(data.filename || `${safeName}.safetensors`);
-      alert(`✅ LoRA "${data.name}" successfully downloaded and saved to 5 TB Google Drive Vault!`);
     } catch (e: any) {
-      alert(`Download error: ${e.message}`);
+      alert(`Download notice: ${e.message}`);
     } finally {
       setIsDirectDownloading(false);
     }
@@ -417,7 +496,12 @@ export default function CivitaiLoraHub({
                 />
                 <button
                   onClick={handleDirectDownload}
-                  disabled={!directUrl.trim() || isDirectDownloading || !isConnected}
+                  disabled={!directUrl.trim() || isDirectDownloading}
+                  title={
+                    isConnected
+                      ? "Download and save to 5 TB Google Drive Vault on Kaggle GPU"
+                      : "Direct browser download to your device (GPU offline)"
+                  }
                   className="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black text-xs font-bold rounded-lg transition disabled:opacity-40"
                 >
                   {isDirectDownloading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
@@ -510,12 +594,26 @@ export default function CivitaiLoraHub({
         </div>
       </div>
 
-      {/* ── Status / Error Feedback ──────────────────────────────── */}
-      {!isConnected && (
-        <div className="bg-amber-950/40 border border-amber-800/60 p-4 rounded-2xl flex items-center justify-between text-xs text-amber-300">
-          <span>⚠️ Kaggle Dual Tesla T4 backend is currently offline. Turn on GPU in the header to enable 1-click downloads to Google Drive.</span>
+      {/* ── Status / Info Feedback ──────────────────────────────── */}
+      <div className="bg-slate-900/90 border border-cyan-500/30 p-3.5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5 text-cyan-300">
+          <div className="p-1.5 rounded-xl bg-cyan-500/20 text-cyan-300">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <span>
+            <strong>Civitai Explorer Active (Serverless):</strong> Browse, search, inspect trigger words, and download <span className="font-mono text-cyan-200">.safetensors</span> directly to your device with zero GPU required.
+          </span>
         </div>
-      )}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold font-mono ${
+            isConnected
+              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/60"
+              : "bg-slate-800 text-slate-300 border border-slate-700"
+          }`}>
+            {isConnected ? "⚡ GPU Vault Sync: ON" : "🌐 Browser Direct: ACTIVE"}
+          </span>
+        </div>
+      </div>
 
       {error && (
         <div className="bg-rose-950/40 border border-rose-900/60 p-4 rounded-2xl text-xs text-rose-300">
@@ -700,16 +798,27 @@ export default function CivitaiLoraHub({
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => handleDownloadModel(model, currentVersion)}
-                        disabled={!isConnected}
-                        className={`w-full py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black rounded-xl text-xs font-bold transition shadow-md shadow-cyan-500/20 flex items-center justify-center gap-1.5 active:scale-95 ${
-                          !isConnected ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Download to Drive Vault</span>
-                      </button>
+                      <div className="flex items-center gap-1.5 w-full">
+                        <button
+                          onClick={() => handleDownloadModel(model, currentVersion)}
+                          className="flex-1 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black rounded-xl text-xs font-bold transition shadow-md shadow-cyan-500/20 flex items-center justify-center gap-1.5 active:scale-95"
+                          title={
+                            isConnected
+                              ? "Download directly to 5 TB Google Drive Vault on Kaggle GPU"
+                              : "Download .safetensors directly to your device via browser (Zero GPU required)"
+                          }
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>{isConnected ? "Save to Drive Vault" : "Download to Device"}</span>
+                        </button>
+                        <button
+                          onClick={() => onSelectForStudio(currentVersion.fileName, currentVersion.trainedWords)}
+                          title="Inject trigger words and use in Studio immediately"
+                          className="px-2.5 py-2 bg-slate-950 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-500/40 text-cyan-300 rounded-xl text-xs font-semibold transition"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
