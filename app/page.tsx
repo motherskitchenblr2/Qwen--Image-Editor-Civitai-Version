@@ -121,7 +121,61 @@ export default function ImageEditorStudio() {
   // Auto-discover live backend from Google Drive & Vercel Registry & Kaggle Session State
   const autoDiscoverBackend = async () => {
     try {
-      const res = await fetch("/api/backend/status", { cache: "no-store" });
+      // 1. Check if candidate URL is already active directly from browser
+      let candidate = backendUrl;
+      if (!candidate && typeof window !== "undefined") {
+        candidate = localStorage.getItem("qwen_backend_url") || "";
+      }
+      candidate = candidate ? candidate.trim().replace(/\/+$/, "") : "";
+
+      if (candidate && (candidate.startsWith("http://") || candidate.startsWith("https://"))) {
+        try {
+          const directPing = await fetch(`${candidate}/api/health`, {
+            signal: AbortSignal.timeout(3000),
+          });
+          if (directPing.ok) {
+            const hData = await directPing.json();
+            setBackendUrl(candidate);
+            setIsConnected(true);
+            setIsStartingGpu(false);
+            setBootMessage("");
+            localStorage.setItem("qwen_backend_url", candidate);
+
+            const ready = Boolean(hData.model_ready);
+            setIsModelReady(ready);
+            setModelStatusMessage(hData.message || (ready ? "Dual Tesla T4 Ready" : "Warming up pipeline in GPU VRAM..."));
+            if (hData.vram) setVramStats(hData.vram);
+            fetchAvailableLoras(candidate);
+
+            // Fetch idle timeout watchdog schedule from backend
+            try {
+              const idleRes = await fetch(`${candidate}/api/settings/idle-timeout`);
+              if (idleRes.ok) {
+                const idleData = await idleRes.json();
+                setAutoShutdownEnabled(idleData.enabled);
+                setIdleTimeoutMinutes(idleData.timeout_minutes);
+                setTempAutoShutdownEnabled(idleData.enabled);
+                setTempIdleTimeoutMinutes(idleData.timeout_minutes);
+                setBackendIdleStatus(idleData);
+              }
+            } catch {}
+
+            // Sync to server registry
+            fetch("/api/tunnel", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url: candidate }),
+            }).catch(() => {});
+
+            return candidate;
+          }
+        } catch {
+          // Direct probe failed; proceed with server discovery
+        }
+      }
+
+      const query = candidate ? `?candidate_url=${encodeURIComponent(candidate)}` : "";
+      const res = await fetch(`/api/backend/status${query}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         const { coordinated_state, is_alive, tunnel_url, kernel_status, model_ready, model_message, vram } = data;
@@ -155,15 +209,20 @@ export default function ImageEditorStudio() {
 
           return cleanUrl;
         } else if (coordinated_state === "warming_up" || kernel_status === "RUNNING") {
-          setIsStartingGpu(true);
-          setIsConnected(false);
-          setIsModelReady(false);
-          setBootMessage("Dual Tesla T4s active on Kaggle (~90s)... Auto-connecting tunnel.");
+          // If already connected via a direct tunnel, preserve connection
+          if (!isConnected) {
+            setIsStartingGpu(true);
+            setIsConnected(false);
+            setIsModelReady(false);
+            setBootMessage("Dual Tesla T4s active on Kaggle (~90s)... Auto-connecting tunnel.");
+          }
         } else if (coordinated_state === "queued" || kernel_status === "QUEUED") {
-          setIsStartingGpu(true);
-          setIsConnected(false);
-          setIsModelReady(false);
-          setBootMessage("Kaggle GPU session queued... Waiting for worker allocation.");
+          if (!isConnected) {
+            setIsStartingGpu(true);
+            setIsConnected(false);
+            setIsModelReady(false);
+            setBootMessage("Kaggle GPU session queued... Waiting for worker allocation.");
+          }
         } else {
           // Offline / stopped
           if (!isShuttingDown) {
@@ -258,6 +317,35 @@ export default function ImageEditorStudio() {
   const checkBackend = async (urlToCheck?: string) => {
     setIsCheckingHealth(true);
     try {
+      const target = (urlToCheck || backendUrl || "").trim().replace(/\/+$/, "");
+      if (target && (target.startsWith("http://") || target.startsWith("https://"))) {
+        try {
+          const directPing = await fetch(`${target}/api/health`, {
+            signal: AbortSignal.timeout(3500),
+          });
+          if (directPing.ok) {
+            const hData = await directPing.json();
+            setBackendUrl(target);
+            setIsConnected(true);
+            setIsStartingGpu(false);
+            setBootMessage("");
+            localStorage.setItem("qwen_backend_url", target);
+
+            const ready = Boolean(hData.model_ready);
+            setIsModelReady(ready);
+            setModelStatusMessage(hData.message || (ready ? "Dual Tesla T4 Ready" : "Warming up pipeline in GPU VRAM..."));
+            if (hData.vram) setVramStats(hData.vram);
+            fetchAvailableLoras(target);
+
+            fetch("/api/tunnel", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url: target }),
+            }).catch(() => {});
+            return;
+          }
+        } catch {}
+      }
       await autoDiscoverBackend();
     } finally {
       setIsCheckingHealth(false);
@@ -314,7 +402,12 @@ export default function ImageEditorStudio() {
     }
     setIsShuttingDown(true);
     try {
-      const res = await fetch("/api/backend/stop", { method: "POST" });
+      const targetUrl = backendUrl || (typeof window !== "undefined" ? localStorage.getItem("qwen_backend_url") || "" : "");
+      const res = await fetch("/api/backend/stop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidate_url: targetUrl }),
+      });
       const data = await res.json().catch(() => ({}));
       setIsConnected(false);
       setIsModelReady(false);
@@ -910,10 +1003,11 @@ export default function ImageEditorStudio() {
                   onClick={handleShutdownGpu}
                   disabled={isShuttingDown}
                   title="GPU is booting on Kaggle. Tap to cancel and halt."
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/20 hover:bg-rose-600 border border-amber-400/80 hover:border-rose-400 text-amber-200 hover:text-white rounded-lg text-[10px] font-semibold animate-neon-amber transition active:scale-95 disabled:opacity-50"
+                  className="group flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/20 hover:bg-rose-600 border border-amber-400/80 hover:border-rose-400 text-amber-200 hover:text-white rounded-lg text-[10px] font-semibold animate-neon-amber transition active:scale-95 disabled:opacity-50"
                 >
-                  <RefreshCw className={`w-3 h-3 text-amber-300 ${isShuttingDown ? "animate-spin" : "animate-spin"}`} />
-                  <span>{isShuttingDown ? "Halting..." : "Booting (Stop)"}</span>
+                  <RefreshCw className={`w-3 h-3 text-amber-300 group-hover:text-white ${isShuttingDown ? "animate-spin" : "animate-spin"}`} />
+                  <span className="group-hover:hidden">{isShuttingDown ? "Halting..." : "Booting..."}</span>
+                  <span className="hidden group-hover:inline">{isShuttingDown ? "Halting..." : "Stop"}</span>
                 </button>
               ) : (
                 <button

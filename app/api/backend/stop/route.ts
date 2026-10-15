@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getActiveTunnelUrl, setMemoryCachedTunnel, edgeConfigUrl } from "../../../lib/tunnelDiscovery";
+import { getActiveTunnelUrl, setMemoryCachedTunnel, edgeConfigUrl, saveTunnelToEdgeConfig } from "../../../lib/tunnelDiscovery";
 
 const KAGGLE_API_URL = "https://api.kaggle.com/v1/kernels.KernelsApiService/SaveKernel";
 const KERNEL_SLUG = "developerchief/qwen-image-editor-civitai-version";
@@ -8,40 +8,32 @@ const KERNEL_TITLE = "Qwen -Image-Editor-Civitai-Version";
 export async function POST(req: NextRequest) {
   try {
     const token = process.env.KAGGLE_API_TOKEN;
-    const EDGE_CONFIG_ID = process.env.EDGE_CONFIG_ID || "";
-    const VERCEL_TOKEN = process.env.VERCEL_TOKEN || "";
+    const body = await req.json().catch(() => ({}));
+    const candidateUrl = (body && typeof body.candidate_url === "string") ? body.candidate_url.trim() : undefined;
 
     // 1. Tier 1: Send /api/shutdown to live tunnel if reachable (graceful teardown)
-    const activeUrl = await getActiveTunnelUrl();
-    if (activeUrl) {
+    let shutdownSent = false;
+    const targetsToTry = [candidateUrl, await getActiveTunnelUrl(candidateUrl)].filter(Boolean) as string[];
+    const uniqueTargets = Array.from(new Set(targetsToTry));
+
+    for (const target of uniqueTargets) {
       try {
-        await fetch(`${activeUrl}/api/shutdown`, {
+        const sRes = await fetch(`${target}/api/shutdown`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: AbortSignal.timeout(3000),
         });
+        if (sRes.ok) {
+          shutdownSent = true;
+          break;
+        }
       } catch (e) {
-        console.warn("Tunnel shutdown ping failed (continuing to Kaggle supersede kill):", e);
+        console.warn(`Tunnel shutdown ping failed for ${target}:`, e);
       }
     }
 
-    // 2. Clear memory cache and Edge Config store
-    setMemoryCachedTunnel(null);
-    if (VERCEL_TOKEN && EDGE_CONFIG_ID) {
-      fetch(edgeConfigUrl(), {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${VERCEL_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          items: [
-            { operation: "upsert", key: "tunnel_url", value: "" },
-            { operation: "upsert", key: "last_updated", value: Date.now() },
-          ],
-        }),
-      }).catch((e) => console.warn("Edge config clear note:", e));
-    }
+    // 2. Clear memory cache and Edge Config store (awaited)
+    await saveTunnelToEdgeConfig(null);
 
     // 3. Tier 2: Guarantee Kaggle kernel halts and releases GPU quota
     // Pushes a minimal 0-GPU CPU notebook stub that runs sys.exit(0).

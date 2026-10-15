@@ -1,14 +1,14 @@
-import { NextResponse } from "next/server";
-import { getActiveTunnelUrl } from "../../../lib/tunnelDiscovery";
+import { NextRequest, NextResponse } from "next/server";
+import { getActiveTunnelUrl, saveTunnelToEdgeConfig } from "../../../lib/tunnelDiscovery";
 
 const STATUS_API_URL = "https://api.kaggle.com/v1/kernels.KernelsApiService/GetKernelSessionStatus";
 const USERNAME = "developerchief";
 const KERNEL_SLUG = "qwen-image-editor-civitai-version";
 
-export async function GET() {
+async function handleStatus(candidateUrl?: string) {
   try {
     const token = process.env.KAGGLE_API_TOKEN;
-    const activeUrl = await getActiveTunnelUrl();
+    const activeUrl = await getActiveTunnelUrl(candidateUrl);
 
     let kernelStatus = "UNKNOWN";
     let failureMessage = "";
@@ -93,4 +93,15 @@ export async function GET() {
       { status: 500 }
     );
   }
+}
+
+export async function GET(req: NextRequest) {
+  const candidate = req?.nextUrl?.searchParams?.get("candidate_url") || undefined;
+  return handleStatus(candidate);
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}));
+  const candidate = (body && typeof body.candidate_url === "string") ? body.candidate_url : undefined;
+  return handleStatus(candidate);
 }
