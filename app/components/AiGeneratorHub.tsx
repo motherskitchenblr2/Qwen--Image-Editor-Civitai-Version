@@ -21,6 +21,7 @@ import {
   Plus,
 } from "lucide-react";
 import LiveAiModelSelector from "./LiveAiModelSelector";
+import PromptActionButtons from "./PromptActionButtons";
 import { LiveAiModel } from "@/app/lib/aiModelRegistry";
 
 export interface AiModelConfig {
@@ -148,6 +149,30 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
   const [lastLatency, setLastLatency] = useState<number | null>(null);
   const [lastModelUsed, setLastModelUsed] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [isEnhancingPrompt, setIsEnhancingPrompt] = useState<boolean>(false);
+
+  const handleEnhancePrompt = async () => {
+    if (!prompt.trim()) return;
+    setIsEnhancingPrompt(true);
+    try {
+      const activeCopilot = typeof window !== "undefined" ? (localStorage.getItem("sentinel_active_copilot") || "mistral") : "mistral";
+      const res = await fetch("/api/sentinel/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, provider: activeCopilot }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.enhancedPrompt) {
+          setPrompt(data.enhancedPrompt);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to enhance prompt:", e);
+    } finally {
+      setIsEnhancingPrompt(false);
+    }
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -336,7 +361,17 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
 
           {/* Prompt */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-300">Prompt</label>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <label className="text-xs font-bold text-white">Prompt</label>
+              <PromptActionButtons
+                prompt={prompt}
+                onUpdatePrompt={setPrompt}
+                negativePrompt={negativePrompt}
+                onUpdateNegativePrompt={setNegativePrompt}
+                onEnhance={handleEnhancePrompt}
+                isEnhancing={isEnhancingPrompt}
+              />
+            </div>
             <textarea
               rows={3}
               value={prompt}
@@ -348,12 +383,21 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
 
           {/* Negative Prompt */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-400">Negative Prompt</label>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <label className="text-xs font-semibold text-slate-400">Negative Prompt</label>
+              <PromptActionButtons
+                prompt={prompt}
+                onUpdatePrompt={setPrompt}
+                negativePrompt={negativePrompt}
+                onUpdateNegativePrompt={setNegativePrompt}
+                isNegativeBar={true}
+              />
+            </div>
             <input
               type="text"
               value={negativePrompt}
               onChange={(e) => setNegativePrompt(e.target.value)}
-              placeholder="What to exclude..."
+              placeholder="e.g. cartoon, anime, clay, silicon, plastic, doll, CGI, bad anatomy, blurry..."
               className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
             />
           </div>

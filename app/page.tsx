@@ -35,6 +35,8 @@ import CivitaiLoraHub from "./components/CivitaiLoraHub";
 import SentinelAiGateway from "./components/SentinelAiGateway";
 import AiGeneratorHub from "./components/AiGeneratorHub";
 import LiveAiModelSelector from "./components/LiveAiModelSelector";
+import PromptActionButtons from "./components/PromptActionButtons";
+import AgenticHealthGuardianModal from "./components/AgenticHealthGuardianModal";
 import { LiveAiModel } from "./lib/aiModelRegistry";
 
 interface LoRAItem {
@@ -57,6 +59,14 @@ export default function ImageEditorStudio() {
   const [studioMode, setStudioMode] = useState<"edit" | "generate">("edit");
   const [selectedStudioModel, setSelectedStudioModel] = useState<string>("kaggle-gpu");
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState<boolean>(false);
+
+  // Floating Toast Notification
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
+
+  const showToast = (text: string, type: "success" | "error" | "info" = "success") => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   // Backend connection
   const [backendUrl, setBackendUrl] = useState<string>("");
@@ -1571,20 +1581,19 @@ export default function ImageEditorStudio() {
 
             {/* Edit / Generation Instruction Prompt */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <label className="text-xs font-bold text-white">
                   {studioMode === "generate" ? "Generation Prompt" : "Edit Prompt"}
                 </label>
-                <button
-                  type="button"
-                  onClick={handleEnhancePrompt}
-                  disabled={isEnhancingPrompt || !prompt.trim()}
-                  className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-300 hover:text-white bg-cyan-950/70 border border-cyan-500/60 hover:border-cyan-400 px-2.5 py-0.5 rounded-lg shadow-[0_0_10px_rgba(6,182,212,0.25)] transition active:scale-95 disabled:opacity-40"
-                  title="Enhance prompt with active Sentinel AI copilot"
-                >
-                  <Sparkles className={`w-3 h-3 ${isEnhancingPrompt ? "animate-spin text-cyan-400" : "fill-cyan-400"}`} />
-                  <span>{isEnhancingPrompt ? "Enhancing..." : "⚡ AI Enhance"}</span>
-                </button>
+                <PromptActionButtons
+                  prompt={prompt}
+                  onUpdatePrompt={setPrompt}
+                  negativePrompt={negativePrompt}
+                  onUpdateNegativePrompt={setNegativePrompt}
+                  onEnhance={handleEnhancePrompt}
+                  isEnhancing={isEnhancingPrompt}
+                  showToast={showToast}
+                />
               </div>
               <textarea
                 rows={3}
@@ -1597,11 +1606,22 @@ export default function ImageEditorStudio() {
 
             {/* Negative Prompt */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Negative Prompt</label>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <label className="text-xs font-semibold text-slate-300">Negative Prompt</label>
+                <PromptActionButtons
+                  prompt={prompt}
+                  onUpdatePrompt={setPrompt}
+                  negativePrompt={negativePrompt}
+                  onUpdateNegativePrompt={setNegativePrompt}
+                  isNegativeBar={true}
+                  showToast={showToast}
+                />
+              </div>
               <input
                 type="text"
                 value={negativePrompt}
                 onChange={(e) => setNegativePrompt(e.target.value)}
+                placeholder="e.g. cartoon, anime, clay, silicon, plastic, doll, CGI, bad anatomy, blurry..."
                 className="w-full bg-slate-900/90 border border-slate-700/80 hover:border-cyan-500/40 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(6,182,212,0.2)] transition"
               />
             </div>
@@ -2133,6 +2153,33 @@ export default function ImageEditorStudio() {
             </div>
           </section>
         </main>
+      )}
+
+      {/* ── Agentic AI Health Guardian Floating Modal & Doctor ── */}
+      <AgenticHealthGuardianModal
+        onNavigateTab={(tab) => setActiveTab(tab)}
+        onTurnOnGpu={() => handleStartGpu()}
+        showToast={showToast}
+        onApplyPromptToStudio={(newPrompt, newNegative) => {
+          setPrompt(newPrompt);
+          if (newNegative) setNegativePrompt(newNegative);
+          setActiveTab("studio");
+        }}
+      />
+
+      {/* ── Floating Toast Notification Banner ── */}
+      {toastMessage && (
+        <div
+          className={`fixed top-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-semibold shadow-2xl backdrop-blur-xl animate-fadeIn ${
+            toastMessage.type === "success"
+              ? "bg-emerald-950/90 border-emerald-500/50 text-emerald-200 shadow-emerald-500/20"
+              : toastMessage.type === "error"
+              ? "bg-rose-950/90 border-rose-500/50 text-rose-200 shadow-rose-500/20"
+              : "bg-cyan-950/90 border-cyan-500/50 text-cyan-200 shadow-cyan-500/20"
+          }`}
+        >
+          <span>{toastMessage.text}</span>
+        </div>
       )}
     </div>
   );

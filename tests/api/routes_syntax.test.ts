@@ -16,6 +16,8 @@ import * as sentinelVerifyRoute from "@/app/api/sentinel/verify/route";
 import * as tunnelRoute from "@/app/api/tunnel/route";
 import * as vaultLorasRoute from "@/app/api/vault/loras/route";
 import * as modelsLiveRoute from "@/app/api/models/live/route";
+import * as sentinelNegativePromptRoute from "@/app/api/sentinel/negative-prompt/route";
+import * as sentinelHealthRoute from "@/app/api/sentinel/health/route";
 
 const HTTP_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
 const ALLOWED_CONFIGS = new Set(["dynamic", "dynamicParams", "revalidate", "fetchCache", "runtime", "preferredRegion", "maxDuration"]);
@@ -45,6 +47,8 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
       "app/api/sentinel/enhance/route.ts": sentinelEnhanceRoute,
       "app/api/sentinel/vault/route.ts": sentinelVaultRoute,
       "app/api/sentinel/verify/route.ts": sentinelVerifyRoute,
+      "app/api/sentinel/negative-prompt/route.ts": sentinelNegativePromptRoute,
+      "app/api/sentinel/health/route.ts": sentinelHealthRoute,
       "app/api/tunnel/route.ts": tunnelRoute,
       "app/api/vault/loras/route.ts": vaultLorasRoute,
     };
@@ -89,6 +93,8 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
       expect(typeof sentinelVaultRoute.POST).toBe("function");
       expect(typeof sentinelVaultRoute.DELETE).toBe("function");
       expect(typeof sentinelVerifyRoute.POST).toBe("function");
+      expect(typeof sentinelNegativePromptRoute.POST).toBe("function");
+      expect(typeof sentinelHealthRoute.GET).toBe("function");
       expect(typeof tunnelRoute.GET).toBe("function");
       expect(typeof tunnelRoute.POST).toBe("function");
       expect(typeof vaultLorasRoute.GET).toBe("function");
@@ -231,18 +237,40 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
       }
     });
 
-    it("/api/models/live POST refreshes registry cache successfully", async () => {
-      const req = new NextRequest("http://localhost:3000/api/models/live", {
+    it("/api/sentinel/negative-prompt POST analyzes positive prompt and deduces tailored negative styles", async () => {
+      const req = new NextRequest("http://localhost:3000/api/sentinel/negative-prompt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force_refresh: true }),
+        body: JSON.stringify({ prompt: "hyper realistic 8k portrait of cybernetic warrior" }),
       });
-      const res = await modelsLiveRoute.POST(req);
+      const res = await sentinelNegativePromptRoute.POST(req);
       expect(res.status).toBe(200);
 
       const json = await res.json();
       expect(json.success).toBe(true);
-      expect(json.providers).toBeDefined();
+      expect(typeof json.negativePrompt).toBe("string");
+      // Confirm the user-requested styles are negated: cartoon, anime, clay, silicon, plastic
+      expect(json.negativePrompt).toContain("cartoon");
+      expect(json.negativePrompt).toContain("anime");
+      expect(json.negativePrompt).toContain("clay");
+      expect(json.negativePrompt).toContain("silicon");
+      expect(json.negativePrompt).toContain("plastic");
+      expect(Array.isArray(json.detectedAesthetics)).toBe(true);
+    });
+
+    it("/api/sentinel/health GET returns real-time subsystem telemetry and exact fix guidance", async () => {
+      const req = new NextRequest("http://localhost:3000/api/sentinel/health");
+      const res = await sentinelHealthRoute.GET(req);
+      expect(res.status).toBe(200);
+
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(typeof json.healthScore).toBe("number");
+      expect(typeof json.status).toBe("string");
+      expect(Array.isArray(json.subsystems)).toBe(true);
+      expect(json.subsystems.length).toBeGreaterThanOrEqual(3);
+      expect(Array.isArray(json.issues)).toBe(true);
+      expect(typeof json.reportMarkdown).toBe("string");
     });
   });
 });
