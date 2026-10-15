@@ -17,6 +17,7 @@ describe("Live AI Model Registry & Free-Tier Safeguard", () => {
     expect(platformIds).toContain("cloudflare_ai");
     expect(platformIds).toContain("gemini");
     expect(platformIds).toContain("groq");
+    expect(platformIds).toContain("mistral");
 
     // Verify Nano Banana has 100% free models requiring no API key
     const nanoBanana = BASE_PROVIDERS.find((p) => p.id === "nanobanana");

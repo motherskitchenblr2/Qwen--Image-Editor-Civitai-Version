@@ -146,12 +146,12 @@ const PROVIDERS: ProviderConfig[] = [
   {
     id: "mistral",
     name: "Mistral AI API",
-    badge: "European Frontier Models",
+    badge: "Free Tier • NeMo, Pixtral & Codestral",
     category: "Vision & Frontier",
-    description: "Advanced reasoning and visual processing with Mistral Large 2, Pixtral 12B Vision, and Codestral.",
+    description: "Advanced reasoning and visual processing with Mistral NeMo, Pixtral 12B Vision, Codestral, and Mistral Tiny.",
     placeholder: "Paste Mistral API key...",
     docsUrl: "https://console.mistral.ai/api-keys/",
-    recommendedModels: ["mistral-large-latest", "pixtral-12b-2409", "codestral-latest"],
+    recommendedModels: ["open-mistral-nemo", "pixtral-12b-2409", "codestral-latest", "mistral-tiny"],
     color: {
       accent: "from-amber-400 to-yellow-500",
       border: "border-yellow-500/30",
@@ -582,7 +582,7 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
-          {["gemini", "groq", "openrouter"].map((pid) => {
+          {["gemini", "groq", "openrouter", "mistral"].map((pid) => {
             const p = PROVIDERS.find((item) => item.id === pid);
             if (!p) return null;
             const isSelected = activeCopilot === pid;

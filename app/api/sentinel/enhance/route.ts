@@ -105,6 +105,34 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (provider === "mistral" && effectiveKey) {
+      const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${effectiveKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "open-mistral-nemo",
+          messages: [
+            { role: "system", content: systemInstruction },
+            { role: "user", content: `Original prompt: "${prompt}"\n\nEnhanced prompt:` },
+          ],
+          max_tokens: 150,
+          temperature: 0.7,
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const enhanced = data.choices?.[0]?.message?.content?.trim();
+        if (enhanced) {
+          return NextResponse.json({ enhancedPrompt: enhanced });
+        }
+      }
+    }
+
     // Default fast rule-based enhancer fallback
     const cyberpunkKeywords = "photorealistic, hyper-detailed, volumetric cinematic lighting, 8k resolution, raytracing reflections, masterwork";
     return NextResponse.json({
