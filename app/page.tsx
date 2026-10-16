@@ -89,8 +89,8 @@ export default function ImageEditorStudio() {
   const [editedImage, setEditedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [prompt, setPrompt] = useState<string>("Turn this image into a cyberpunk masterpiece with neon lighting and high details");
-  const [negativePrompt, setNegativePrompt] = useState<string>("blurry, distorted, low quality, deformed, artifacts");
-  const [trueCfgScale, setTrueCfgScale] = useState<number>(1.0);
+  const [negativePrompt, setNegativePrompt] = useState<string>("blurry, distorted, low quality, deformed, artifacts, oversaturated, high contrast, washed out, low resolution");
+  const [trueCfgScale, setTrueCfgScale] = useState<number>(4.0);
   const [guidanceScale, setGuidanceScale] = useState<number>(1.0);
   const [steps, setSteps] = useState<number>(4);
   const [seed, setSeed] = useState<number | "">("");
@@ -820,8 +820,13 @@ export default function ImageEditorStudio() {
       }
 
       const data = await res.json();
-      setFusedStatusMessage(`✅ ${Object.keys(data.active_loras || {}).length} LoRA(s) fused into GPU VRAM!`);
-      setTimeout(() => setFusedStatusMessage(""), 5000);
+      const fusedCount = Object.keys(data.active_loras || {}).length;
+      if (fusedCount === 0) {
+        setFusedStatusMessage(`⚠️ LoRA is not downloaded in GPU cache yet. Please download it from Civitai Hub or Quick Downloader first.`);
+      } else {
+        setFusedStatusMessage(`✅ ${fusedCount} LoRA(s) fused into GPU VRAM!`);
+      }
+      setTimeout(() => setFusedStatusMessage(""), 6000);
       fetchAvailableLoras(cleanUrl);
     } catch (e: any) {
       alert(`LoRA Fuse error: ${e.message}`);
@@ -1042,15 +1047,18 @@ export default function ImageEditorStudio() {
           setViewMode("result");
         }
       } else {
-        // Cloud API Engine: Nano Banana Turbo, Alibaba Qwen Cloud, Google Imagen 3, Cloudflare Workers AI
+        // Cloud API Engine: Nano Banana Turbo, Alibaba Qwen Cloud, Google Imagen 3, Hugging Face Hub, Cloudflare Workers AI
+        const isHf = selectedStudioModel.startsWith("huggingface/") || selectedStudioModel.startsWith("hf/") || (selectedStudioModel.includes("/") && !selectedStudioModel.includes("@cf/"));
         setGenerationStatusText(
           selectedStudioModel === "nano-banana"
             ? "⚡ Synthesizing with Nano Banana Turbo (~1.5s)..."
             : selectedStudioModel === "google-imagen"
-            ? "Synthesizing with Google Imagen 3 (AI Studio)..."
+            ? "Synthesizing with Google Gemini Vision Engine..."
+            : isHf
+            ? `Synthesizing with Hugging Face (${selectedStudioModel.split("/").pop()})...`
             : selectedStudioModel === "qwen-cloud"
             ? `Synthesizing with Alibaba ${studioMode === "edit" ? "qwen-image-edit" : "qwen-image"}...`
-            : "Synthesizing with Cloudflare Workers AI (~3s)..."
+            : "Synthesizing with Cloud AI Engine..."
         );
         setGenerationProgress(35);
 
@@ -1063,7 +1071,7 @@ export default function ImageEditorStudio() {
             ? "@cf/leonardo/lucid-origin"
             : selectedStudioModel === "cf-flux"
             ? "@cf/black-forest-labs/flux-1-schnell"
-            : "nano-banana";
+            : selectedStudioModel;
 
         const res = await fetch("/api/generate", {
           method: "POST",
@@ -1073,7 +1081,7 @@ export default function ImageEditorStudio() {
             negative_prompt: negativePrompt,
             model: targetCloudModel,
             mode: studioMode,
-            image_base64: studioMode === "edit" ? originalImage : undefined,
+            image_base64: originalImage || undefined,
             seed: seed === "" ? null : Number(seed),
             nsfw_enabled: isNsfwMode,
           }),

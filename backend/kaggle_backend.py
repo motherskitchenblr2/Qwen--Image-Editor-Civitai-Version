@@ -727,7 +727,9 @@ class ModelOrchestrator:
             filename = f"{name}.safetensors" if not name.endswith(".safetensors") else name
             lora_file = LORAS_DIR / filename
 
-            # On-demand pull from Google Drive Vault if not in local cache
+            # On-demand pull from Hugging Face / Google Drive Vault if not in local cache
+            if not lora_file.exists():
+                hf_fetch_on_demand(filename, "loras", LORAS_DIR)
             if not lora_file.exists():
                 gdrive_fetch_on_demand(filename, "loras", LORAS_DIR)
 
@@ -745,8 +747,8 @@ class ModelOrchestrator:
         self,
         input_image: Image.Image,
         prompt: str,
-        negative_prompt: str = "blurry, distorted, low quality, deformed",
-        true_cfg_scale: float = 1.0,
+        negative_prompt: str = "blurry, distorted, low quality, deformed, pixelated, saturated, oversaturated",
+        true_cfg_scale: float = 4.0,
         guidance_scale: float = 1.0,
         num_inference_steps: int = 4,
         seed: Optional[int] = None,
@@ -769,7 +771,7 @@ class ModelOrchestrator:
 
             # Calculate safe inference dimensions for Tesla T4 (prevents quadratic attention OOM)
             orig_w, orig_h = input_image.size
-            max_dim = int(os.environ.get("MAX_INFERENCE_DIM", 448))
+            max_dim = int(os.environ.get("MAX_INFERENCE_DIM", 768))
             if width and height:
                 scale = min(max_dim / max(int(width), int(height)), 1.0)
                 target_w = max(256, (int(int(width) * scale) // 16) * 16)
@@ -880,8 +882,8 @@ class LoRALoadRequest(BaseModel):
 class EditRequest(BaseModel):
     image_base64: str
     prompt: str
-    negative_prompt: str = "blurry, distorted, low quality, deformed"
-    true_cfg_scale: float = 1.0
+    negative_prompt: str = "blurry, distorted, low quality, deformed, pixelated, saturated, oversaturated"
+    true_cfg_scale: float = 4.0
     guidance_scale: float = 1.0
     num_inference_steps: int = 4
     seed: Optional[int] = None
@@ -1114,11 +1116,19 @@ def load_loras_endpoint(req: LoRALoadRequest):
     try:
         lora_dicts = [l.dict() for l in req.loras]
         orchestrator.apply_loras(lora_dicts)
+        if len(req.loras) > 0 and len(orchestrator.active_loras) == 0:
+            missing_names = [l.name for l in req.loras]
+            raise HTTPException(
+                status_code=400,
+                detail=f"None of the requested LoRAs ({', '.join(missing_names)}) are downloaded in GPU storage yet. Please download them first via Civitai Hub or Vault."
+            )
         return {
             "status": "success",
             "active_loras": orchestrator.active_loras,
             "message": f"Successfully loaded & fused {len(orchestrator.active_loras)} LoRA(s) into GPU DiT layers."
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"LoRA loading failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
