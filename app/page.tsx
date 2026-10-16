@@ -90,9 +90,9 @@ export default function ImageEditorStudio() {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [prompt, setPrompt] = useState<string>("Turn this image into a cyberpunk masterpiece with neon lighting and high details");
   const [negativePrompt, setNegativePrompt] = useState<string>("blurry, distorted, low quality, deformed, artifacts, oversaturated, high contrast, washed out, low resolution");
-  const [trueCfgScale, setTrueCfgScale] = useState<number>(4.0);
+  const [trueCfgScale, setTrueCfgScale] = useState<number>(1.0);
   const [guidanceScale, setGuidanceScale] = useState<number>(1.0);
-  const [steps, setSteps] = useState<number>(4);
+  const [steps, setSteps] = useState<number>(6);
   const [seed, setSeed] = useState<number | "">("");
   const [generationElapsed, setGenerationElapsed] = useState<number>(0);
 

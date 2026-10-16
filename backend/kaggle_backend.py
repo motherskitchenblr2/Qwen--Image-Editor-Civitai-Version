@@ -74,9 +74,21 @@ for d in [MODELS_DIR, LORAS_DIR, OUTPUTS_DIR, CONFIGS_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 BASE_MODEL_ID = os.environ.get("BASE_MODEL_ID", "Qwen/Qwen-Image-Edit-2509")
+VIGGLE_TURBO_REPO = os.environ.get("VIGGLE_TURBO_REPO", "Viggle/Qwen-Image-2.1-viggle-turbo")
+VIGGLE_LORA_FILE = os.environ.get("VIGGLE_LORA_FILE", "Qwen-Image-2.1-viggle-turbo-v0.3-6step-lora-r256.safetensors")
 RAPID_TRANSFORMER_ID = os.environ.get("RAPID_TRANSFORMER_ID", "prithivMLmods/Qwen-Image-Edit-Rapid-AIO-V4")
 MODEL_ID = BASE_MODEL_ID
 CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY", "")
+
+def raw_nodes(steps: int):
+    """Raw pre-shift sigma nodes for distilled Qwen Turbo pipelines."""
+    if steps < 4:
+        return None
+    if steps == 4:
+        return [1.0, 0.75, 0.5, 0.25]
+    if steps == 9:
+        return raw_nodes(7) + [1 / 6, 1 / 12]
+    return [1.0 - 0.125 * i / (steps - 4) for i in range(steps - 4)] + [0.875, 0.75, 0.5, 0.25]
 
 # ─── 0. INACTIVITY WATCHDOG & AUTO-SHUTDOWN GUARD ───────────────────────────
 IDLE_TIMEOUT_SECONDS = int(os.environ.get("IDLE_TIMEOUT_SECONDS", 20 * 60)) # Default 20 minutes (prevents premature termination) -> auto-stop GPU
@@ -571,10 +583,23 @@ class ModelOrchestrator:
                         low_cpu_mem_usage=True
                     )
 
-                    # Dynamic multi-GPU or CPU offload
-                    self.pipe.enable_model_cpu_offload(gpu_id=0)
+                    # Dynamic multi-GPU balancing:
+                    if num_gpus >= 2:
+                        try:
+                            if hasattr(self.pipe, "transformer") and self.pipe.transformer is not None:
+                                self.pipe.transformer.to("cuda:0")
+                            if hasattr(self.pipe, "text_encoder") and self.pipe.text_encoder is not None:
+                                self.pipe.text_encoder.to("cuda:1")
+                            if hasattr(self.pipe, "vae") and self.pipe.vae is not None:
+                                self.pipe.vae.to("cuda:1")
+                            logger.info("✅ Strategy 1: Sharded across Dual GPUs (DiT on GPU 0, Text Encoder + VAE on GPU 1).")
+                        except Exception as dist_e:
+                            logger.warning(f"Dual-GPU direct component placement note: {dist_e}")
+                            self.pipe.enable_model_cpu_offload(gpu_id=0)
+                    else:
+                        self.pipe.enable_model_cpu_offload(gpu_id=0)
                     self.pipe.set_progress_bar_config(disable=None)
-                    logger.info("✅ Strategy 1 success: 4-bit NF4 quantized pipeline loaded with CPU offload.")
+                    logger.info("✅ Strategy 1 success: 4-bit NF4 quantized pipeline loaded.")
                     loaded = True
                 except Exception as e1:
                     logger.warning(f"Strategy 1 (4-bit NF4) failed: {e1}")
@@ -674,10 +699,56 @@ class ModelOrchestrator:
                     last_error = e4
 
             if loaded and self.pipe is not None:
+                # 1. ⚡ Visual Patch Embed Acceleration (30s Conv3d -> 0.8ms matmul)
+                try:
+                    visual_model = None
+                    if hasattr(self.pipe, "text_encoder"):
+                        te = self.pipe.text_encoder
+                        if hasattr(te, "model") and hasattr(te.model, "visual"):
+                            visual_model = te.model.visual
+                        elif hasattr(te, "visual"):
+                            visual_model = te.visual
+
+                    if visual_model and hasattr(visual_model, "patch_embed"):
+                        pe = visual_model.patch_embed
+                        if hasattr(pe, "proj"):
+                            def _patch_embed_forward(hidden_states):
+                                proj = pe.proj
+                                weight = proj.weight.reshape(proj.weight.shape[0], -1)
+                                return hidden_states.to(weight.dtype).flatten(1) @ weight.T + proj.bias
+                            pe.forward = _patch_embed_forward
+                            logger.info("⚡ [Acceleration] Replaced 30s cuDNN Conv3d with 0.8ms matmul in visual patch_embed!")
+                except Exception as pe_e:
+                    logger.warning(f"patch_embed acceleration note: {pe_e}")
+
+                # 2. ⚡ FlowMatchEulerDiscreteScheduler Rebuild with shift_terminal=None
+                try:
+                    from diffusers import FlowMatchEulerDiscreteScheduler
+                    if hasattr(self.pipe, "scheduler") and hasattr(self.pipe.scheduler, "config"):
+                        self.pipe.scheduler = FlowMatchEulerDiscreteScheduler.from_config(
+                            self.pipe.scheduler.config, shift_terminal=None
+                        )
+                        logger.info("⚡ [Scheduler] Rebuilt FlowMatchEulerDiscreteScheduler with shift_terminal=None.")
+                except Exception as sc_e:
+                    logger.warning(f"Scheduler rebuild note: {sc_e}")
+
+                # 3. ⚡ Try loading Viggle Turbo LoRA weights into pipeline
+                try:
+                    logger.info(f"⚡ [Turbo Engine] Attempting Viggle Turbo distillation adapter ({VIGGLE_TURBO_REPO})...")
+                    self.pipe.load_lora_weights(
+                        VIGGLE_TURBO_REPO,
+                        weight_name=VIGGLE_LORA_FILE,
+                        adapter_name="viggle_turbo",
+                    )
+                    self.pipe.set_adapters("viggle_turbo")
+                    logger.info("✅ [Turbo Engine] Viggle Turbo v0.3 distillation adapter active.")
+                except Exception as vt_e:
+                    logger.warning(f"Viggle Turbo auto-load note: {vt_e}")
+
+                # 4. Memory optimizations: slicing enabled, strictly NO VAE tiling for image edits!
                 try:
                     if hasattr(self.pipe, "vae") and self.pipe.vae is not None:
                         self.pipe.vae.enable_slicing()
-                        self.pipe.vae.enable_tiling()
                 except Exception:
                     pass
                 try:
@@ -807,14 +878,23 @@ class ModelOrchestrator:
                     call_kwargs = {
                         "image": input_image,
                         "prompt": prompt,
-                        "negative_prompt": negative_prompt,
-                        "true_cfg_scale": true_cfg_scale,
                         "guidance_scale": guidance_scale,
                         "num_inference_steps": num_inference_steps,
                         "generator": gen,
                         "height": target_h,
                         "width": target_w,
                     }
+
+                    # Viggle Turbo exact 6-step or 9-step sigma schedule
+                    sigmas = raw_nodes(num_inference_steps)
+                    if sigmas is not None:
+                        call_kwargs["sigmas"] = sigmas
+                        # Distilled model must run with true_cfg_scale=1.0 (zero-CFG)
+                        call_kwargs["true_cfg_scale"] = 1.0
+                    else:
+                        call_kwargs["negative_prompt"] = negative_prompt
+                        call_kwargs["true_cfg_scale"] = true_cfg_scale
+
                     if task_id:
                         call_kwargs["callback_on_step_end"] = step_cb
                         call_kwargs["callback_on_step_end_tensor_inputs"] = ["latents"]
@@ -882,10 +962,10 @@ class LoRALoadRequest(BaseModel):
 class EditRequest(BaseModel):
     image_base64: str
     prompt: str
-    negative_prompt: str = "blurry, distorted, low quality, deformed, pixelated, saturated, oversaturated"
-    true_cfg_scale: float = 4.0
+    negative_prompt: str = ""
+    true_cfg_scale: float = 1.0
     guidance_scale: float = 1.0
-    num_inference_steps: int = 4
+    num_inference_steps: int = 6
     seed: Optional[int] = None
     height: Optional[int] = None
     width: Optional[int] = None
