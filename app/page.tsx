@@ -1010,11 +1010,18 @@ export default function ImageEditorStudio() {
                 } else {
                   const totalSt = statusData.total_steps || Number(steps);
                   const currSt = statusData.step || 0;
-                  const pct = totalSt > 0 ? Math.round((currSt / totalSt) * 100) : (statusData.progress || 0);
+                  const pct = typeof statusData.progress === "number" && statusData.progress > 0
+                    ? Math.round(statusData.progress)
+                    : (totalSt > 0 ? Math.round((currSt / totalSt) * 100) : 0);
                   setGenerationProgress(pct);
                   setGenerationStep(currSt);
                   setTotalGenerationSteps(totalSt);
-                  if (totalSt <= 4) {
+                  if (statusData.stage) {
+                    setGenerationStatusText(`${statusData.stage} (${pct}%)`);
+                  } else if (currSt === 0) {
+                    const elapsedSec = Math.round(attempts * 1.5);
+                    setGenerationStatusText(`⚡ Encoding prompt & image features (${elapsedSec}s)...`);
+                  } else if (totalSt <= 4) {
                     setGenerationStatusText(`⚡ Rapid Step ${currSt}/${totalSt} (${pct}%)`);
                   } else {
                     setGenerationStatusText(`Step ${currSt}/${totalSt} (${pct}%)`);
@@ -2266,8 +2273,8 @@ export default function ImageEditorStudio() {
             {isGenerating && (
               <div className="bg-black/80 border border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.2)] p-3 rounded-xl space-y-2 animate-neon-cyan">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-cyan-300 font-bold truncate max-w-[200px]">{generationStatusText}</span>
-                  <div className="flex items-center gap-2">
+                  <span className="text-cyan-300 font-bold truncate flex-1 min-w-0 pr-2">{generationStatusText}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-emerald-300 text-[11px] font-mono font-bold">{generationElapsed}s</span>
                     <span className="text-white font-mono font-extrabold">{generationProgress}%</span>
                   </div>
@@ -2282,6 +2289,22 @@ export default function ImageEditorStudio() {
                   <span>{steps <= 4 ? "⚡ Rapid 4-Step Pipeline (~15-25s)" : "Standard DiT Pipeline"}</span>
                   <span>{generationElapsed > 0 ? `${generationElapsed}s elapsed` : "Starting..."}</span>
                 </div>
+                {generationElapsed > 45 && (
+                  <div className="pt-1.5 border-t border-amber-500/30 flex items-center justify-between text-[11px] text-amber-300">
+                    <span className="truncate pr-2">GPU taking longer than expected (~45s+).</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsGenerating(false);
+                        setSelectedStudioModel("nano-banana");
+                        setGenerationStatusText("");
+                      }}
+                      className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/60 rounded text-[10px] font-bold text-amber-200 transition-colors flex-shrink-0"
+                    >
+                      ⚡ Switch to Cloud AI
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </section>

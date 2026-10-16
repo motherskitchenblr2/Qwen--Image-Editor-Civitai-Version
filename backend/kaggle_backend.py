@@ -528,30 +528,56 @@ class ModelOrchestrator:
             last_error = None
             preferred_dtype = torch.bfloat16 if (torch.cuda.is_available() and torch.cuda.is_bf16_supported()) else torch.float16
 
-            # Strategy 1: Balanced Multi-GPU Device Map (Primary for Kaggle Dual Tesla T4)
-            # Distributes weights across GPU 0 (11.8GiB), GPU 1 (13.6GiB), leaving ~3.0GiB free on GPU 0
-            # for Qwen text-encoder activations and keeping CPU RAM usage minimal (<3GiB).
-            if num_gpus >= 2:
+            # Strategy 1: 4-Bit NF4 Quantization with BitsAndBytes (Optimized for Tesla T4 16GB)
+            # Drastically cuts 20.4B DiT (~41GB) down to ~10.2GB and 7B Text Encoder down to ~3.5GB.
+            # Leaves 5GB+ free VRAM headroom on Tesla T4 to avoid CUDA Out of Memory during inference.
+            if num_gpus > 0:
                 try:
-                    max_memory = {0: "11.8GiB", 1: "13.6GiB"}
-                    for i in range(2, num_gpus):
-                        max_memory[i] = "13.0GiB"
-                    max_memory["cpu"] = "16GiB"
-                    logger.info(f"Attempting primary multi-GPU device_map across {num_gpus} GPUs (dtype={preferred_dtype}, max_memory={max_memory})...")
+                    from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
+                    from transformers import BitsAndBytesConfig as TransformersBitsAndBytesConfig
+                    from diffusers import PipelineQuantizationConfig
+
+                    logger.info(f"Attempting Strategy 1: 4-Bit NF4 Pipeline Quantization across {num_gpus} GPU(s)...")
+                    transformer_bnb = DiffusersBitsAndBytesConfig(
+                        load_in_4bit=True,
+                        bnb_4bit_quant_type="nf4",
+                        bnb_4bit_compute_dtype=preferred_dtype,
+                        bnb_4bit_use_double_quant=True,
+                        llm_int8_skip_modules=[
+                            "time_text_embed",
+                            "img_in",
+                            "norm_out",
+                            "proj_out",
+                            "img_mod",
+                            "txt_mod",
+                        ],
+                    )
+                    text_encoder_bnb = TransformersBitsAndBytesConfig(
+                        load_in_4bit=True,
+                        bnb_4bit_quant_type="nf4",
+                        bnb_4bit_compute_dtype=preferred_dtype,
+                    )
+                    quant_config = PipelineQuantizationConfig(
+                        quant_mapping={
+                            "transformer": transformer_bnb,
+                            "text_encoder": text_encoder_bnb,
+                        }
+                    )
 
                     self.pipe = PipelineClass.from_pretrained(
                         MODEL_ID,
+                        quantization_config=quant_config,
                         torch_dtype=preferred_dtype,
-                        device_map="auto",
-                        max_memory=max_memory,
                         low_cpu_mem_usage=True
                     )
 
+                    # Dynamic multi-GPU or CPU offload
+                    self.pipe.enable_model_cpu_offload(gpu_id=0)
                     self.pipe.set_progress_bar_config(disable=None)
-                    logger.info("✅ Pipeline loaded successfully with balanced multi-GPU device_map='auto'.")
+                    logger.info("✅ Strategy 1 success: 4-bit NF4 quantized pipeline loaded with CPU offload.")
                     loaded = True
                 except Exception as e1:
-                    logger.warning(f"multi-GPU device_map='auto' failed: {e1}")
+                    logger.warning(f"Strategy 1 (4-bit NF4) failed: {e1}")
                     last_error = e1
                     try:
                         del self.pipe
@@ -561,21 +587,41 @@ class ModelOrchestrator:
                     torch.cuda.empty_cache()
                     gc.collect()
 
-            # Strategy 2: Official Diffusers enable_model_cpu_offload() (Fallback)
-            if not loaded and num_gpus > 0:
-                logger.info("Attempting pipeline initialization with enable_model_cpu_offload()...")
+            # Strategy 2: Component-Level Transformer Multi-GPU Distribution
+            if not loaded and num_gpus >= 2:
                 try:
-                    self.pipe = PipelineClass.from_pretrained(
-                        MODEL_ID,
-                        torch_dtype=preferred_dtype,
-                        low_cpu_mem_usage=True
-                    )
-                    self.pipe.enable_model_cpu_offload()
+                    logger.info(f"Attempting Strategy 2: Dual-GPU Component Sharding across {num_gpus} GPUs...")
+                    max_memory = {0: "10.0GiB", 1: "13.5GiB", "cpu": "16GiB"}
+                    transformer = None
+                    if QwenImageTransformer2DModel is not None:
+                        try:
+                            transformer = QwenImageTransformer2DModel.from_pretrained(
+                                MODEL_ID,
+                                subfolder="transformer",
+                                torch_dtype=preferred_dtype,
+                                device_map="auto",
+                                max_memory=max_memory,
+                                low_cpu_mem_usage=True
+                            )
+                        except Exception as te:
+                            logger.warning(f"Standalone transformer load note: {te}")
+                            transformer = None
+
+                    pipe_kwargs = {
+                        "torch_dtype": preferred_dtype,
+                        "low_cpu_mem_usage": True,
+                    }
+                    if transformer is not None:
+                        pipe_kwargs["transformer"] = transformer
+
+                    self.pipe = PipelineClass.from_pretrained(MODEL_ID, **pipe_kwargs)
+                    if transformer is None:
+                        self.pipe.enable_model_cpu_offload(gpu_id=0)
                     self.pipe.set_progress_bar_config(disable=None)
-                    logger.info("✅ Pipeline loaded successfully with enable_model_cpu_offload().")
+                    logger.info("✅ Strategy 2 success: Pipeline loaded with sharded multi-GPU transformer.")
                     loaded = True
                 except Exception as e2:
-                    logger.warning(f"enable_model_cpu_offload failed: {e2}")
+                    logger.warning(f"Strategy 2 failed: {e2}")
                     last_error = e2
                     try:
                         del self.pipe
@@ -585,21 +631,21 @@ class ModelOrchestrator:
                     torch.cuda.empty_cache()
                     gc.collect()
 
-            # Strategy 3: Sequential CPU Offloading fallback (Extreme low-memory guard)
+            # Strategy 3: Sequential CPU Offloading (Extreme Low VRAM Guard: Streams layers sequentially)
             if not loaded and num_gpus > 0:
-                logger.info("Attempting sequential CPU offloading fallback...")
+                logger.info("Attempting Strategy 3: Sequential CPU offloading fallback...")
                 try:
                     self.pipe = PipelineClass.from_pretrained(
                         MODEL_ID,
-                        torch_dtype=torch.bfloat16,
+                        torch_dtype=preferred_dtype,
                         low_cpu_mem_usage=True
                     )
                     self.pipe.enable_sequential_cpu_offload()
                     self.pipe.set_progress_bar_config(disable=None)
-                    logger.info("✅ Pipeline loaded successfully with enable_sequential_cpu_offload().")
+                    logger.info("✅ Strategy 3 success: Pipeline loaded with enable_sequential_cpu_offload().")
                     loaded = True
                 except Exception as e3:
-                    logger.warning(f"enable_sequential_cpu_offload failed: {e3}")
+                    logger.warning(f"Strategy 3 failed: {e3}")
                     last_error = e3
                     try:
                         del self.pipe
@@ -611,20 +657,20 @@ class ModelOrchestrator:
 
             # Strategy 4: Standard Direct CUDA / CPU Pipeline
             if not loaded:
-                logger.info("Attempting direct pipeline load...")
+                logger.info("Attempting Strategy 4: Standard direct pipeline load...")
                 try:
                     self.pipe = PipelineClass.from_pretrained(
                         MODEL_ID,
-                        torch_dtype=torch.bfloat16 if num_gpus > 0 else torch.float32,
+                        torch_dtype=preferred_dtype if num_gpus > 0 else torch.float32,
                         low_cpu_mem_usage=True
                     )
                     if num_gpus > 0:
-                        self.pipe.to("cuda")
+                        self.pipe.enable_model_cpu_offload(gpu_id=0)
                     self.pipe.set_progress_bar_config(disable=None)
                     logger.info("✅ Standard pipeline loaded successfully.")
                     loaded = True
                 except Exception as e4:
-                    logger.error(f"Standard pipeline load failed: {e4}")
+                    logger.error(f"Strategy 4 failed: {e4}")
                     last_error = e4
 
             if loaded and self.pipe is not None:
@@ -737,13 +783,21 @@ class ModelOrchestrator:
             torch.cuda.empty_cache()
             gc.collect()
 
+            if task_id and task_id in JOBS:
+                JOBS[task_id]["stage"] = "Encoding prompt & input image on Tesla T4..."
+                JOBS[task_id]["progress"] = 8.0
+
             def step_cb(pipe_obj, step_idx, timestep, callback_kwargs):
-                if task_id and task_id in JOBS:
-                    curr_step = step_idx + 1
-                    prog = round(curr_step / num_inference_steps * 100, 1)
-                    JOBS[task_id]["step"] = curr_step
-                    JOBS[task_id]["progress"] = prog
-                    logger.info(f"[{task_id}] Step {curr_step}/{num_inference_steps} ({prog}%)")
+                try:
+                    if task_id and task_id in JOBS:
+                        curr_step = step_idx + 1
+                        prog = round(12.0 + (curr_step / max(num_inference_steps, 1)) * 78.0, 1)
+                        JOBS[task_id]["stage"] = f"⚡ Denoising Step {curr_step}/{num_inference_steps}"
+                        JOBS[task_id]["step"] = curr_step
+                        JOBS[task_id]["progress"] = prog
+                        logger.info(f"[{task_id}] Step {curr_step}/{num_inference_steps} ({prog}%)")
+                except Exception as cb_e:
+                    logger.warning(f"step_cb warning: {cb_e}")
                 return callback_kwargs
 
             try:
@@ -766,6 +820,10 @@ class ModelOrchestrator:
                     torch.cuda.empty_cache()
                     gc.collect()
                     result = self.pipe(**call_kwargs)
+
+                if task_id and task_id in JOBS:
+                    JOBS[task_id]["stage"] = "Decoding high-res output with VAE..."
+                    JOBS[task_id]["progress"] = 94.0
 
                 output_img = result.images[0]
                 if output_img.size != (orig_w, orig_h):
@@ -1220,7 +1278,8 @@ def edit_image(req: EditRequest):
         JOBS[task_id] = {
             "task_id": task_id,
             "status": "queued",
-            "progress": 0.0,
+            "stage": "Initializing Tesla T4 GPU Pipeline...",
+            "progress": 5.0,
             "step": 0,
             "total_steps": req.num_inference_steps,
             "image_base64": None,
@@ -1232,6 +1291,8 @@ def edit_image(req: EditRequest):
 
         def async_worker():
             JOBS[task_id]["status"] = "processing"
+            JOBS[task_id]["stage"] = "Encoding prompt & input image on Tesla T4..."
+            JOBS[task_id]["progress"] = 8.0
             try:
                 output_image = orchestrator.generate(
                     input_image=input_image,
@@ -1251,12 +1312,24 @@ def edit_image(req: EditRequest):
                 out_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
                 JOBS[task_id]["image_base64"] = f"data:image/png;base64,{out_b64}"
                 JOBS[task_id]["status"] = "completed"
+                JOBS[task_id]["stage"] = "Completed"
                 JOBS[task_id]["progress"] = 100.0
                 touch_activity()
             except Exception as exc:
+                err_str = str(exc)
                 logger.error(f"[{task_id}] Async generation error: {exc}", exc_info=True)
+                try:
+                    import torch
+                    torch.cuda.empty_cache()
+                    import gc
+                    gc.collect()
+                except Exception:
+                    pass
                 JOBS[task_id]["status"] = "failed"
-                JOBS[task_id]["error"] = str(exc)
+                if "out of memory" in err_str.lower() or "cudaerrormemoryallocation" in err_str.lower():
+                    JOBS[task_id]["error"] = "CUDA Out of Memory on Tesla T4. GPU cache auto-cleared. Please retry with 4 steps at 448px, or switch to Cloud AI."
+                else:
+                    JOBS[task_id]["error"] = err_str
 
         threading.Thread(target=async_worker, daemon=True).start()
         return {
@@ -1305,6 +1378,7 @@ def get_task_status(task_id: str):
     return {
         "task_id": task_id,
         "status": job["status"],
+        "stage": job.get("stage", "Processing"),
         "progress": job.get("progress", 0.0),
         "step": job.get("step", 0),
         "total_steps": job.get("total_steps", 20),
