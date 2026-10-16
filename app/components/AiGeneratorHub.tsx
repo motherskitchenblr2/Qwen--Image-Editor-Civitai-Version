@@ -428,7 +428,7 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
           {/* Negative Prompt */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <label className="text-xs font-semibold text-slate-400">Negative Prompt</label>
+              <label className="text-xs font-bold text-slate-400">Negative Prompt</label>
               <PromptActionButtons
                 prompt={prompt}
                 onUpdatePrompt={setPrompt}
@@ -449,7 +449,7 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
           {/* Resolution & Seed */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-400">Resolution</label>
+              <label className="text-xs font-bold text-slate-400">Resolution</label>
               <select
                 value={aspectRatio}
                 onChange={(e) => setAspectRatio(e.target.value)}
@@ -462,7 +462,7 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-400">Seed</label>
+              <label className="text-xs font-bold text-slate-400">Seed</label>
               <div className="flex gap-1.5">
                 <input
                   type="number"

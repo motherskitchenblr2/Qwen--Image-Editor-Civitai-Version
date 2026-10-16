@@ -30,6 +30,8 @@ import {
   Undo2,
   Shield,
   Cpu,
+  Sun,
+  Moon,
 } from "lucide-react";
 import CivitaiLoraHub from "./components/CivitaiLoraHub";
 import SentinelAiGateway from "./components/SentinelAiGateway";
@@ -154,6 +156,49 @@ export default function ImageEditorStudio() {
           ? "⚠️ 18+ Unrestricted NSFW Mode Activated"
           : "🛡️ SFW Mode Activated (Safe & Filtered)",
         enabled ? "info" : "success"
+      );
+    }
+  };
+
+  // Day / Night Theme Controller ("night" | "day")
+  const [theme, setTheme] = useState<"night" | "day">("night");
+
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem("qwen_studio_theme") as "night" | "day" | null;
+      if (savedTheme === "day" || savedTheme === "night") {
+        setTheme(savedTheme);
+        document.documentElement.setAttribute("data-theme", savedTheme);
+        if (savedTheme === "day") {
+          document.body.classList.add("theme-day");
+          document.documentElement.classList.add("theme-day");
+        } else {
+          document.body.classList.remove("theme-day");
+          document.documentElement.classList.remove("theme-day");
+        }
+      }
+    } catch (_) {}
+  }, []);
+
+  const handleToggleTheme = (newTheme: "night" | "day") => {
+    setTheme(newTheme);
+    try {
+      localStorage.setItem("qwen_studio_theme", newTheme);
+      document.documentElement.setAttribute("data-theme", newTheme);
+      if (newTheme === "day") {
+        document.body.classList.add("theme-day");
+        document.documentElement.classList.add("theme-day");
+      } else {
+        document.body.classList.remove("theme-day");
+        document.documentElement.classList.remove("theme-day");
+      }
+    } catch (_) {}
+    if (showToast) {
+      showToast(
+        newTheme === "day"
+          ? "☀️ 3D Neomorphism Day Theme (#F9EE99) Activated"
+          : "🌙 Cyberpunk Night Theme Activated",
+        "info"
       );
     }
   };
@@ -1064,32 +1109,32 @@ export default function ImageEditorStudio() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-transparent text-slate-100 font-sans selection:bg-cyan-500 selection:text-black relative">
+    <div className={`flex flex-col min-h-screen bg-transparent text-slate-100 font-sans selection:bg-cyan-500 selection:text-black relative ${theme === "day" ? "theme-day" : "theme-night"}`}>
       {/* ── Top Header ────────────────────────────────────────── */}
-      <header className="border-b border-cyan-500/40 bg-slate-950/90 backdrop-blur-2xl px-3 sm:px-6 py-2.5 lg:py-3 sticky top-0 z-50 shadow-[0_4px_30px_rgba(6,182,212,0.18)] w-full max-w-full">
+      <header className="border-b border-cyan-500/40 bg-slate-950/90 backdrop-blur-2xl px-3 sm:px-6 py-2.5 lg:py-3.5 sticky top-0 z-50 shadow-[0_4px_30px_rgba(6,182,212,0.18)] w-full max-w-full">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-2.5 lg:gap-4 w-full">
           {/* Top Row on Mobile: Brand on Left, Quick GPU Controls on Right */}
           <div className="flex items-center justify-between w-full lg:w-auto gap-3">
             {/* Brand Logo & Name */}
-            <div className="flex items-center gap-2.5">
-              <div className="bg-gradient-to-tr from-cyan-400 via-teal-400 to-indigo-500 p-2 rounded-xl text-black shadow-[0_0_20px_rgba(6,182,212,0.55)] shrink-0 animate-neon-cyan">
-                <Sparkles className="w-4 h-4 fill-black" />
+            <div className="flex items-center gap-2.5 sm:gap-3.5">
+              <div className="bg-gradient-to-tr from-cyan-400 via-teal-400 to-indigo-500 p-2 sm:p-2.5 rounded-2xl text-black shadow-[0_0_20px_rgba(6,182,212,0.55)] shrink-0 animate-neon-cyan">
+                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 fill-black" />
               </div>
               <div>
-                <h1 className="font-extrabold text-sm sm:text-base lg:text-lg leading-tight bg-gradient-to-r from-white via-cyan-200 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
+                <h1 className="app-title-main font-black text-xl sm:text-2xl lg:text-3xl xl:text-4xl leading-tight tracking-tight bg-gradient-to-r from-white via-cyan-200 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_0_16px_rgba(6,182,212,0.6)]">
                   Qwen Image Editor Studio
                 </h1>
-                <p className="text-[10px] sm:text-[11px] text-cyan-300/80 font-medium tracking-wide">Dual Tesla T4 &bull; 5 TB Google Drive Vault</p>
+                <p className="text-[11px] sm:text-xs text-cyan-300/90 font-extrabold tracking-wide">Dual Tesla T4 &bull; 5 TB Google Drive Vault</p>
               </div>
             </div>
 
-            {/* Mobile GPU Power Toggle Button (Right side on mobile only) */}
+            {/* Mobile GPU Power & Theme Controls (Right side on mobile only) */}
             <div className="flex items-center gap-1.5 lg:hidden shrink-0">
               {isConnected ? (
                 <div className="flex items-center gap-1.5">
                   <span
                     title={modelStatusMessage}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold ${
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-extrabold ${
                       isModelReady
                         ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/60 shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-neon-emerald"
                         : "bg-amber-500/20 text-amber-300 border border-amber-400/60 shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-neon-amber"
@@ -1102,7 +1147,7 @@ export default function ImageEditorStudio() {
                     onClick={handleShutdownGpu}
                     disabled={isShuttingDown}
                     title="GPU is ON. Click to stop and deallocate Kaggle GPU immediately."
-                    className="group flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/25 hover:bg-rose-600/90 border border-emerald-400 hover:border-rose-400 text-emerald-200 hover:text-white rounded-lg text-[11px] font-bold shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all active:scale-95 disabled:opacity-50"
+                    className="group flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/25 hover:bg-rose-600/90 border border-emerald-400 hover:border-rose-400 text-emerald-200 hover:text-white rounded-lg text-[11px] font-black shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all active:scale-95 disabled:opacity-50"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 group-hover:bg-rose-300 animate-pulse" />
                     <Power className={`w-3 h-3 text-emerald-300 group-hover:text-white ${isShuttingDown ? "animate-spin" : ""}`} />
@@ -1115,7 +1160,7 @@ export default function ImageEditorStudio() {
                   onClick={handleShutdownGpu}
                   disabled={isShuttingDown}
                   title="GPU is booting on Kaggle. Tap to cancel and halt."
-                  className="group flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/20 hover:bg-rose-600 border border-amber-400/80 hover:border-rose-400 text-amber-200 hover:text-white rounded-lg text-[10px] font-semibold animate-neon-amber transition active:scale-95 disabled:opacity-50"
+                  className="group flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/20 hover:bg-rose-600 border border-amber-400/80 hover:border-rose-400 text-amber-200 hover:text-white rounded-lg text-[10px] font-bold animate-neon-amber transition active:scale-95 disabled:opacity-50"
                 >
                   <RefreshCw className={`w-3 h-3 text-amber-300 group-hover:text-white ${isShuttingDown ? "animate-spin" : "animate-spin"}`} />
                   <span className="group-hover:hidden">{isShuttingDown ? "Halting..." : "Booting..."}</span>
@@ -1125,16 +1170,35 @@ export default function ImageEditorStudio() {
                 <button
                   onClick={() => handleStartGpu()}
                   title="Boot Kaggle GPU"
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900/90 hover:bg-emerald-500/20 border border-cyan-500/40 hover:border-emerald-400 text-cyan-200 hover:text-emerald-300 rounded-lg text-[11px] font-bold shadow-[0_0_10px_rgba(6,182,212,0.2)] transition active:scale-95"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900/90 hover:bg-emerald-500/20 border border-cyan-500/40 hover:border-emerald-400 text-cyan-200 hover:text-emerald-300 rounded-lg text-[11px] font-black shadow-[0_0_10px_rgba(6,182,212,0.2)] transition active:scale-95"
                 >
                   <Power className="w-3 h-3 text-cyan-400" />
                   <span>Turn On GPU</span>
                 </button>
               )}
+
+              {/* Day / Night Theme Toggle Mobile */}
+              <button
+                onClick={() => handleToggleTheme(theme === "day" ? "night" : "day")}
+                title={theme === "day" ? "Switch to Night Mode (Cyberpunk Dark)" : "Switch to Day Mode (3D Neomorphism Pastel Yellow #F9EE99)"}
+                className={`p-1.5 rounded-lg border text-[11px] font-black transition flex items-center gap-1 active:scale-95 ${
+                  theme === "day"
+                    ? "bg-amber-300 border-amber-500/80 text-amber-950 shadow-[inset_2px_2px_4px_rgba(180,165,75,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.8)]"
+                    : "bg-slate-900/90 border-cyan-500/40 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+                }`}
+              >
+                {theme === "day" ? (
+                  <Sun className="w-3.5 h-3.5 text-amber-800 fill-amber-500" />
+                ) : (
+                  <Moon className="w-3.5 h-3.5 text-cyan-300 fill-cyan-400/20" />
+                )}
+              </button>
+
+              {/* NSFW Toggle Mobile */}
               <button
                 onClick={() => handleToggleNsfwMode(!isNsfwMode)}
                 title={isNsfwMode ? "NSFW Mode Active (Tap to enable SFW Safe Mode)" : "SFW Safe Mode Active (Tap to enable NSFW Mode)"}
-                className={`p-1.5 rounded-lg border text-[10px] font-bold transition flex items-center gap-1 ${
+                className={`p-1.5 rounded-lg border text-[10px] font-black transition flex items-center gap-1 ${
                   isNsfwMode
                     ? "bg-rose-500/20 border-rose-500/80 text-rose-300 animate-pulse"
                     : "bg-emerald-500/15 border-emerald-500/60 text-emerald-300"
@@ -1153,13 +1217,13 @@ export default function ImageEditorStudio() {
 
           {/* Tab Switcher Navigation - Full width with clean horizontal swipe on mobile, center on desktop */}
           <div className="w-full lg:w-auto overflow-x-auto no-scrollbar py-0.5">
-            <div className="flex items-center gap-1 sm:gap-1.5 bg-black/80 p-1 sm:p-1.5 rounded-2xl border border-cyan-500/35 shadow-[0_0_18px_rgba(6,182,212,0.18)] w-max mx-auto lg:mx-0">
+            <div className="flex items-center gap-1 sm:gap-1.5 bg-black/80 p-1 sm:p-1.5 rounded-2xl border border-cyan-500/35 shadow-[0_0_18px_rgba(6,182,212,0.18)] w-max mx-auto lg:mx-0 tab-nav-container">
               <button
                 onClick={() => setActiveTab("studio")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 transition ${
                   activeTab === "studio"
-                    ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
+                    ? "tab-active bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "tab-inactive text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 shrink-0" />
@@ -1167,56 +1231,56 @@ export default function ImageEditorStudio() {
               </button>
               <button
                 onClick={() => setActiveTab("generators")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 transition ${
                   activeTab === "generators"
-                    ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
+                    ? "tab-active bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "tab-inactive text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
                 }`}
               >
                 <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span>AI Generators</span>
-                <span className="px-1.5 py-0.2 bg-amber-500/20 border border-amber-400/60 rounded-full text-[9px] text-amber-300 font-bold shadow-[0_0_8px_rgba(245,158,11,0.3)]">
+                <span className="px-1.5 py-0.2 bg-amber-500/20 border border-amber-400/60 rounded-full text-[9px] text-amber-300 font-extrabold shadow-[0_0_8px_rgba(245,158,11,0.3)]">
                   NEW
                 </span>
               </button>
               <button
                 onClick={() => setActiveTab("loras")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 transition ${
                   activeTab === "loras"
-                    ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
+                    ? "tab-active bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "tab-inactive text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
                 }`}
               >
                 <Layers className="w-3.5 h-3.5 shrink-0" />
                 <span>Civitai LoRA Hub</span>
                 {availableLoras.length > 0 && (
-                  <span className="px-1.5 py-0.2 bg-slate-900 border border-cyan-500/40 rounded-full text-[10px] text-cyan-300 font-mono font-bold shadow-[0_0_8px_rgba(6,182,212,0.25)]">
+                  <span className="px-1.5 py-0.2 bg-slate-900 border border-cyan-500/40 rounded-full text-[10px] text-cyan-300 font-mono font-black shadow-[0_0_8px_rgba(6,182,212,0.25)]">
                     {availableLoras.length}
                   </span>
                 )}
               </button>
               <button
                 onClick={() => setActiveTab("gallery")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 transition ${
                   activeTab === "gallery"
-                    ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
+                    ? "tab-active bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "tab-inactive text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
                 }`}
               >
                 <ImageIcon className="w-3.5 h-3.5 shrink-0" />
                 <span>Gallery</span>
                 {gallery.length > 0 && (
-                  <span className="px-1.5 py-0.2 bg-slate-900 border border-slate-700/80 rounded-full text-[10px] text-slate-300 font-mono">
+                  <span className="px-1.5 py-0.2 bg-slate-900 border border-slate-700/80 rounded-full text-[10px] text-slate-300 font-mono font-bold">
                     {gallery.length}
                   </span>
                 )}
               </button>
               <button
                 onClick={() => setActiveTab("sentinel")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 transition ${
                   activeTab === "sentinel"
-                    ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
+                    ? "tab-active bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                    : "tab-inactive text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
                 }`}
               >
                 <Shield className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
@@ -1299,6 +1363,29 @@ export default function ImageEditorStudio() {
                 <span>Turn On GPU</span>
               </button>
             )}
+
+            {/* Day / Night Theme Toggle Desktop */}
+            <button
+              onClick={() => handleToggleTheme(theme === "day" ? "night" : "day")}
+              title={theme === "day" ? "Switch to Cyberpunk Night Theme" : "Switch to 3D Neomorphism Pastel Yellow Day Theme (#F9EE99)"}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black transition active:scale-95 ${
+                theme === "day"
+                  ? "bg-amber-300/80 hover:bg-amber-300 border-amber-500/70 text-amber-950 shadow-[4px_4px_10px_rgba(175,158,65,0.4),-4px_-4px_10px_rgba(255,255,245,0.95)]"
+                  : "bg-slate-900/90 hover:bg-slate-800 border-cyan-500/40 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]"
+              }`}
+            >
+              {theme === "day" ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-800 fill-amber-500" />
+                  <span className="font-extrabold tracking-wide">DAY NEO</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-cyan-300 fill-cyan-400/20" />
+                  <span className="font-extrabold tracking-wide">NIGHT</span>
+                </>
+              )}
+            </button>
 
             {/* Quick NSFW/SFW Mode Switcher Badge */}
             <button
@@ -1763,7 +1850,7 @@ export default function ImageEditorStudio() {
           {/* Left: Input & Tuning Panel (4 cols) */}
           <section className="lg:col-span-4 flex flex-col gap-4 sm:gap-5 bg-slate-950/85 border border-cyan-500/40 shadow-[0_0_25px_rgba(6,182,212,0.18)] hover:shadow-[0_0_35px_rgba(6,182,212,0.28)] p-3.5 sm:p-5 rounded-2xl w-full max-w-full overflow-hidden transition-all duration-300">
             <div className="flex items-center justify-between border-b border-cyan-500/30 pb-3">
-              <span className="text-sm font-extrabold flex items-center gap-2 text-white">
+              <span className="text-sm sm:text-base font-black flex items-center gap-2 text-white">
                 <Sliders className="w-4 h-4 text-cyan-400 animate-pulse" /> Generation Settings
               </span>
             </div>
@@ -2202,14 +2289,14 @@ export default function ImageEditorStudio() {
           {/* Center: Canvas & Image Comparison (5 cols) */}
           <section className="lg:col-span-5 flex flex-col gap-4">
             <div className="flex items-center justify-between bg-slate-950/85 border border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.18)] px-4 py-2.5 rounded-xl">
-              <span className="text-xs font-extrabold text-white flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-black text-white flex items-center gap-2">
                 <ImageIcon className="w-4 h-4 text-purple-400 animate-pulse" />
                 Canvas Preview
               </span>
               <div className="flex items-center gap-1 bg-black/80 p-1 rounded-lg border border-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.15)]">
                 <button
                   onClick={() => setViewMode("result")}
-                  className={`px-3 py-1 text-xs rounded-md font-extrabold transition ${
+                  className={`px-3 py-1 text-xs rounded-md font-black transition ${
                     viewMode === "result" ? "bg-gradient-to-r from-cyan-400 to-teal-400 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]" : "text-slate-300 hover:text-white"
                   }`}
                 >
@@ -2217,7 +2304,7 @@ export default function ImageEditorStudio() {
                 </button>
                 <button
                   onClick={() => setViewMode("original")}
-                  className={`px-3 py-1 text-xs rounded-md font-extrabold transition ${
+                  className={`px-3 py-1 text-xs rounded-md font-black transition ${
                     viewMode === "original" ? "bg-gradient-to-r from-cyan-400 to-teal-400 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]" : "text-slate-300 hover:text-white"
                   }`}
                 >
@@ -2238,7 +2325,7 @@ export default function ImageEditorStudio() {
                     <Sparkles className="w-8 h-8" />
                   </div>
                   <div>
-                    <p className="text-sm font-extrabold text-white">Text-to-Image Generation Mode</p>
+                    <p className="text-sm font-black text-white">Text-to-Image Generation Mode</p>
                     <p className="text-xs text-purple-200/80 mt-1">
                       Type your creative prompt and click &quot;Generate Image&quot; below. No source image required!
                     </p>
@@ -2253,7 +2340,7 @@ export default function ImageEditorStudio() {
                     <Upload className="w-8 h-8" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-bold text-white">Upload source image</p>
+                    <p className="text-sm font-black text-white">Upload source image</p>
                     <p className="text-xs text-cyan-300/80 mt-0.5">PNG, JPG or WebP (max 10MB)</p>
                   </div>
                 </div>
@@ -2280,7 +2367,7 @@ export default function ImageEditorStudio() {
           {/* Right: LoRA Vault & Quick Downloader (3 cols) */}
           <section className="lg:col-span-3 flex flex-col gap-5 bg-slate-950/85 border border-emerald-500/40 shadow-[0_0_25px_rgba(16,185,129,0.18)] hover:shadow-[0_0_35px_rgba(16,185,129,0.28)] p-5 rounded-2xl transition-all duration-300">
             <div className="flex items-center justify-between border-b border-emerald-500/30 pb-3">
-              <span className="text-sm font-extrabold flex items-center gap-2 text-white">
+              <span className="text-sm sm:text-base font-black flex items-center gap-2 text-white">
                 <Database className="w-4 h-4 text-emerald-400 animate-pulse" /> Vault LoRAs ({availableLoras.length})
               </span>
               <button

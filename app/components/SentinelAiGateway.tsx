@@ -550,7 +550,7 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-extrabold text-white">Cloudflare MCP &amp; R2 Storage Active</span>
+                <span className="text-sm sm:text-base font-black text-white">Cloudflare MCP &amp; R2 Storage Active</span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/25 text-amber-300 border border-amber-400/50 shadow-[0_0_8px_rgba(245,158,11,0.3)]">
                   Account: {vaultInfo["cloudflare_ai"]?.configured ? "Connected" : "Configured"}
                 </span>
@@ -623,7 +623,7 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/90 border border-cyan-500/30 p-3 sm:px-4 sm:py-3 rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.12)]">
         <div className="flex items-center gap-2">
           <Cpu className="w-4 h-4 text-cyan-400 animate-pulse shrink-0" />
-          <span className="text-xs font-bold text-white">Live AI Provider Model Catalogs:</span>
+          <span className="text-xs sm:text-sm font-black text-white">Live AI Provider Model Catalogs:</span>
           <span className="text-[11px] text-slate-300 hidden md:inline">
             Real-time model lists synchronized across all API cards below.
           </span>
@@ -674,13 +674,13 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
                       <Key className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                      <h3 className="text-sm sm:text-base font-black text-slate-100 flex items-center gap-2">
                         {provider.name}
                         {isVaulted && (
                           <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400 animate-pulse" />
                         )}
                       </h3>
-                      <p className="text-[11px] text-slate-400">{provider.badge}</p>
+                      <p className="text-[11px] text-slate-400 font-bold">{provider.badge}</p>
                     </div>
                   </div>
 

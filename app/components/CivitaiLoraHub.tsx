@@ -706,7 +706,7 @@ export default function CivitaiLoraHub({
                 <div className="p-4 flex-1 flex flex-col justify-between gap-3 bg-slate-900/80">
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-sm text-slate-100 group-hover:text-cyan-300 transition line-clamp-1" title={model.name}>
+                      <h3 className="font-black text-sm text-slate-100 group-hover:text-cyan-300 transition line-clamp-1" title={model.name}>
                         {model.name}
                       </h3>
                       <a

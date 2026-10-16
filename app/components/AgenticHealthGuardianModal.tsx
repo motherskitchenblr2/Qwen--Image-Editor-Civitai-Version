@@ -271,13 +271,13 @@ export default function AgenticHealthGuardianModal({
                   <Activity className="w-4 h-4 animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
                     Agentic AI App Health Guardian
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                       v2.3 DOCTOR
                     </span>
                   </h3>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-400 font-bold">
                     Live Subsystem Diagnostics, Exact Issue Reporting &amp; Prompt Intelligence
                   </p>
                 </div>

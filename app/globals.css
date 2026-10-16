@@ -173,3 +173,249 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(6, 182, 212, 0.8);
 }
+
+/* =========================================================================
+   3D NEOMORPHISM PASTEL YELLOW (#F9EE99) DAY THEME SYSTEM
+   ========================================================================= */
+
+/* Neomorphic Color Tokens */
+:root {
+  --neo-day-bg: #F9EE99;
+  --neo-day-surface: #F9EE99;
+  --neo-day-shadow-dark: rgba(175, 158, 65, 0.45);
+  --neo-day-shadow-light: rgba(255, 255, 245, 0.95);
+  --neo-day-text-main: #1C1917;
+  --neo-day-text-sub: #44403C;
+}
+
+/* Day Mode Body & Global Canvas */
+html[data-theme="day"],
+html.theme-day,
+body.theme-day,
+.theme-day {
+  background-color: #F9EE99 !important;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 255, 245, 0.75), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 85% 65%, rgba(225, 210, 110, 0.35), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 15% 85%, rgba(255, 255, 220, 0.5), transparent 70%) !important;
+  color: #1C1917 !important;
+}
+
+/* Explicit 3D Neomorphic Utility Classes */
+.neo-card {
+  background: linear-gradient(145deg, #FFFCAE, #E5DA87);
+  box-shadow: 8px 8px 20px rgba(175, 158, 65, 0.45), -8px -8px 20px rgba(255, 255, 245, 0.95);
+  border: 1px solid rgba(255, 255, 235, 0.8);
+  border-radius: 1.25rem;
+}
+
+.neo-card-inset {
+  background: #F2E68E;
+  box-shadow: inset 4px 4px 8px rgba(175, 158, 65, 0.42), inset -4px -4px 8px rgba(255, 255, 245, 0.95);
+  border: 1px solid rgba(190, 175, 90, 0.35);
+  border-radius: 1rem;
+}
+
+.neo-btn {
+  background: linear-gradient(145deg, #FFFCAE, #E5DA87);
+  box-shadow: 4px 4px 10px rgba(175, 158, 65, 0.4), -4px -4px 10px rgba(255, 255, 245, 0.95);
+  border: 1px solid rgba(255, 255, 235, 0.85);
+  border-radius: 0.875rem;
+  transition: all 0.15s ease-in-out;
+}
+.neo-btn:hover:not(:disabled) {
+  box-shadow: 6px 6px 14px rgba(175, 158, 65, 0.5), -6px -6px 14px rgba(255, 255, 245, 1);
+  transform: translateY(-1px);
+}
+.neo-btn:active:not(:disabled),
+.neo-btn-active {
+  box-shadow: inset 3px 3px 6px rgba(175, 158, 65, 0.45), inset -3px -3px 6px rgba(255, 255, 245, 0.95) !important;
+  transform: translateY(1px);
+}
+
+.neo-input {
+  background: #F3E890 !important;
+  box-shadow: inset 3px 3px 7px rgba(175, 158, 65, 0.4), inset -3px -3px 7px rgba(255, 255, 245, 0.95) !important;
+  border: 1px solid rgba(190, 175, 90, 0.4) !important;
+  color: #1C1917 !important;
+  border-radius: 0.75rem;
+}
+.neo-input:focus {
+  outline: none;
+  box-shadow: inset 4px 4px 8px rgba(175, 158, 65, 0.48), inset -4px -4px 8px rgba(255, 255, 245, 0.95), 0 0 0 2px rgba(14, 116, 144, 0.4) !important;
+}
+
+/* Day Mode Structural Adaptation */
+.theme-day header {
+  background: rgba(249, 238, 153, 0.94) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(190, 175, 90, 0.4) !important;
+  box-shadow: 0 6px 20px rgba(175, 158, 65, 0.28) !important;
+}
+
+/* 3D Embossed Cards & Sections in Day Mode */
+.theme-day section,
+.theme-day .glass-panel-neon,
+.theme-day div[class*="bg-slate-950"],
+.theme-day div[class*="bg-slate-900"],
+.theme-day div[class*="bg-black/80"],
+.theme-day div[class*="bg-black/60"],
+.theme-day div[class*="bg-black/40"] {
+  background: linear-gradient(145deg, #FFFCAE, #E5DA87) !important;
+  border-color: rgba(255, 255, 235, 0.8) !important;
+  box-shadow: 8px 8px 20px rgba(175, 158, 65, 0.42), -8px -8px 20px rgba(255, 255, 245, 0.95) !important;
+  color: #1C1917 !important;
+}
+
+/* Tab Container Inset / Sunken Well */
+.theme-day .flex.items-center.bg-black\/80,
+.theme-day .tab-nav-container {
+  background: #F3E890 !important;
+  box-shadow: inset 4px 4px 8px rgba(175, 158, 65, 0.45), inset -4px -4px 8px rgba(255, 255, 245, 0.95) !important;
+  border: 1px solid rgba(190, 175, 90, 0.35) !important;
+}
+
+/* Active & Inactive Tabs in Day Mode */
+.theme-day button.tab-active,
+.theme-day div.tab-nav-container button[class*="bg-gradient-to-r"] {
+  background: linear-gradient(145deg, #FFFCAE, #E5DA87) !important;
+  box-shadow: 4px 4px 10px rgba(175, 158, 65, 0.45), -4px -4px 10px rgba(255, 255, 245, 0.95) !important;
+  color: #1C1917 !important;
+  border: 1px solid rgba(255, 255, 235, 0.85) !important;
+  font-weight: 800 !important;
+}
+.theme-day div.tab-nav-container button:not([class*="bg-gradient-to-r"]) {
+  color: #44403C !important;
+  font-weight: 700 !important;
+}
+.theme-day div.tab-nav-container button:not([class*="bg-gradient-to-r"]):hover {
+  background: rgba(255, 255, 245, 0.5) !important;
+  color: #1C1917 !important;
+}
+
+/* Inputs, Textareas, and Selects in Day Mode */
+.theme-day input,
+.theme-day textarea,
+.theme-day select {
+  background: #F3E890 !important;
+  color: #1C1917 !important;
+  border: 1px solid rgba(190, 175, 90, 0.45) !important;
+  box-shadow: inset 3px 3px 7px rgba(175, 158, 65, 0.4), inset -3px -3px 7px rgba(255, 255, 245, 0.95) !important;
+}
+.theme-day input:focus,
+.theme-day textarea:focus,
+.theme-day select:focus {
+  outline: none !important;
+  border-color: #0E7490 !important;
+  box-shadow: inset 4px 4px 8px rgba(175, 158, 65, 0.45), inset -4px -4px 8px rgba(255, 255, 245, 0.95), 0 0 0 2px rgba(14, 116, 144, 0.35) !important;
+}
+.theme-day input::placeholder,
+.theme-day textarea::placeholder {
+  color: #78716C !important;
+}
+
+/* Tactile 3D Buttons in Day Mode */
+.theme-day button:not(.tab-inactive) {
+  border-color: rgba(255, 255, 235, 0.85);
+}
+.theme-day button:hover:not(:disabled) {
+  filter: brightness(1.03);
+}
+
+/* Day Mode High-Contrast Typography & Bold Headers */
+.theme-day h1,
+.theme-day h2,
+.theme-day h3,
+.theme-day h4,
+.theme-day h5,
+.theme-day h6,
+.theme-day .font-extrabold,
+.theme-day .font-black {
+  color: #1C1917 !important;
+  font-weight: 800 !important;
+}
+
+/* App Title Embossed Chiseled 3D Effect in Day Mode */
+.theme-day .app-title-main {
+  color: #1C1917 !important;
+  background: none !important;
+  -webkit-text-fill-color: #1C1917 !important;
+  text-shadow: 1px 1px 1px rgba(255, 255, 245, 0.9), -1px -1px 1px rgba(180, 165, 80, 0.3) !important;
+  font-weight: 900 !important;
+}
+
+.theme-day .text-white,
+.theme-day .text-slate-100,
+.theme-day .text-slate-200 {
+  color: #1C1917 !important;
+}
+
+.theme-day .text-slate-300,
+.theme-day .text-slate-400 {
+  color: #44403C !important;
+}
+
+.theme-day .text-slate-500,
+.theme-day .text-slate-600 {
+  color: #57534E !important;
+}
+
+.theme-day .text-cyan-300,
+.theme-day .text-cyan-400,
+.theme-day .text-cyan-200,
+.theme-day .text-neon-cyan {
+  color: #0E7490 !important;
+  text-shadow: none !important;
+}
+
+.theme-day .text-emerald-300,
+.theme-day .text-emerald-400,
+.theme-day .text-neon-emerald {
+  color: #15803D !important;
+  text-shadow: none !important;
+}
+
+.theme-day .text-amber-300,
+.theme-day .text-amber-400 {
+  color: #B45309 !important;
+  text-shadow: none !important;
+}
+
+.theme-day .text-rose-300,
+.theme-day .text-rose-400 {
+  color: #BE123C !important;
+  text-shadow: none !important;
+}
+
+.theme-day .text-purple-300,
+.theme-day .text-purple-400 {
+  color: #6D28D9 !important;
+  text-shadow: none !important;
+}
+
+/* Mute Neon Glow Animations in Day Mode for Crisp Neomorphic Shading */
+.theme-day .animate-neon-cyan,
+.theme-day .animate-neon-purple,
+.theme-day .animate-neon-emerald,
+.theme-day .animate-neon-amber,
+.theme-day .animate-neon-button {
+  animation: none !important;
+}
+
+/* Day Mode Scrollbars */
+.theme-day::-webkit-scrollbar-track,
+.theme-day ::-webkit-scrollbar-track {
+  background: #E8DD87 !important;
+}
+.theme-day::-webkit-scrollbar-thumb,
+.theme-day ::-webkit-scrollbar-thumb {
+  background: #C4B564 !important;
+  border-radius: 9999px;
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.2);
+}
+.theme-day::-webkit-scrollbar-thumb:hover,
+.theme-day ::-webkit-scrollbar-thumb:hover {
+  background: #AFA050 !important;
+}
+

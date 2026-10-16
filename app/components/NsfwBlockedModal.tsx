@@ -34,10 +34,10 @@ export default function NsfwBlockedModal({ onOpenSettings }: NsfwBlockedModalPro
 
         {/* Exact Error Message Required by User */}
         <div className="space-y-2">
-          <h2 className="text-xl font-extrabold text-white tracking-wide drop-shadow-[0_0_12px_rgba(244,63,94,0.8)]">
+          <h2 className="text-xl font-black text-white tracking-wide drop-shadow-[0_0_12px_rgba(244,63,94,0.8)]">
             {NSFW_BLOCKED_MESSAGE}
           </h2>
-          <p className="text-xs text-rose-200/80 font-medium">
+          <p className="text-xs text-rose-200/80 font-bold">
             This request was blocked under active SFW Mode.
           </p>
         </div>
@@ -47,7 +47,7 @@ export default function NsfwBlockedModal({ onOpenSettings }: NsfwBlockedModalPro
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(244,63,94,0.4)] transition active:scale-95"
+            className="px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-xl shadow-[0_0_15px_rgba(244,63,94,0.4)] transition active:scale-95"
           >
             Dismiss
           </button>
@@ -58,7 +58,7 @@ export default function NsfwBlockedModal({ onOpenSettings }: NsfwBlockedModalPro
                 setIsOpen(false);
                 onOpenSettings();
               }}
-              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-semibold text-xs rounded-xl transition"
+              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-bold text-xs rounded-xl transition"
             >
               Open Settings
             </button>
