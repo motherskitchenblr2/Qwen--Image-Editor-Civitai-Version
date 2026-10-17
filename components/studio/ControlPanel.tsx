@@ -191,7 +191,7 @@ export default function ControlPanel({
       </button>
 
       {studioMode === "edit" && !originalImage && (
-        <p className="text-[11px] text-slate-400 text-center font-medium">
+        <p className="text-slate-400 text-xs font-medium text-center">
           Upload an image to enable editing
         </p>
       )}

@@ -240,4 +240,26 @@ flowchart TD
   - Dropzone card sizing: `w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40 hover:border-cyan-500/60 transition-all cursor-pointer`.
   - History ribbon hugs the bottom of the viewport directly below the canvas stage without generating empty black dead space.
 
+---
+
+## 10. Mobile Visual Polish & Touch Ergonomics
+
+### 10.1 Top Canvas Safe-Area Padding
+- **Component**: `CanvasWorkspace.tsx`
+- **Enhancement**: Added safe-area padding (`pt-2 px-3 sm:px-4`) to the canvas header toolbar. Prevents the view mode buttons (`[Split Wipe] [Result] [Original]`) and zoom controls from brushing directly against the top viewport edge on mobile browsers.
+
+### 10.2 Compact Collapsible Session History on Mobile (<1024px)
+- **Component**: `HistoryRibbon.tsx`
+- **Enhancement**:
+  - Implemented `isMobileExpanded` collapsible toggle bar on mobile:
+    `border-t border-b border-slate-800/60 py-1.5 px-3 text-xs flex items-center justify-between bg-black/60 rounded-lg`
+  - Replaces the full vertical thumbnail gallery by default on mobile screens, displaying a single-line summary with output count and expand/collapse chevron.
+  - Prevents thumbnail rows from pushing the prompt editor and controls off-screen on small mobile viewports.
+  - Fully expanded by default on desktop (`>=1024px`).
+
+### 10.3 Bottom CTA Helper Contrast & Legibility
+- **Component**: `ControlPanel.tsx`
+- **Enhancement**:
+  - Elevated "Upload an image to enable editing" helper note from low-visibility `text-[11px]` to `text-slate-400 text-xs font-medium text-center` for crisp readability on mobile OLED screens.
+
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   History,
   RotateCcw,
@@ -8,6 +8,7 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Trash2,
   Sparkles,
 } from "lucide-react";
@@ -28,6 +29,7 @@ export default function HistoryRibbon({
   onClearHistory,
 }: HistoryRibbonProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
 
   const scroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
@@ -38,23 +40,66 @@ export default function HistoryRibbon({
 
   if (gallery.length === 0) {
     return (
-      <div className="bg-black/60 border border-cyan-500/25 rounded-2xl p-2.5 px-4 flex items-center justify-between text-xs text-slate-400">
-        <div className="flex items-center gap-2">
-          <History className="w-3.5 h-3.5 text-cyan-400/70" />
-          <span className="font-semibold text-slate-300">Session History</span>
-          <span className="text-[11px] text-slate-500">
-            Outputs will appear here for instant 1-click rollback, branching, and comparison.
+      <div className="w-full">
+        {/* Mobile Compact Bar (<1024px) */}
+        <div className="lg:hidden border-t border-b border-slate-800/60 py-1.5 px-3 text-xs flex items-center justify-between bg-black/60 rounded-lg text-slate-400">
+          <div className="flex items-center gap-2">
+            <History className="w-3.5 h-3.5 text-cyan-400/70" />
+            <span className="font-semibold text-slate-300">Session History</span>
+          </div>
+          <span className="text-[10px] font-mono text-cyan-400/60 uppercase tracking-wider">
+            0 Items
           </span>
         </div>
-        <span className="text-[10px] font-mono text-cyan-400/60 uppercase tracking-wider">
-          0 Items
-        </span>
+
+        {/* Desktop Ribbon (>=1024px) */}
+        <div className="hidden lg:flex bg-black/60 border border-cyan-500/25 rounded-2xl p-2.5 px-4 items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <History className="w-3.5 h-3.5 text-cyan-400/70" />
+            <span className="font-semibold text-slate-300">Session History</span>
+            <span className="text-[11px] text-slate-500">
+              Outputs will appear here for instant 1-click rollback, branching, and comparison.
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-cyan-400/60 uppercase tracking-wider">
+            0 Items
+          </span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-950/85 border border-cyan-500/35 shadow-[0_0_20px_rgba(6,182,212,0.12)] rounded-2xl p-2.5 flex flex-col gap-2">
+    <div className="w-full flex flex-col">
+      {/* Mobile Compact Collapsible Bar (<1024px) */}
+      <button
+        type="button"
+        onClick={() => setIsMobileExpanded((prev) => !prev)}
+        className="w-full lg:hidden border-t border-b border-slate-800/60 py-1.5 px-3 text-xs flex items-center justify-between bg-black/60 hover:bg-slate-900/60 transition active:scale-[0.99] text-left rounded-lg"
+      >
+        <div className="flex items-center gap-2">
+          <History className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="font-semibold text-slate-200">Session History</span>
+          <span className="px-1.5 py-0.2 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-full text-[10px] font-mono font-bold">
+            {gallery.length}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-cyan-300 text-[11px]">
+          <span>{isMobileExpanded ? "Collapse" : "Expand"}</span>
+          <ChevronDown
+            className={`w-3.5 h-3.5 transition-transform duration-200 ${
+              isMobileExpanded ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+      </button>
+
+      {/* Main Ribbon Content (Always visible on desktop >=1024px, collapsible on mobile <1024px) */}
+      <div
+        className={`${
+          isMobileExpanded ? "flex" : "hidden"
+        } lg:flex bg-slate-950/85 border border-cyan-500/35 shadow-[0_0_20px_rgba(6,182,212,0.12)] rounded-2xl p-2.5 flex-col gap-2 mt-1.5 lg:mt-0`}
+      >
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <History className="w-3.5 h-3.5 text-cyan-400" />
@@ -164,6 +209,7 @@ export default function HistoryRibbon({
           );
         })}
       </div>
+    </div>
     </div>
   );
 }
