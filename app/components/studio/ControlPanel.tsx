@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Sliders,
   Sparkles,
@@ -13,6 +13,7 @@ import {
   Dice5,
   ExternalLink,
   Info,
+  ChevronDown,
 } from "lucide-react";
 import LiveAiModelSelector from "@/app/components/LiveAiModelSelector";
 import PromptActionButtons from "@/app/components/PromptActionButtons";
@@ -148,10 +149,89 @@ export default function ControlPanel({
         { s: 30, label: "30 Steps", sub: "Ultra Detail" },
       ];
 
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState<boolean>(false);
+
   const isGenerateDisabled =
     isGenerating ||
     (selectedStudioModel === "kaggle-gpu" && (!originalImage || !isConnected)) ||
     (studioMode === "edit" && !originalImage && selectedStudioModel !== "kaggle-gpu");
+
+  const renderActionButton = (isMobileBar = false) => (
+    <div className={`space-y-2 ${isMobileBar ? "w-full max-w-lg mx-auto" : "w-full"}`}>
+      <button
+        onClick={handleGenerate}
+        disabled={isGenerateDisabled}
+        title={
+          studioMode === "edit" && !originalImage
+            ? "Upload an image to enable editing"
+            : undefined
+        }
+        className={`w-full h-11 px-4 rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 transition ${
+          isGenerateDisabled
+            ? "bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800"
+            : "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/20 active:scale-[0.99]"
+        }`}
+      >
+        {isGenerating ? (
+          <>
+            <RefreshCw className="w-4 h-4 animate-spin text-white" />
+            <span>Synthesizing Diffusion...</span>
+          </>
+        ) : studioMode === "generate" ? (
+          <>
+            <Sparkles className="w-4 h-4 fill-current" />
+            <span>Generate Image</span>
+          </>
+        ) : (
+          <>
+            <Zap className="w-4 h-4 fill-current" />
+            <span>Apply Image Edit</span>
+          </>
+        )}
+      </button>
+
+      {studioMode === "edit" && !originalImage && (
+        <p className="text-[11px] text-slate-400 text-center font-medium">
+          Upload an image to enable editing
+        </p>
+      )}
+
+      {/* Progress Bar & Status */}
+      {isGenerating && (
+        <div className="bg-black/90 border border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.2)] p-2.5 rounded-2xl space-y-1.5 animate-neon-cyan">
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-cyan-300 font-bold truncate flex-1 min-w-0 pr-2">
+              {generationStatusText}
+            </span>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-emerald-300 text-[11px] font-mono font-bold">
+                {generationElapsed}s
+              </span>
+              <span className="text-white font-mono font-extrabold">{generationProgress}%</span>
+            </div>
+          </div>
+          <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden p-0.5 border border-cyan-500/30">
+            <div
+              className="bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-500 h-full rounded-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(6,182,212,0.8)]"
+              style={{ width: `${Math.max(4, Math.min(100, generationProgress))}%` }}
+            />
+          </div>
+          {generationElapsed > 45 && (
+            <div className="pt-1.5 border-t border-amber-500/30 flex items-center justify-between text-[11px] text-amber-300">
+              <span className="truncate pr-2">Taking longer than expected (~45s+).</span>
+              <button
+                type="button"
+                onClick={onSwitchToCloud}
+                className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/60 rounded text-[10px] font-bold text-amber-200 transition-colors flex-shrink-0"
+              >
+                ⚡ Switch to Cloud AI
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-4 sm:gap-5 bg-slate-950/85 border border-cyan-500/40 shadow-[0_0_25px_rgba(6,182,212,0.18)] hover:shadow-[0_0_35px_rgba(6,182,212,0.28)] p-3.5 sm:p-5 rounded-3xl w-full max-w-full overflow-hidden transition-all duration-300">
@@ -247,8 +327,31 @@ export default function ControlPanel({
         </div>
       </div>
 
-      {/* ── LoRA Stack Management Section ── */}
-      <div className="space-y-2.5 pt-2 border-t border-cyan-500/30">
+      {/* ── Collapsible Accordion Trigger (Mobile Only, Always Expanded on Desktop) ── */}
+      <div className="pt-2 border-t border-cyan-500/30">
+        <button
+          type="button"
+          onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+          className="w-full flex items-center justify-between p-3 rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-xs font-bold text-slate-200 transition-all shadow-sm lg:hidden active:scale-[0.99]"
+        >
+          <span className="flex items-center gap-2 text-cyan-300">
+            <Sliders className="w-4 h-4 text-cyan-400" />
+            <span className="font-extrabold tracking-wide">⚙️ Advanced Parameters &amp; Sliders</span>
+          </span>
+          <span className="flex items-center gap-2">
+            {activeLoras.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/50 text-[10px] font-mono font-bold">
+                {activeLoras.length} LoRA{activeLoras.length > 1 ? "s" : ""}
+              </span>
+            )}
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isAdvancedOpen ? "rotate-180 text-cyan-400" : ""}`} />
+          </span>
+        </button>
+
+        {/* ── Advanced Content (Collapsible on Mobile, Expanded on Desktop) ── */}
+        <div className={`${isAdvancedOpen ? "block" : "hidden"} lg:block space-y-4 pt-3 lg:pt-0`}>
+          {/* ── LoRA Stack Management Section ── */}
+          <div className="space-y-2.5 pt-2 border-t border-cyan-500/30 lg:border-t-0 lg:pt-0">
         <div className="flex items-center justify-between">
           <label className="text-xs font-black text-white flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-purple-400" />
@@ -479,81 +582,17 @@ export default function ControlPanel({
           </div>
         </div>
       </div>
+    </div>
+  </div>
 
-      {/* ── High-Contrast Primary Action Button ── */}
-      <div className="pt-2 border-t border-cyan-500/30 space-y-2">
-        <button
-          onClick={handleGenerate}
-          disabled={isGenerateDisabled}
-          title={
-            studioMode === "edit" && !originalImage
-              ? "Upload an image to enable editing"
-              : undefined
-          }
-          className={`w-full h-11 px-4 rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 transition ${
-            isGenerateDisabled
-              ? "bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800"
-              : "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/20 active:scale-[0.99]"
-          }`}
-        >
-          {isGenerating ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin text-white" />
-              <span>Synthesizing Diffusion...</span>
-            </>
-          ) : studioMode === "generate" ? (
-            <>
-              <Sparkles className="w-4 h-4 fill-current" />
-              <span>Generate Image</span>
-            </>
-          ) : (
-            <>
-              <Zap className="w-4 h-4 fill-current" />
-              <span>Apply Image Edit</span>
-            </>
-          )}
-        </button>
+      {/* ── Desktop Primary Action Button ── */}
+      <div className="hidden lg:block pt-2 border-t border-cyan-500/30">
+        {renderActionButton(false)}
+      </div>
 
-        {studioMode === "edit" && !originalImage && (
-          <p className="text-[11px] text-slate-400 text-center font-medium">
-            Upload an image to enable editing
-          </p>
-        )}
-
-        {/* Progress Bar & Status */}
-        {isGenerating && (
-          <div className="bg-black/80 border border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.2)] p-3 rounded-2xl space-y-2 animate-neon-cyan">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-cyan-300 font-bold truncate flex-1 min-w-0 pr-2">
-                {generationStatusText}
-              </span>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-emerald-300 text-[11px] font-mono font-bold">
-                  {generationElapsed}s
-                </span>
-                <span className="text-white font-mono font-extrabold">{generationProgress}%</span>
-              </div>
-            </div>
-            <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden p-0.5 border border-cyan-500/30">
-              <div
-                className="bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-500 h-full rounded-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(6,182,212,0.8)]"
-                style={{ width: `${Math.max(4, Math.min(100, generationProgress))}%` }}
-              />
-            </div>
-            {generationElapsed > 45 && (
-              <div className="pt-1.5 border-t border-amber-500/30 flex items-center justify-between text-[11px] text-amber-300">
-                <span className="truncate pr-2">Taking longer than expected (~45s+).</span>
-                <button
-                  type="button"
-                  onClick={onSwitchToCloud}
-                  className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/60 rounded text-[10px] font-bold text-amber-200 transition-colors flex-shrink-0"
-                >
-                  ⚡ Switch to Cloud AI
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+      {/* ── Mobile Sticky Bottom Action Bar ── */}
+      <div className="fixed bottom-0 left-0 right-0 p-3 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 z-50 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.85)]">
+        {renderActionButton(true)}
       </div>
     </div>
   );

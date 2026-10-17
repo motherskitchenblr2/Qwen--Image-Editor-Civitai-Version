@@ -293,7 +293,7 @@ export default function CanvasWorkspace({
   const activeDisplayImage = editedImage || originalImage;
 
   return (
-    <div className="flex-1 w-full flex flex-col gap-3 min-h-[440px] max-h-full overflow-hidden select-none">
+    <div className="flex-1 w-full flex flex-col gap-3 min-h-[360px] lg:min-h-[500px] max-h-full overflow-hidden select-none">
       {/* ── Top Workspace Toolbar ── */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 bg-slate-950/85 border border-cyan-500/35 rounded-2xl shadow-[0_0_20px_rgba(6,182,212,0.12)]">
         {/* Left: View Mode Toggles */}
@@ -455,7 +455,7 @@ export default function CanvasWorkspace({
       {/* ── Main Canvas Viewport ── */}
       <div
         ref={containerRef}
-        className="flex-1 min-h-[380px] bg-slate-950/90 border border-cyan-500/35 rounded-3xl relative overflow-hidden flex items-center justify-center shadow-[inset_0_0_50px_rgba(0,0,0,0.85)] group"
+        className="flex-1 min-h-[320px] sm:min-h-[360px] lg:min-h-[460px] bg-slate-950/90 border border-cyan-500/35 rounded-3xl relative overflow-hidden flex items-center justify-center shadow-[inset_0_0_50px_rgba(0,0,0,0.85)] group"
       >
         {/* Hidden File Input */}
         <input

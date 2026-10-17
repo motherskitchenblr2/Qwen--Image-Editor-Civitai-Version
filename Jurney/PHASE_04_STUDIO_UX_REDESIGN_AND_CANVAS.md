@@ -161,3 +161,27 @@ flowchart TD
 - **Component**: `StudioLayout.tsx`
 - **Enhancement**: Applied `w-full h-[calc(100vh-64px)] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 pr-2 pb-8 flex flex-col gap-4` to the left `<aside>`. This allows the user to scroll through complex model settings, LoRAs, and prompt parameters while the right canvas workspace remains anchored and stationary in the desktop viewport.
 
+---
+
+## 7. Responsive Visual Density & Mobile Overhaul (UI/UX Pro Max Amezing Tier)
+
+### 7.1 Desktop-First Side-by-Side Workspace
+- **Container**: `w-full min-h-[calc(100vh-64px)] grid grid-cols-1 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] gap-6 px-4 lg:px-8 py-4 overflow-hidden`
+- **Left Sidebar**: `lg:h-[calc(100vh-80px)] lg:overflow-y-auto pr-2 space-y-4 scrollbar-thin scrollbar-thumb-slate-800 pb-24 lg:pb-8`
+- **Right Canvas Workspace**: `flex flex-col h-full min-h-[360px] lg:min-h-[500px] lg:h-[calc(100vh-80px)] min-w-0 gap-4 overflow-hidden`
+- **Dropzone Viewport**: Polished empty-state upload container (`w-full max-w-xl h-80 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/40 hover:border-cyan-500/50 hover:bg-slate-900/60 transition-all cursor-pointer`)
+
+### 7.2 Mobile Overhaul (<1024px Screens)
+- **Visual Re-ordering**:
+  - Interactive Canvas placed on top (`order-1 lg:order-2`) so mobile users immediately see their uploaded/edited artwork without scrolling.
+  - Controls placed below canvas (`order-2 lg:order-1`).
+- **Collapsible Accordion for Advanced Parameters & Sliders**:
+  - Main prompt, negative prompt, mode switcher, and live AI model selector remain permanently accessible.
+  - LoRA stacking (chips, weight sliders, fuse/unload), CFG Scale, Guidance Scale, Inference Steps presets, and Seed are consolidated into a clean, collapsible accordion (`⚙️ Advanced Parameters & Sliders`) on mobile.
+  - Automatically expanded on desktop (`lg:block`).
+- **Sticky Bottom Action Bar**:
+  - Primary CTA ("Apply Image Edit" / "Generate") is pinned to the bottom of the mobile viewport (`fixed bottom-0 left-0 right-0 p-3 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 z-50 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.85)]`).
+  - Scrollable container provides `pb-24` padding so bottom content is never obscured by the fixed bar.
+  - Real-time generation progress bar, elapsed timer, and Cloud fallback switch are embedded directly into the sticky bar during active inference.
+
+
