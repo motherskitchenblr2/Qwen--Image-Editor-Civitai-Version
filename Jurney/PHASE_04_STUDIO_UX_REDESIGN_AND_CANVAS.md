@@ -218,4 +218,24 @@ flowchart TD
   - Replaced small placeholder with a generous, immersive dashed dropzone: `w-full max-w-2xl h-[420px] border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/30 hover:border-cyan-500/50 hover:bg-slate-900/50 transition-all cursor-pointer p-6 text-center group/drop`.
   - Added dedicated upload icon, clear file format helper (`Supported formats: PNG, JPG, WebP (up to 10MB)`), and prominent `Browse or Drag Image Here` button with cyan gradient.
 
+---
+
+## 9. Viewport Lock (100dvh) & Canvas Auto-Centering (Ponytail Lazy Senior Optimization)
+
+### 9.1 Lock Workspace to Dynamic Viewport Height (100dvh)
+- **Component**: `StudioLayout.tsx`
+- **Enhancement**:
+  - Replaced loose `min-h-[...]` with strict viewport clamp:
+    `h-[calc(100dvh-64px)] w-full grid grid-cols-1 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] overflow-hidden px-4 py-2 gap-4`
+  - Guarantees neither the page nor the right panel vertically stretches past the screen boundary at 100%, 62%, or high-DPI zoom levels.
+- **Left Sidebar**:
+  - `w-full order-2 lg:order-1 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 pr-2 space-y-4 pb-12`
+
+### 9.2 Canvas Stage Auto-Centering & Sizing
+- **Component**: `CanvasWorkspace.tsx`
+- **Enhancement**:
+  - Root container: `h-full flex flex-col justify-between overflow-hidden bg-[#050811] rounded-xl border border-slate-800/60 select-none`.
+  - Canvas stage viewport: `flex-1 min-h-0 relative overflow-hidden flex items-center justify-center p-4 shadow-[inset_0_0_50px_rgba(0,0,0,0.85)] group`.
+  - Dropzone card sizing: `w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40`.
+
 

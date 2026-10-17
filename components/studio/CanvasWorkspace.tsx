@@ -294,9 +294,9 @@ export default function CanvasWorkspace({
   const activeDisplayImage = editedImage || originalImage;
 
   return (
-    <div className="flex-1 w-full flex flex-col gap-3 min-h-[360px] lg:min-h-[500px] max-h-full overflow-hidden select-none">
+    <div className="h-full flex flex-col justify-between overflow-hidden bg-[#050811] rounded-xl border border-slate-800/60 select-none">
       {/* ── Top Workspace Toolbar (Aligned with Mode Switch) ── */}
-      <div className="min-h-[48px] h-12 flex items-center justify-between gap-2 px-3 sm:px-4 bg-slate-950/85 border border-cyan-500/35 rounded-2xl shadow-[0_0_20px_rgba(6,182,212,0.12)] shrink-0">
+      <div className="min-h-[48px] h-12 flex items-center justify-between gap-2 px-3 sm:px-4 bg-slate-950/85 border-b border-cyan-500/35 shrink-0">
         {/* Left: View Mode Toggles */}
         <div className="flex items-center gap-1 bg-black/80 p-1 rounded-xl border border-cyan-500/30">
           {originalImage && editedImage && (
@@ -456,7 +456,7 @@ export default function CanvasWorkspace({
       {/* ── Main Canvas Viewport ── */}
       <div
         ref={containerRef}
-        className="flex-1 min-h-[320px] sm:min-h-[360px] lg:min-h-[460px] bg-slate-950/90 border border-cyan-500/35 rounded-3xl relative overflow-hidden flex items-center justify-center shadow-[inset_0_0_50px_rgba(0,0,0,0.85)] group"
+        className="flex-1 min-h-0 relative overflow-hidden flex items-center justify-center p-4 shadow-[inset_0_0_50px_rgba(0,0,0,0.85)] group"
       >
         {/* Hidden File Input */}
         <input
@@ -584,9 +584,9 @@ export default function CanvasWorkspace({
           </div>
         ) : studioMode === "generate" ? (
           /* Empty State: Text-to-Image Generation Mode */
-          <div className="flex flex-col items-center gap-3 p-8 text-center max-w-sm">
-            <div className="p-5 bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 border border-cyan-400/60 rounded-3xl text-cyan-300 shadow-[0_0_30px_rgba(6,182,212,0.35)] animate-pulse">
-              <Sparkles className="w-10 h-10" />
+          <div className="w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40">
+            <div className="p-3.5 bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 border border-cyan-400/60 rounded-2xl text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.35)] mb-3 animate-pulse">
+              <Sparkles className="w-8 h-8" />
             </div>
             <div>
               <p className="text-base font-black text-white">Text-to-Image Studio Canvas</p>
@@ -599,24 +599,24 @@ export default function CanvasWorkspace({
           /* Empty State: Image-to-Image Edit Mode (Upload Dropzone) */
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="w-full max-w-2xl h-[420px] border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/30 hover:border-cyan-500/50 hover:bg-slate-900/50 transition-all cursor-pointer p-6 text-center group/drop"
+            className="w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40 hover:border-cyan-500/50 hover:bg-slate-900/50 transition-all cursor-pointer group/drop"
           >
-            <div className="p-4 bg-slate-900/90 border border-cyan-500/30 rounded-2xl text-cyan-400 group-hover/drop:text-white group-hover/drop:border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all mb-4">
-              <Upload className="w-10 h-10 group-hover/drop:scale-110 transition-transform" />
+            <div className="p-3.5 bg-slate-900/90 border border-cyan-500/30 rounded-2xl text-cyan-400 group-hover/drop:text-white group-hover/drop:border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all mb-3">
+              <Upload className="w-8 h-8 group-hover/drop:scale-110 transition-transform" />
             </div>
-            <div className="space-y-1.5 max-w-md">
-              <p className="text-base font-black text-white">Upload source image to begin editing</p>
+            <div className="space-y-1 max-w-sm">
+              <p className="text-sm font-black text-white">Upload source image to begin editing</p>
               <p className="text-xs text-slate-400">
                 Drag and drop your image here, or select from your device
               </p>
-              <p className="text-[11px] font-mono text-cyan-300/70 pt-1">
+              <p className="text-[10px] font-mono text-cyan-300/70 pt-0.5">
                 Supported formats: PNG, JPG, WebP (up to 10MB)
               </p>
             </div>
-            <div className="mt-5">
+            <div className="mt-4">
               <button
                 type="button"
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 group-hover/drop:shadow-cyan-500/40 transition active:scale-[0.99] flex items-center gap-2 pointer-events-none"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-500/20 group-hover/drop:shadow-cyan-500/40 transition active:scale-[0.99] flex items-center gap-2 pointer-events-none"
               >
                 <FolderOpen className="w-4 h-4" />
                 <span>Browse or Drag Image Here</span>
