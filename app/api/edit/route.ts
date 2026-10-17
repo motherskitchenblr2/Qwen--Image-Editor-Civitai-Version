@@ -7,6 +7,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       image_base64,
+      mask_base64,
       prompt,
       negative_prompt = "blurry, distorted, low quality, deformed, artifacts",
       true_cfg_scale = 1.0,
@@ -50,8 +51,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Forward to GPU microservice
-    const gpuPayload = {
+    const gpuPayload: any = {
       image_base64,
       prompt: prompt.trim(),
       negative_prompt,
@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
       loras,
       async_mode: Boolean(async_mode),
     };
+    if (mask_base64) {
+      gpuPayload.mask_base64 = mask_base64;
+    }
 
     const res = await fetch(`${targetBackend}/api/edit`, {
       method: "POST",

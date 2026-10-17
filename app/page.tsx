@@ -48,20 +48,15 @@ import {
   triggerNsfwBlockedModal,
 } from "./lib/nsfwFilter";
 import { LiveAiModel } from "./lib/aiModelRegistry";
-
-interface LoRAItem {
-  name: string;
-  scale: number;
-}
-
-interface BackendLoRA {
-  name: string;
-  filename: string;
-  size_mb: number;
-  is_active: boolean;
-  scale?: number;
-  trigger_words?: string;
-}
+import {
+  StudioLayout,
+  ControlPanel,
+  CanvasWorkspace,
+  LoraModal,
+  HistoryRibbon,
+  LoRAItem,
+  BackendLoRA,
+} from "./components/studio";
 
 export default function ImageEditorStudio() {
   // Navigation Tabs: Studio & Editor | AI Generator Hub | Civitai.red LoRA Hub | Outputs Gallery | Sentinel Gateway
@@ -102,6 +97,8 @@ export default function ImageEditorStudio() {
   const [selectedDropdownLora, setSelectedDropdownLora] = useState<string>("");
   const [isFusingLora, setIsFusingLora] = useState<boolean>(false);
   const [fusedStatusMessage, setFusedStatusMessage] = useState<string>("");
+  const [isLoraModalOpen, setIsLoraModalOpen] = useState<boolean>(false);
+  const [inpaintMask, setInpaintMask] = useState<string | null>(null);
 
   // Quick Downloader states
   const [civitaiUrl, setCivitaiUrl] = useState<string>("");
@@ -864,7 +861,7 @@ export default function ImageEditorStudio() {
     };
 
     if (!activeLoras.some((l) => l.name === lora.name)) {
-      setActiveLoras((prev) => [...prev, { name: lora.name, scale: 0.8 }]);
+      setActiveLoras((prev) => [...prev.slice(-2), { name: lora.name, scale: 0.8 }]);
     }
 
     if (triggerWords && triggerWords.length > 0) {
@@ -875,6 +872,33 @@ export default function ImageEditorStudio() {
     }
 
     setActiveTab("studio");
+  };
+
+  const handleToggleLoraInStack = (lora: BackendLoRA) => {
+    setActiveLoras((prev) => {
+      const exists = prev.some((l) => l.name === lora.name);
+      if (exists) {
+        return prev.filter((l) => l.name !== lora.name);
+      }
+      if (prev.length >= 3) {
+        showToast("Maximum 3 LoRAs can be stacked simultaneously", "info");
+        return prev;
+      }
+      return [...prev, { name: lora.name, scale: 0.8 }];
+    });
+  };
+
+  const handleUpdateLoraScale = (name: string, scale: number) => {
+    setActiveLoras((prev) =>
+      prev.map((item) => (item.name === name ? { ...item, scale } : item))
+    );
+  };
+
+  const handleInjectTriggers = (triggers: string) => {
+    if (!prompt.includes(triggers)) {
+      setPrompt((prev) => (prev ? `${prev}, ${triggers}` : triggers));
+      showToast("Inserted trigger words into prompt!", "success");
+    }
   };
 
   const handleQuickDownloadLora = async () => {
@@ -961,6 +985,7 @@ export default function ImageEditorStudio() {
           num_inference_steps: Number(steps),
           seed: seed === "" ? null : Number(seed),
           loras: activeLoras,
+          mask_base64: inpaintMask || undefined,
           async_mode: true,
         };
 
@@ -1082,6 +1107,7 @@ export default function ImageEditorStudio() {
             model: targetCloudModel,
             mode: studioMode,
             image_base64: originalImage || undefined,
+            mask_base64: inpaintMask || undefined,
             seed: seed === "" ? null : Number(seed),
             nsfw_enabled: isNsfwMode,
           }),
@@ -1860,645 +1886,128 @@ export default function ImageEditorStudio() {
       ) : activeTab === "sentinel" ? (
         <SentinelAiGateway />
       ) : (
-        /* ── STUDIO & EDITOR TAB ───────────────────────────────── */
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 p-3 sm:p-6 max-w-7xl mx-auto w-full max-w-full overflow-hidden animate-fadeIn">
-          {/* Left: Input & Tuning Panel (4 cols) */}
-          <section className="lg:col-span-4 flex flex-col gap-4 sm:gap-5 bg-slate-950/85 border border-cyan-500/40 shadow-[0_0_25px_rgba(6,182,212,0.18)] hover:shadow-[0_0_35px_rgba(6,182,212,0.28)] p-3.5 sm:p-5 rounded-2xl w-full max-w-full overflow-hidden transition-all duration-300">
-            <div className="flex items-center justify-between border-b border-cyan-500/30 pb-3">
-              <span className="text-sm sm:text-base font-black flex items-center gap-2 text-white">
-                <Sliders className="w-4 h-4 text-cyan-400 animate-pulse" /> Generation Settings
-              </span>
-            </div>
-
-            {/* ── Mode Selection: Equal-Sized Buttons in One Line (UI-UX-PRO-MAX) ── */}
-            <div className="flex items-center gap-1.5 bg-black/80 p-1 rounded-xl border border-cyan-500/35 shadow-[0_0_12px_rgba(6,182,212,0.15)] w-full">
-              <button
-                type="button"
-                onClick={() => setStudioMode("generate")}
-                className={`flex-1 h-9 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
-                  studioMode === "generate"
-                    ? "bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "text-slate-300 hover:text-cyan-300"
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                <span>🎨 Generate</span>
-                <span className="hidden sm:inline"> Image</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStudioMode("edit")}
-                className={`flex-1 h-9 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
-                  studioMode === "edit"
-                    ? "bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "text-slate-300 hover:text-cyan-300"
-                }`}
-              >
-                <ImageIcon className="w-3.5 h-3.5 shrink-0" />
-                <span>✨ Edit</span>
-                <span className="hidden sm:inline"> Image</span>
-              </button>
-            </div>
-
-            {/* ── AI Engine Model Selector with Live Provider Platforms ── */}
-            <LiveAiModelSelector
-              activeModelId={selectedStudioModel}
-              onSelectModel={(m: LiveAiModel) => setSelectedStudioModel(m.id)}
-              mode={studioMode}
-              compact={true}
+        /* ── TWO-COLUMN STUDIO & LIVE CANVAS WORKSPACE ─────────────── */
+        <StudioLayout
+          controlPanel={
+            <ControlPanel
+              studioMode={studioMode}
+              setStudioMode={setStudioMode}
+              selectedStudioModel={selectedStudioModel}
+              setSelectedStudioModel={setSelectedStudioModel}
+              prompt={prompt}
+              setPrompt={setPrompt}
+              negativePrompt={negativePrompt}
+              setNegativePrompt={setNegativePrompt}
+              handleEnhancePrompt={handleEnhancePrompt}
+              isEnhancingPrompt={isEnhancingPrompt}
+              showToast={showToast}
+              trueCfgScale={trueCfgScale}
+              setTrueCfgScale={setTrueCfgScale}
+              guidanceScale={guidanceScale}
+              setGuidanceScale={setGuidanceScale}
+              steps={steps}
+              setSteps={setSteps}
+              seed={seed}
+              setSeed={setSeed}
+              activeLoras={activeLoras}
+              setActiveLoras={setActiveLoras}
+              availableLoras={availableLoras}
+              onOpenLoraModal={() => setIsLoraModalOpen(true)}
+              handleFuseLora={handleFuseLora}
+              handleUnloadLoras={handleUnloadLoras}
+              isFusingLora={isFusingLora}
+              fusedStatusMessage={fusedStatusMessage}
+              isConnected={isConnected}
+              isModelReady={isModelReady}
+              modelStatusMessage={modelStatusMessage}
+              handleGenerate={handleGenerate}
+              isGenerating={isGenerating}
+              originalImage={originalImage}
+              generationStatusText={generationStatusText}
+              generationProgress={generationProgress}
+              generationElapsed={generationElapsed}
+              onSwitchToCloud={() => {
+                setIsGenerating(false);
+                setSelectedStudioModel("nano-banana");
+                setGenerationStatusText("");
+              }}
             />
-
-            {/* Edit / Generation Instruction Prompt */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <label className="text-xs font-bold text-white">
-                  {studioMode === "generate" ? "Generation Prompt" : "Edit Prompt"}
-                </label>
-                <PromptActionButtons
-                  prompt={prompt}
-                  onUpdatePrompt={setPrompt}
-                  negativePrompt={negativePrompt}
-                  onUpdateNegativePrompt={setNegativePrompt}
-                  onEnhance={handleEnhancePrompt}
-                  isEnhancing={isEnhancingPrompt}
-                  showToast={showToast}
-                />
-              </div>
-              <textarea
-                rows={3}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="e.g. Turn the jacket into red leather, add cyberpunk neon highlights"
-                className="w-full bg-slate-900/90 border border-cyan-500/35 hover:border-cyan-400/70 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition"
-              />
-            </div>
-
-            {/* Negative Prompt */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <label className="text-xs font-semibold text-slate-300">Negative Prompt</label>
-                <PromptActionButtons
-                  prompt={prompt}
-                  onUpdatePrompt={setPrompt}
-                  negativePrompt={negativePrompt}
-                  onUpdateNegativePrompt={setNegativePrompt}
-                  isNegativeBar={true}
-                  showToast={showToast}
-                />
-              </div>
-              <input
-                type="text"
-                value={negativePrompt}
-                onChange={(e) => setNegativePrompt(e.target.value)}
-                placeholder="e.g. cartoon, anime, clay, silicon, plastic, doll, CGI, bad anatomy, blurry..."
-                className="w-full bg-slate-900/90 border border-slate-700/80 hover:border-cyan-500/40 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(6,182,212,0.2)] transition"
-              />
-            </div>
-
-            {/* ── LoRA Selection Dropdown & Dynamic GPU Fusing Hub ── */}
-            <div className="space-y-2.5 pt-2 border-t border-cyan-500/30">
-              <input
-                type="file"
-                ref={localLoraInputRef}
-                onChange={handleLocalLoraFileChange}
-                accept=".safetensors"
-                className="hidden"
-              />
-
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-purple-400" />
-                  LoRA Model Dropdown
-                </label>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => localLoraInputRef.current?.click()}
-                    disabled={isUploadingLocalLora || !isConnected}
-                    className="text-[11px] text-emerald-300 hover:text-emerald-200 flex items-center gap-1 transition font-bold disabled:opacity-40"
-                    title="Upload and fuse a locally downloaded .safetensors LoRA"
-                  >
-                    <FolderOpen className="w-3 h-3" />
-                    <span>Browse Locally</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("loras")}
-                    className="text-[11px] text-cyan-300 hover:text-white flex items-center gap-1 transition font-bold"
-                    title="Explore Civitai LoRAs"
-                  >
-                    <span>Civitai Hub</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Upload Progress Indicator */}
-              {isUploadingLocalLora && (
-                <div className="p-2.5 rounded-xl border border-emerald-500/80 bg-emerald-950/80 text-xs text-emerald-200 flex flex-col gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] animate-neon-emerald">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 font-bold">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-                      Uploading Local LoRA to GPU Storage...
-                    </span>
-                    <span className="font-mono font-bold text-emerald-300">{uploadProgress}%</span>
-                  </div>
-                  <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-emerald-400 to-cyan-400 h-1.5 rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(16,185,129,0.7)]"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* LoRA Dropdown Selector */}
-              <div className="relative">
-                <select
-                  value={selectedDropdownLora}
-                  onChange={(e) => handleSelectLoraFromDropdown(e.target.value)}
-                  className="w-full bg-slate-900/90 border border-purple-500/40 hover:border-purple-400 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-400 focus:shadow-[0_0_12px_rgba(168,85,247,0.3)] cursor-pointer font-medium"
-                >
-                  <option value="">
-                    {availableLoras.length === 0
-                      ? "-- No LoRAs in Vault (Click Browse Locally / Hub) --"
-                      : `-- Select LoRA to Fuse into GPU (${availableLoras.length} Available) --`}
-                  </option>
-                  {availableLoras.map((lora) => (
-                    <option key={lora.filename} value={lora.filename}>
-                      {lora.name} ({lora.size_mb} MB) {lora.is_active ? "⚡ [ACTIVE IN VRAM]" : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Fusing Status / Live Animation Message */}
-              {fusedStatusMessage && (
-                <div
-                  className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
-                    isFusingLora
-                      ? "bg-purple-950/80 border-purple-500/80 text-purple-200 shadow-[0_0_15px_rgba(168,85,247,0.35)] animate-neon-purple"
-                      : "bg-emerald-950/80 border-emerald-500/80 text-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.35)]"
-                  }`}
-                >
-                  {isFusingLora ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-400" />
-                  ) : (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  )}
-                  <span>{fusedStatusMessage}</span>
-                </div>
-              )}
-
-              {/* Active LoRA Cards */}
-              {activeLoras.length > 0 && (
-                <div className="space-y-2 mt-1">
-                  {activeLoras.map((lora, idx) => (
-                    <div key={idx} className="bg-black/75 border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.18)] p-2.5 rounded-xl space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-white truncate max-w-[180px]">{lora.name}</span>
-                        <button
-                          onClick={() => setActiveLoras((prev) => prev.filter((_, i) => i !== idx))}
-                          className="text-slate-400 hover:text-rose-400 transition"
-                          title="Remove from stack"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-300">Scale / Weight:</span>
-                        <span className="text-purple-300 font-mono font-bold drop-shadow-[0_0_6px_rgba(168,85,247,0.5)]">{lora.scale}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.0"
-                        max="2.0"
-                        step="0.05"
-                        value={lora.scale}
-                        onChange={(e) => {
-                          const newScale = parseFloat(e.target.value);
-                          setActiveLoras((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, scale: newScale } : item))
-                          );
-                        }}
-                        className="w-full accent-purple-400 h-1 bg-slate-800 rounded-lg cursor-pointer"
-                      />
-                    </div>
-                  ))}
-
-                  {/* Actions for Selected LoRAs */}
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      onClick={() => handleFuseLora(activeLoras)}
-                      disabled={isFusingLora || !isConnected || !isModelReady}
-                      title={!isModelReady && isConnected ? `GPU pipeline is warming up: ${modelStatusMessage}` : "Fuse selected LoRA into GPU"}
-                      className="flex-1 py-1.5 bg-gradient-to-r from-cyan-400 via-teal-300 to-purple-500 hover:from-cyan-300 hover:to-purple-400 text-black text-xs font-black rounded-lg transition shadow-[0_0_18px_rgba(6,182,212,0.4)] flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40"
-                    >
-                      {isFusingLora ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : !isModelReady && isConnected ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Zap className="w-3.5 h-3.5 fill-black" />
-                      )}
-                      <span>
-                        {isFusingLora
-                          ? "Fusing..."
-                          : !isModelReady && isConnected
-                          ? "Warming Up..."
-                          : "Fuse into GPU"}
-                      </span>
-                    </button>
-                    <button
-                      onClick={handleUnloadLoras}
-                      disabled={isFusingLora || !isConnected}
-                      title="Unload all LoRAs from GPU"
-                      className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold rounded-lg transition"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Sliders: True-CFG, Guidance, Steps */}
-            <div className="space-y-4 pt-2 border-t border-cyan-500/30">
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-white font-medium">Qwen True-CFG Scale</span>
-                  <span className="font-bold text-cyan-300 drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]">{trueCfgScale}</span>
-                </div>
-                <input
-                  type="range"
-                  min="1.0"
-                  max="8.0"
-                  step="0.5"
-                  value={trueCfgScale}
-                  onChange={(e) => setTrueCfgScale(parseFloat(e.target.value))}
-                  className="w-full accent-cyan-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-white font-medium">Guidance Scale</span>
-                  <span className="font-bold text-cyan-300 drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]">{guidanceScale}</span>
-                </div>
-                <input
-                  type="range"
-                  min="1.0"
-                  max="10.0"
-                  step="0.1"
-                  value={guidanceScale}
-                  onChange={(e) => setGuidanceScale(parseFloat(e.target.value))}
-                  className="w-full accent-cyan-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-white font-medium">Inference Steps</span>
-                  <div className="flex items-center gap-1.5">
-                    {steps === 4 && (
-                      <span className="text-[10px] bg-emerald-500/25 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold border border-emerald-400/60 shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                        ⚡ Rapid (13-25s)
-                      </span>
-                    )}
-                    <span className="font-bold text-cyan-300 drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]">{steps}</span>
-                  </div>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="50"
-                  step="1"
-                  value={steps}
-                  onChange={(e) => setSteps(parseInt(e.target.value))}
-                  className="w-full accent-cyan-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
-                />
-                {/* Step Quick Presets */}
-                <div className="grid grid-cols-4 gap-1.5 mt-2">
-                  {[
-                    { s: 4, label: "⚡ 4 Steps", sub: "15-25s" },
-                    { s: 6, label: "6 Steps", sub: "Balanced" },
-                    { s: 8, label: "8 Steps", sub: "High" },
-                    { s: 12, label: "12 Steps", sub: "Max" },
-                  ].map((preset) => (
-                    <button
-                      key={preset.s}
-                      type="button"
-                      onClick={() => setSteps(preset.s)}
-                      className={`py-1 px-1 rounded text-center border transition-all ${
-                        steps === preset.s
-                          ? "bg-cyan-500/25 border-cyan-400 text-cyan-200 font-extrabold shadow-[0_0_15px_rgba(6,182,212,0.4)]"
-                          : "bg-slate-900/80 border-slate-800 text-slate-300 hover:border-cyan-500/40 hover:text-white"
-                      }`}
-                    >
-                      <div className="text-[11px] font-bold leading-tight">{preset.label}</div>
-                      <div className="text-[9px] text-cyan-300/70 leading-tight">{preset.sub}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-2 pt-1">
-                <label className="text-xs text-white font-medium">Seed</label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    placeholder="Random"
-                    value={seed}
-                    onChange={(e) => setSeed(e.target.value === "" ? "" : parseInt(e.target.value))}
-                    className="w-24 bg-slate-900/90 border border-slate-700/80 rounded-lg px-2 py-1 text-xs text-white focus:border-cyan-400 focus:outline-none"
-                  />
-                  <button
-                    onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
-                    className="px-2 py-1 bg-slate-900 hover:bg-cyan-950 border border-cyan-500/30 text-xs rounded-lg text-cyan-300 transition"
-                  >
-                    🎲
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Action Buttons Row: Smaller, Equal-Sized Consistency (UI-UX-PRO-MAX) ── */}
-            <div className="flex items-center gap-2 pt-2 border-t border-cyan-500/30">
-              <button
-                onClick={handleGenerate}
-                disabled={
-                  isGenerating ||
-                  (selectedStudioModel === "kaggle-gpu" && (!originalImage || !isConnected)) ||
-                  (studioMode === "edit" && !originalImage && selectedStudioModel !== "kaggle-gpu")
+          }
+          canvasWorkspace={
+            <CanvasWorkspace
+              originalImage={originalImage}
+              editedImage={editedImage}
+              studioMode={studioMode}
+              onUploadImage={handleImageUpload}
+              onSendResultToInput={() => {
+                if (editedImage) {
+                  setOriginalImage(editedImage);
+                  setEditedImage(null);
+                  showToast("Result sent to input for iterative refinement!", "success");
                 }
-                className={`flex-1 h-9 px-3.5 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition active:scale-95 ${
-                  isGenerating ||
-                  (selectedStudioModel === "kaggle-gpu" && (!originalImage || !isConnected)) ||
-                  (studioMode === "edit" && !originalImage && selectedStudioModel !== "kaggle-gpu")
-                    ? "bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800"
-                    : "bg-gradient-to-r from-cyan-400 via-teal-300 to-fuchsia-500 hover:from-cyan-300 hover:via-teal-200 hover:to-fuchsia-400 text-black shadow-[0_0_25px_rgba(6,182,212,0.55)] hover:shadow-[0_0_35px_rgba(236,72,153,0.7)] animate-neon-button"
-                }`}
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-black" />
-                    <span>Processing...</span>
-                  </>
-                ) : studioMode === "generate" ? (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5 fill-black" />
-                    <span>Generate Image</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-3.5 h-3.5 fill-black" />
-                    <span>Apply Image Edit</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleEnhancePrompt}
-                disabled={isEnhancingPrompt || !prompt.trim()}
-                title="AI Enhance Prompt"
-                className="h-9 px-3 bg-cyan-950/70 hover:bg-cyan-900/80 border border-cyan-500/60 text-cyan-200 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.25)] transition active:scale-95 disabled:opacity-40"
-              >
-                <Sparkles className={`w-3.5 h-3.5 ${isEnhancingPrompt ? "animate-spin text-cyan-400" : "fill-cyan-400"}`} />
-                <span>{isEnhancingPrompt ? "..." : "Enhance"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
-                title="Randomize seed"
-                className="h-9 px-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1 transition"
-              >
-                <span>🎲</span>
-                <span>Seed</span>
-              </button>
-            </div>
-
-            {/* Progress Bar & Status */}
-            {isGenerating && (
-              <div className="bg-black/80 border border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.2)] p-3 rounded-xl space-y-2 animate-neon-cyan">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-cyan-300 font-bold truncate flex-1 min-w-0 pr-2">{generationStatusText}</span>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-emerald-300 text-[11px] font-mono font-bold">{generationElapsed}s</span>
-                    <span className="text-white font-mono font-extrabold">{generationProgress}%</span>
-                  </div>
-                </div>
-                <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden p-0.5 border border-cyan-500/30">
-                  <div
-                    className="bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-500 h-full rounded-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(6,182,212,0.8)]"
-                    style={{ width: `${Math.max(4, Math.min(100, generationProgress))}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[11px] text-cyan-300/80">
-                  <span>{steps <= 4 ? "⚡ Rapid 4-Step Pipeline (~15-25s)" : "Standard DiT Pipeline"}</span>
-                  <span>{generationElapsed > 0 ? `${generationElapsed}s elapsed` : "Starting..."}</span>
-                </div>
-                {generationElapsed > 45 && (
-                  <div className="pt-1.5 border-t border-amber-500/30 flex items-center justify-between text-[11px] text-amber-300">
-                    <span className="truncate pr-2">GPU taking longer than expected (~45s+).</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsGenerating(false);
-                        setSelectedStudioModel("nano-banana");
-                        setGenerationStatusText("");
-                      }}
-                      className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/60 rounded text-[10px] font-bold text-amber-200 transition-colors flex-shrink-0"
-                    >
-                      ⚡ Switch to Cloud AI
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
-
-          {/* Center: Canvas & Image Comparison (5 cols) */}
-          <section className="lg:col-span-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between bg-slate-950/85 border border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.18)] px-4 py-2.5 rounded-xl">
-              <span className="text-xs sm:text-sm font-black text-white flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-purple-400 animate-pulse" />
-                Canvas Preview
-              </span>
-              <div className="flex items-center gap-1 bg-black/80 p-1 rounded-lg border border-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.15)]">
-                <button
-                  onClick={() => setViewMode("result")}
-                  className={`px-3 py-1 text-xs rounded-md font-black transition ${
-                    viewMode === "result" ? "bg-gradient-to-r from-cyan-400 to-teal-400 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]" : "text-slate-300 hover:text-white"
-                  }`}
-                >
-                  Result
-                </button>
-                <button
-                  onClick={() => setViewMode("original")}
-                  className={`px-3 py-1 text-xs rounded-md font-black transition ${
-                    viewMode === "original" ? "bg-gradient-to-r from-cyan-400 to-teal-400 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]" : "text-slate-300 hover:text-white"
-                  }`}
-                >
-                  Original
-                </button>
-              </div>
-            </div>
-
-            {/* Main Visual Display */}
-            <div className="flex-1 bg-slate-950/90 border-2 border-purple-500/45 hover:border-purple-400/80 shadow-[0_0_30px_rgba(168,85,247,0.2)] hover:shadow-[0_0_45px_rgba(168,85,247,0.35)] rounded-2xl flex flex-col items-center justify-center min-h-[420px] relative overflow-hidden group transition-all duration-300">
-              {viewMode === "result" && editedImage ? (
-                <img src={editedImage} alt="Edited result" className="max-h-[460px] w-auto object-contain rounded-xl shadow-[0_0_35px_rgba(0,0,0,0.8)]" />
-              ) : originalImage ? (
-                <img src={originalImage} alt="Source upload" className="max-h-[460px] w-auto object-contain rounded-xl shadow-[0_0_35px_rgba(0,0,0,0.8)]" />
-              ) : studioMode === "generate" ? (
-                <div className="flex flex-col items-center gap-3 p-8 text-center max-w-sm">
-                  <div className="p-4 bg-purple-500/15 border border-purple-400/60 rounded-full text-purple-300 shadow-[0_0_25px_rgba(168,85,247,0.35)] animate-neon-purple">
-                    <Sparkles className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-white">Text-to-Image Generation Mode</p>
-                    <p className="text-xs text-purple-200/80 mt-1">
-                      Type your creative prompt and click &quot;Generate Image&quot; below. No source image required!
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-cyan-400/60 hover:border-cyan-300 hover:shadow-[0_0_30px_rgba(6,182,212,0.35)] bg-cyan-950/25 rounded-2xl cursor-pointer transition-all duration-300"
-                >
-                  <div className="p-4 bg-slate-900 rounded-full text-cyan-400 group-hover:text-white shadow-[0_0_15px_rgba(6,182,212,0.3)] transition">
-                    <Upload className="w-8 h-8" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-black text-white">Upload source image</p>
-                    <p className="text-xs text-cyan-300/80 mt-0.5">PNG, JPG or WebP (max 10MB)</p>
-                  </div>
-                </div>
-              )}
-
-              <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-
-              {/* Quick Actions overlay */}
-              {editedImage && (
-                <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-black/85 backdrop-blur-md p-1.5 rounded-xl border border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
-                  <a
-                    href={editedImage}
-                    download="qwen_masterpiece.png"
-                    className="p-2 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-black font-bold rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.5)] transition"
-                    title="Download Image"
-                  >
-                    <Download className="w-4 h-4" />
-                  </a>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Right: LoRA Vault & Quick Downloader (3 cols) */}
-          <section className="lg:col-span-3 flex flex-col gap-5 bg-slate-950/85 border border-emerald-500/40 shadow-[0_0_25px_rgba(16,185,129,0.18)] hover:shadow-[0_0_35px_rgba(16,185,129,0.28)] p-5 rounded-2xl transition-all duration-300">
-            <div className="flex items-center justify-between border-b border-emerald-500/30 pb-3">
-              <span className="text-sm sm:text-base font-black flex items-center gap-2 text-white">
-                <Database className="w-4 h-4 text-emerald-400 animate-pulse" /> Vault LoRAs ({availableLoras.length})
-              </span>
-              <button
-                onClick={() => setActiveTab("loras")}
-                className="text-[11px] text-emerald-300 hover:text-white font-bold drop-shadow-[0_0_6px_rgba(16,185,129,0.4)]"
-              >
-                Browse Hub &rarr;
-              </button>
-            </div>
-
-            {/* Browse & Upload Local LoRA */}
-            <button
-              onClick={() => localLoraInputRef.current?.click()}
-              disabled={isUploadingLocalLora || !isConnected}
-              className="w-full py-2 px-3 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-400/80 rounded-xl text-xs font-bold text-emerald-200 flex items-center justify-center gap-2 transition shadow-[0_0_15px_rgba(16,185,129,0.25)] active:scale-95 disabled:opacity-40"
-              title="Upload a .safetensors LoRA from local storage to Vault"
-            >
-              <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Browse Local LoRA (.safetensors)</span>
-            </button>
-
-            {/* Quick Civitai URL Downloader */}
-            <div className="space-y-2 bg-black/75 p-3 rounded-xl border border-emerald-500/35 shadow-[0_0_15px_rgba(16,185,129,0.12)]">
-              <span className="text-xs font-bold text-white">Quick URL Download</span>
-              <input
-                type="text"
-                placeholder="Paste Civitai / Civitai.red URL or ID"
-                value={civitaiUrl}
-                onChange={(e) => setCivitaiUrl(e.target.value)}
-                className="w-full bg-slate-900/90 border border-slate-700/80 hover:border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:shadow-[0_0_10px_rgba(16,185,129,0.3)] transition"
-              />
-              <input
-                type="text"
-                placeholder="Custom Name (optional)"
-                value={loraCustomName}
-                onChange={(e) => setLoraCustomName(e.target.value)}
-                className="w-full bg-slate-900/90 border border-slate-700/80 hover:border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:shadow-[0_0_10px_rgba(16,185,129,0.3)] transition"
-              />
-              <button
-                onClick={handleQuickDownloadLora}
-                disabled={!civitaiUrl || !isConnected || isDownloadingLora}
-                className={`w-full py-1.5 text-xs font-extrabold rounded-lg flex items-center justify-center gap-1.5 transition ${
-                  !civitaiUrl || !isConnected || isDownloadingLora
-                    ? "bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800"
-                    : "bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-black shadow-[0_0_20px_rgba(16,185,129,0.45)]"
-                }`}
-              >
-                {isDownloadingLora ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                Download to Google Drive
-              </button>
-            </div>
-
-            {/* Downloaded LoRAs in Vault */}
-            <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[380px] pr-1">
-              <span className="text-[11px] font-bold text-emerald-300/80 uppercase tracking-wider">
-                Google Drive Cached LoRAs
-              </span>
-              {availableLoras.length === 0 ? (
-                <div className="text-center p-4 border border-dashed border-slate-800 rounded-xl space-y-2">
-                  <Layers className="w-6 h-6 text-slate-600 mx-auto" />
-                  <p className="text-xs text-slate-400">No LoRAs in Vault yet.</p>
-                  <button
-                    onClick={() => setActiveTab("loras")}
-                    className="text-xs text-emerald-400 hover:underline font-bold"
-                  >
-                    Open Civitai.red Hub &rarr;
-                  </button>
-                </div>
-              ) : (
-                availableLoras.map((lora, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-black/75 border border-slate-800 hover:border-emerald-500/60 hover:shadow-[0_0_15px_rgba(16,185,129,0.25)] p-2.5 rounded-xl space-y-1.5 transition"
-                  >
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-white truncate max-w-[150px]">{lora.name}</span>
-                      <span className="text-[10px] text-emerald-300/90 font-mono font-bold">{lora.size_mb} MB</span>
-                    </div>
-
-                    {lora.trigger_words && (
-                      <p className="text-[10px] text-cyan-300/90 truncate font-mono">
-                        Trigger: {lora.trigger_words}
-                      </p>
-                    )}
-
-                    <div className="flex items-center gap-1.5 pt-1">
-                      <button
-                        onClick={() => handleSelectLoraFromDropdown(lora.filename)}
-                        className="flex-1 py-1 bg-slate-900 hover:bg-emerald-950/70 border border-slate-700 hover:border-emerald-500/50 text-slate-200 hover:text-emerald-200 text-[11px] rounded-lg font-bold transition"
-                      >
-                        + Add to Stack
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-        </main>
+              }}
+              onMaskChange={setInpaintMask}
+              fileInputRef={fileInputRef}
+              isGenerating={isGenerating}
+              generationProgress={generationProgress}
+            />
+          }
+          historyRibbon={
+            <HistoryRibbon
+              gallery={gallery}
+              activeImage={editedImage || originalImage}
+              onSelectImage={(img) => {
+                setEditedImage(img);
+                setViewMode("result");
+              }}
+              onSendToInput={(img) => {
+                setOriginalImage(img);
+                setEditedImage(null);
+                showToast("Image sent to input for iterative refinement!", "success");
+              }}
+              onClearHistory={() => setGallery([])}
+            />
+          }
+        />
       )}
+
+      {/* Hidden LoRA File Input for Local Safetensors */}
+      <input
+        type="file"
+        ref={localLoraInputRef}
+        onChange={handleLocalLoraFileChange}
+        accept=".safetensors"
+        className="hidden"
+      />
+
+      {/* ── LoRA Studio & Multi-Stack Manager Modal ── */}
+      <LoraModal
+        isOpen={isLoraModalOpen}
+        onClose={() => setIsLoraModalOpen(false)}
+        availableLoras={availableLoras}
+        activeLoras={activeLoras}
+        onToggleLora={handleToggleLoraInStack}
+        onUpdateLoraScale={handleUpdateLoraScale}
+        onInjectTriggers={handleInjectTriggers}
+        onFuseLoras={() => handleFuseLora(activeLoras)}
+        onUnloadLoras={handleUnloadLoras}
+        isFusing={isFusingLora}
+        isModelReady={isModelReady}
+        isConnected={isConnected}
+        onBrowseLocal={() => localLoraInputRef.current?.click()}
+        isUploadingLocal={isUploadingLocalLora}
+        uploadProgress={uploadProgress}
+        civitaiUrl={civitaiUrl}
+        setCivitaiUrl={setCivitaiUrl}
+        loraCustomName={loraCustomName}
+        setLoraCustomName={setLoraCustomName}
+        onQuickDownload={handleQuickDownloadLora}
+        isDownloading={isDownloadingLora}
+        onOpenCivitaiHub={() => {
+          setIsLoraModalOpen(false);
+          setActiveTab("loras");
+        }}
+      />
 
       {/* ── Agentic AI Health Guardian Floating Modal & Doctor ── */}
       <AgenticHealthGuardianModal
