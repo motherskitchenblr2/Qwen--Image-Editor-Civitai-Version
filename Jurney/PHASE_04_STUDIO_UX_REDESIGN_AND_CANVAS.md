@@ -220,22 +220,24 @@ flowchart TD
 
 ---
 
-## 9. Viewport Lock (100dvh) & Canvas Auto-Centering (Ponytail Lazy Senior Optimization)
+## 9. Viewport Lock (100dvh) & Canvas Auto-Centering (Studio Workspace Final Polish)
 
 ### 9.1 Lock Workspace to Dynamic Viewport Height (100dvh)
-- **Component**: `StudioLayout.tsx`
+- **Component**: `StudioLayout.tsx` & `app/page.tsx`
 - **Enhancement**:
   - Replaced loose `min-h-[...]` with strict viewport clamp:
     `h-[calc(100dvh-64px)] w-full grid grid-cols-1 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] overflow-hidden px-4 py-2 gap-4`
+  - In `app/page.tsx`: Set `h-[100dvh] max-h-[100dvh] overflow-hidden` when in studio tab and `shrink-0` on header to guarantee zero outer window scrolling.
   - Guarantees neither the page nor the right panel vertically stretches past the screen boundary at 100%, 62%, or high-DPI zoom levels.
 - **Left Sidebar**:
-  - `w-full order-2 lg:order-1 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 pr-2 space-y-4 pb-12`
+  - `w-full order-2 lg:order-1 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 pr-2 space-y-4 pb-8`
 
 ### 9.2 Canvas Stage Auto-Centering & Sizing
 - **Component**: `CanvasWorkspace.tsx`
 - **Enhancement**:
   - Root container: `h-full flex flex-col justify-between overflow-hidden bg-[#050811] rounded-xl border border-slate-800/60 select-none`.
-  - Canvas stage viewport: `flex-1 min-h-0 relative overflow-hidden flex items-center justify-center p-4 shadow-[inset_0_0_50px_rgba(0,0,0,0.85)] group`.
-  - Dropzone card sizing: `w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40`.
+  - Canvas stage viewport: `flex-1 min-h-0 relative overflow-hidden flex items-center justify-center p-6 shadow-[inset_0_0_50px_rgba(0,0,0,0.85)] group`.
+  - Dropzone card sizing: `w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40 hover:border-cyan-500/60 transition-all cursor-pointer`.
+  - History ribbon hugs the bottom of the viewport directly below the canvas stage without generating empty black dead space.
 
 

@@ -456,7 +456,7 @@ export default function CanvasWorkspace({
       {/* ── Main Canvas Viewport ── */}
       <div
         ref={containerRef}
-        className="flex-1 min-h-0 relative overflow-hidden flex items-center justify-center p-4 shadow-[inset_0_0_50px_rgba(0,0,0,0.85)] group"
+        className="flex-1 min-h-0 relative overflow-hidden flex items-center justify-center p-6 shadow-[inset_0_0_50px_rgba(0,0,0,0.85)] group"
       >
         {/* Hidden File Input */}
         <input
@@ -584,7 +584,7 @@ export default function CanvasWorkspace({
           </div>
         ) : studioMode === "generate" ? (
           /* Empty State: Text-to-Image Generation Mode */
-          <div className="w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40">
+          <div className="w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40 hover:border-cyan-500/60 transition-all cursor-pointer">
             <div className="p-3.5 bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 border border-cyan-400/60 rounded-2xl text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.35)] mb-3 animate-pulse">
               <Sparkles className="w-8 h-8" />
             </div>
@@ -599,10 +599,10 @@ export default function CanvasWorkspace({
           /* Empty State: Image-to-Image Edit Mode (Upload Dropzone) */
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40 hover:border-cyan-500/50 hover:bg-slate-900/50 transition-all cursor-pointer group/drop"
+            className="w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40 hover:border-cyan-500/60 transition-all cursor-pointer"
           >
-            <div className="p-3.5 bg-slate-900/90 border border-cyan-500/30 rounded-2xl text-cyan-400 group-hover/drop:text-white group-hover/drop:border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all mb-3">
-              <Upload className="w-8 h-8 group-hover/drop:scale-110 transition-transform" />
+            <div className="p-3.5 bg-slate-900/90 border border-cyan-500/30 rounded-2xl text-cyan-400 group-hover:text-white group-hover:border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all mb-3">
+              <Upload className="w-8 h-8 group-hover:scale-110 transition-transform" />
             </div>
             <div className="space-y-1 max-w-sm">
               <p className="text-sm font-black text-white">Upload source image to begin editing</p>
@@ -616,7 +616,7 @@ export default function CanvasWorkspace({
             <div className="mt-4">
               <button
                 type="button"
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-500/20 group-hover/drop:shadow-cyan-500/40 transition active:scale-[0.99] flex items-center gap-2 pointer-events-none"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition active:scale-[0.99] flex items-center gap-2 pointer-events-none"
               >
                 <FolderOpen className="w-4 h-4" />
                 <span>Browse or Drag Image Here</span>
