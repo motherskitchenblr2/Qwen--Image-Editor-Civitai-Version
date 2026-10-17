@@ -296,7 +296,7 @@ export default function CanvasWorkspace({
   return (
     <div className="h-full flex flex-col justify-between overflow-hidden bg-[#050811] rounded-xl border border-slate-800/60 select-none">
       {/* ── Top Workspace Toolbar (Aligned with Mode Switch) ── */}
-      <div className="min-h-[48px] h-12 flex items-center justify-between gap-2 pt-2 px-3 sm:px-4 bg-slate-950/85 border-b border-cyan-500/35 shrink-0">
+      <div className="min-h-[50px] flex items-center justify-between gap-2 pt-3 px-3 pb-1 sm:px-4 bg-slate-950/85 border-b border-cyan-500/35 shrink-0">
         {/* Left: View Mode Toggles */}
         <div className="flex items-center gap-1 bg-black/80 p-1 rounded-xl border border-cyan-500/30">
           {originalImage && editedImage && (

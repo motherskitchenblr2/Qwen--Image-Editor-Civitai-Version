@@ -262,4 +262,30 @@ flowchart TD
 - **Enhancement**:
   - Elevated "Upload an image to enable editing" helper note from low-visibility `text-[11px]` to `text-slate-400 text-xs font-medium text-center` for crisp readability on mobile OLED screens.
 
+---
+
+## 11. Mobile Portrait Refinement: Header Headroom, Session History Reordering & High-Contrast Typography
+
+### 11.1 Top Canvas Header Spacing (`CanvasWorkspace.tsx`)
+- **Root Cause**: On mobile portrait viewports with notch cutouts, dynamic islands, or browser URL address bars, toolbar controls (`[Result] [Original]`, zoom toggles) were touching the top border of the canvas wrapper.
+- **Resolution**:
+  - Replaced fixed `min-h-[48px] h-12 pt-2 px-3 sm:px-4` with dynamic `min-h-[50px] pt-3 px-3 pb-1 sm:px-4`.
+  - Provides 12px of top breathing room (`pt-3`) and 4px bottom padding (`pb-1`), preventing touch target collisions and eliminating status bar bleed.
+
+### 11.2 Mobile Session History Reordering (`StudioLayout.tsx`)
+- **Root Cause**: In the mobile single-column DOM structure, `<main>` (`order-1`) rendered both `{canvasWorkspace}` and `{historyRibbon}` before `<aside>` (`order-2`, `{controlPanel}`). This caused the initial "Session History - 0 Items" bar to sit awkwardly wedged between the image canvas and the `Generate / Edit` mode toggle.
+- **Resolution**:
+  - Separated the mobile and desktop display slots of `{historyRibbon}`:
+    - **Desktop (`hidden lg:block`)**: Remains at the bottom of `<main>` beneath `{canvasWorkspace}`.
+    - **Mobile (`lg:hidden`)**: Rendered inside `<aside>` beneath `{controlPanel}` (`pt-3 border-t border-slate-800/60`).
+  - Increased mobile aside bottom padding to `pb-28 lg:pb-8` so the reordered history bar and controls scroll cleanly above the sticky mobile action dock with zero overlap.
+  - As a result, on mobile portrait viewports, the `Generate / Edit` mode switcher and prompt box sit directly beneath the canvas dropzone without any intervening dividers.
+
+### 11.3 High-Contrast CTA Helper Subtext & History Metadata
+- **Components**: `ControlPanel.tsx`, `HistoryRibbon.tsx`
+- **Resolution**:
+  - Ensured the disabled helper text `"Upload an image to enable editing"` is explicitly styled with `text-slate-400 text-xs font-medium text-center` in both the desktop action container and the sticky mobile bottom dock.
+  - Upgraded the empty session history subtext in `HistoryRibbon.tsx` from `text-slate-500` to `text-slate-400 font-medium` to ensure WCAG AA compliant contrast against the deep `#050811` OLED theme.
+
+
 

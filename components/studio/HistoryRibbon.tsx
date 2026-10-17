@@ -57,7 +57,7 @@ export default function HistoryRibbon({
           <div className="flex items-center gap-2">
             <History className="w-3.5 h-3.5 text-cyan-400/70" />
             <span className="font-semibold text-slate-300">Session History</span>
-            <span className="text-[11px] text-slate-500">
+            <span className="text-[11px] text-slate-400 font-medium">
               Outputs will appear here for instant 1-click rollback, branching, and comparison.
             </span>
           </div>
