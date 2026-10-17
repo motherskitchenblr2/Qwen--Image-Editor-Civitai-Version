@@ -287,5 +287,32 @@ flowchart TD
   - Ensured the disabled helper text `"Upload an image to enable editing"` is explicitly styled with `text-slate-400 text-xs font-medium text-center` in both the desktop action container and the sticky mobile bottom dock.
   - Upgraded the empty session history subtext in `HistoryRibbon.tsx` from `text-slate-500` to `text-slate-400 font-medium` to ensure WCAG AA compliant contrast against the deep `#050811` OLED theme.
 
+---
+
+## 12. Viewport-Frozen Navigation Header Bar & Document Flow Preservation
+
+### 12.1 Header Freezing (`app/page.tsx`)
+- **Root Cause**:
+  - The previous header utilized `position: sticky; top: 0;`.
+  - In CSS, `position: sticky` fails to stick to the viewport whenever parent or ancestor elements (`html, body`) have `overflow-x: hidden` or an internal overflow clipping context, which is common in mobile Chromium and WebKit.
+  - In views where page content scrolls vertically (Gallery, LoRA Hub, AI Generators, Sentinel, and mobile Studio), the header was moving upward with the scroll instead of staying locked at the top of the viewport.
+- **Resolution**:
+  - Converted the header from `sticky top-0` to `fixed top-0 left-0 right-0 z-50`.
+  - Added a matching flow spacer directly beneath `<header>`: `<div className="h-14 sm:h-16 shrink-0" aria-hidden="true" />` (56px mobile, 64px desktop).
+  - Guarantees the header is permanently frozen at the top of the screen regardless of how deep the user scrolls or which tab is active.
+  - Sub-views, cards, and canvas content scroll cleanly beneath the blurred frosted-glass header (`backdrop-blur-2xl bg-slate-950/95`).
+
+### 12.2 Modern Overflow Clipping (`app/globals.css`)
+- **Enhancement**:
+  - Replaced `overflow-x: hidden` on `html, body` with `overflow-x: clip`.
+  - Prevents horizontal viewport scrolling without establishing an accidental overflow scroll context.
+
+### 12.3 Viewport-Bound Responsive Studio Layout (`StudioLayout.tsx`)
+- **Enhancement**:
+  - Updated root workspace wrapper to `flex-1 min-h-0 w-full grid grid-cols-1 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] overflow-y-auto lg:overflow-hidden px-4 py-2 gap-4`.
+  - On desktop (`lg:`): The workspace remains locked to `100dvh` viewport height with zero page scroll; the left sidebar scrolls independently.
+  - On mobile (`<lg`): Smooth vertical scrolling is enabled through `overflow-y-auto`, while the header bar remains permanently frozen at the top and the action bar remains pinned at the bottom.
+
+
 
 

@@ -14,7 +14,7 @@ export default function StudioLayout({
   historyRibbon,
 }: StudioLayoutProps) {
   return (
-    <div className="h-[calc(100dvh-64px)] w-full grid grid-cols-1 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] overflow-hidden px-4 py-2 gap-4 animate-fadeIn">
+    <div className="flex-1 min-h-0 w-full grid grid-cols-1 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] overflow-y-auto lg:overflow-hidden px-4 py-2 gap-4 animate-fadeIn">
       {/* Left Column (ControlPanel): Mobile sits below canvas (order-2), Desktop sits in left column (order-1) */}
       <aside className="w-full order-2 lg:order-1 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 pr-2 space-y-4 pb-28 lg:pb-8">
         {controlPanel}

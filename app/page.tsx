@@ -1154,8 +1154,8 @@ export default function ImageEditorStudio() {
 
   return (
     <div className={`flex flex-col ${activeTab === "studio" ? "h-[100dvh] max-h-[100dvh] overflow-hidden" : "min-h-screen"} bg-transparent text-slate-100 font-sans selection:bg-cyan-500 selection:text-black relative ${theme === "day" ? "theme-day" : "theme-night"}`}>
-      {/* ── Top Unified Header Bar ────────────────────────────── */}
-      <header className="border-b border-cyan-500/30 bg-slate-950/95 backdrop-blur-2xl px-4 lg:px-8 py-2.5 sticky top-0 z-50 shadow-[0_4px_30px_rgba(6,182,212,0.15)] w-full shrink-0">
+      {/* ── Top Unified Header Bar (Frozen at Top of Viewport) ── */}
+      <header className="border-b border-cyan-500/30 bg-slate-950/95 backdrop-blur-2xl px-4 lg:px-8 py-2.5 fixed top-0 left-0 right-0 z-50 shadow-[0_4px_30px_rgba(6,182,212,0.15)] w-full">
         <div className="w-full flex items-center justify-between gap-3 lg:gap-6">
           {/* Left: Brand Identity */}
           <div className="flex items-center gap-3 shrink-0">
@@ -1413,6 +1413,9 @@ export default function ImageEditorStudio() {
           </div>
         )}
       </header>
+
+      {/* Header spacer: preserves natural document flow height beneath frozen header */}
+      <div className="h-14 sm:h-16 shrink-0" aria-hidden="true" />
 
       {/* Booting Notification Banner */}
       {bootMessage && (
