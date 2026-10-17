@@ -598,12 +598,12 @@ export default function CanvasWorkspace({
           /* Empty State: Image-to-Image Edit Mode (Upload Dropzone) */
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center gap-4 p-8 border-2 border-dashed border-cyan-500/40 hover:border-cyan-400 bg-cyan-950/15 hover:bg-cyan-950/30 rounded-3xl cursor-pointer transition-all duration-300 max-w-md text-center shadow-[0_0_30px_rgba(6,182,212,0.1)] hover:shadow-[0_0_40px_rgba(6,182,212,0.3)]"
+            className="w-full max-w-xl h-80 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/40 hover:border-cyan-500/50 hover:bg-slate-900/60 transition-all cursor-pointer shadow-lg group/drop"
           >
-            <div className="p-4 bg-slate-900 rounded-2xl text-cyan-400 group-hover:text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] transition">
+            <div className="p-4 bg-slate-900/90 rounded-2xl text-cyan-400 group-hover/drop:text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] transition mb-3">
               <Upload className="w-8 h-8" />
             </div>
-            <div>
+            <div className="text-center px-4">
               <p className="text-sm font-black text-white">Upload source image to begin editing</p>
               <p className="text-xs text-cyan-300/80 mt-1">
                 Drag and drop or click here (PNG, JPG, WebP up to 10MB)

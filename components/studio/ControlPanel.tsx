@@ -485,29 +485,40 @@ export default function ControlPanel({
         <button
           onClick={handleGenerate}
           disabled={isGenerateDisabled}
-          className={`w-full h-11 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition active:scale-98 ${
+          title={
+            studioMode === "edit" && !originalImage
+              ? "Upload an image to enable editing"
+              : undefined
+          }
+          className={`w-full h-11 px-4 rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 transition ${
             isGenerateDisabled
               ? "bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800"
-              : "bg-gradient-to-r from-cyan-400 via-teal-300 to-fuchsia-500 hover:from-cyan-300 hover:via-teal-200 hover:to-fuchsia-400 text-black shadow-[0_0_25px_rgba(6,182,212,0.6)] hover:shadow-[0_0_35px_rgba(236,72,153,0.8)] animate-neon-button"
+              : "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/20 active:scale-[0.99]"
           }`}
         >
           {isGenerating ? (
             <>
-              <RefreshCw className="w-4 h-4 animate-spin text-black" />
+              <RefreshCw className="w-4 h-4 animate-spin text-white" />
               <span>Synthesizing Diffusion...</span>
             </>
           ) : studioMode === "generate" ? (
             <>
-              <Sparkles className="w-4 h-4 fill-black" />
+              <Sparkles className="w-4 h-4 fill-current" />
               <span>Generate Image</span>
             </>
           ) : (
             <>
-              <Zap className="w-4 h-4 fill-black" />
+              <Zap className="w-4 h-4 fill-current" />
               <span>Apply Image Edit</span>
             </>
           )}
         </button>
+
+        {studioMode === "edit" && !originalImage && (
+          <p className="text-[11px] text-slate-400 text-center font-medium">
+            Upload an image to enable editing
+          </p>
+        )}
 
         {/* Progress Bar & Status */}
         {isGenerating && (

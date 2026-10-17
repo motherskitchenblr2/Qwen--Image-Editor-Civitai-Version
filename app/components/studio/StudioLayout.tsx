@@ -16,7 +16,7 @@ export default function StudioLayout({
   return (
     <div className="w-full min-h-[calc(100vh-64px)] grid grid-cols-1 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] gap-6 px-4 lg:px-8 py-4 animate-fadeIn">
       {/* Left Column (ControlPanel): Sticky/Scrollable on Desktop */}
-      <aside className="w-full lg:max-h-[calc(100vh-80px)] lg:overflow-y-auto pr-2 flex flex-col gap-4 no-scrollbar">
+      <aside className="w-full h-[calc(100vh-64px)] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 pr-2 pb-8 flex flex-col gap-4">
         {controlPanel}
       </aside>
 

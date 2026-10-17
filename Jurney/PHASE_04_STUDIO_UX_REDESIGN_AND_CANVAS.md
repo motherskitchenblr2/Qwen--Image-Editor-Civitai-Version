@@ -142,3 +142,22 @@ flowchart TD
 - [x] **Production Build**: `npm run build` compiled 12/12 routes cleanly with Next.js 15.5.
 - [x] **Code Reduction**: Decoupled `app/page.tsx` by over 650 lines of monolithic code into clean, isolated modules.
 - [x] **Git Checkpoint**: Committed to `feature/studio-modern-redesign` under hash `4256ecb`.
+
+---
+
+## 6. Studio Polish Pass & Viewport Optimization
+
+### 6.1 Expanded Empty State Canvas Dropzone
+- **Component**: `CanvasWorkspace.tsx`
+- **Enhancement**: Replaced compact empty placeholder with an expanded, high-visibility dashed dropzone (`max-w-xl h-80 border-2 border-dashed border-slate-700/80 rounded-2xl bg-slate-900/40 hover:border-cyan-500/50 hover:bg-slate-900/60 transition-all cursor-pointer`) giving users an immediate, tactile drag-and-drop target.
+
+### 6.2 Primary CTA Accessibility & Visual Hierarchy
+- **Component**: `ControlPanel.tsx`
+- **Enhancements**:
+  - **Electric Gradient**: Enabled state styled with `bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/20 active:scale-[0.99]`.
+  - **Contextual Tooltip & Helper Note**: When in Edit mode with no image uploaded, the button displays a native `title="Upload an image to enable editing"` tooltip alongside a subtle helper message (`<p className="text-[11px] text-slate-400 text-center font-medium">Upload an image to enable editing</p>`).
+
+### 6.3 Independent Left Sidebar Scroll (Stationary Canvas)
+- **Component**: `StudioLayout.tsx`
+- **Enhancement**: Applied `w-full h-[calc(100vh-64px)] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 pr-2 pb-8 flex flex-col gap-4` to the left `<aside>`. This allows the user to scroll through complex model settings, LoRAs, and prompt parameters while the right canvas workspace remains anchored and stationary in the desktop viewport.
+
