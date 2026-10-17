@@ -19,6 +19,7 @@ import {
   Layers,
   Image as ImageIcon,
   CheckCircle2,
+  FolderOpen,
 } from "lucide-react";
 
 interface CanvasWorkspaceProps {
@@ -294,8 +295,8 @@ export default function CanvasWorkspace({
 
   return (
     <div className="flex-1 w-full flex flex-col gap-3 min-h-[360px] lg:min-h-[500px] max-h-full overflow-hidden select-none">
-      {/* ── Top Workspace Toolbar ── */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 bg-slate-950/85 border border-cyan-500/35 rounded-2xl shadow-[0_0_20px_rgba(6,182,212,0.12)]">
+      {/* ── Top Workspace Toolbar (Aligned with Mode Switch) ── */}
+      <div className="min-h-[48px] h-12 flex items-center justify-between gap-2 px-3 sm:px-4 bg-slate-950/85 border border-cyan-500/35 rounded-2xl shadow-[0_0_20px_rgba(6,182,212,0.12)] shrink-0">
         {/* Left: View Mode Toggles */}
         <div className="flex items-center gap-1 bg-black/80 p-1 rounded-xl border border-cyan-500/30">
           {originalImage && editedImage && (
@@ -598,16 +599,28 @@ export default function CanvasWorkspace({
           /* Empty State: Image-to-Image Edit Mode (Upload Dropzone) */
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="w-full max-w-xl h-80 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/40 hover:border-cyan-500/50 hover:bg-slate-900/60 transition-all cursor-pointer shadow-lg group/drop"
+            className="w-full max-w-2xl h-[420px] border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/30 hover:border-cyan-500/50 hover:bg-slate-900/50 transition-all cursor-pointer p-6 text-center group/drop"
           >
-            <div className="p-4 bg-slate-900/90 rounded-2xl text-cyan-400 group-hover/drop:text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] transition mb-3">
-              <Upload className="w-8 h-8" />
+            <div className="p-4 bg-slate-900/90 border border-cyan-500/30 rounded-2xl text-cyan-400 group-hover/drop:text-white group-hover/drop:border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all mb-4">
+              <Upload className="w-10 h-10 group-hover/drop:scale-110 transition-transform" />
             </div>
-            <div className="text-center px-4">
-              <p className="text-sm font-black text-white">Upload source image to begin editing</p>
-              <p className="text-xs text-cyan-300/80 mt-1">
-                Drag and drop or click here (PNG, JPG, WebP up to 10MB)
+            <div className="space-y-1.5 max-w-md">
+              <p className="text-base font-black text-white">Upload source image to begin editing</p>
+              <p className="text-xs text-slate-400">
+                Drag and drop your image here, or select from your device
               </p>
+              <p className="text-[11px] font-mono text-cyan-300/70 pt-1">
+                Supported formats: PNG, JPG, WebP (up to 10MB)
+              </p>
+            </div>
+            <div className="mt-5">
+              <button
+                type="button"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 group-hover/drop:shadow-cyan-500/40 transition active:scale-[0.99] flex items-center gap-2 pointer-events-none"
+              >
+                <FolderOpen className="w-4 h-4" />
+                <span>Browse or Drag Image Here</span>
+              </button>
             </div>
           </div>
         )}

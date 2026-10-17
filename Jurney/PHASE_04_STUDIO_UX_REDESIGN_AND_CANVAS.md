@@ -184,4 +184,38 @@ flowchart TD
   - Scrollable container provides `pb-24` padding so bottom content is never obscured by the fixed bar.
   - Real-time generation progress bar, elapsed timer, and Cloud fallback switch are embedded directly into the sticky bar during active inference.
 
+---
+
+## 8. Unified Navbar, Aligned Workspace Baselines & Expanded Dropzone (UI/UX Pro Max Refinement)
+
+### 8.1 Unified Edge-to-Edge Navbar Refactor
+- **Component**: `app/page.tsx`
+- **Brand Identity**:
+  - Left-anchored brand icon + Title (`Qwen Image Editor Studio`) with gradient typography.
+  - Subtitle badge: `Dual Tesla T4 • 5 TB Vault`.
+- **Navigation Controls**:
+  - Center desktop segmented control containing all 5 primary tabs: `Studio & Editor`, `AI Generators` (with NEW badge), `Civitai LoRA Hub` (with dynamic LoRA count badge), `Gallery` (with count badge), and `Sentinel`.
+  - Mobile hamburger drawer (`<1024px`) with intuitive grid of quick tab buttons (`isMobileNavOpen`).
+- **System Status Cluster**:
+  - Single unified GPU toggle button:
+    - Online: emerald glowing badge with pulsing live ping indicator and hover-to-stop (`GPU Online` -> `Turn Off`).
+    - Booting: amber spinning refresh indicator (`Booting GPU...` -> `Halting...`).
+    - Offline: compact amber indicator with click-to-start action (`⚡ GPU Offline • Turn On`).
+  - Sleek Theme Toggle: `NIGHT` / `DAY NEO` with Sun/Moon icons.
+  - One-tap SFW Safety Toggle: `🛡️ SFW SAFE` / `🔞 NSFW ON`.
+  - Eliminated redundant `Vault: 5.0 TiB` badge to eliminate visual clutter.
+
+### 8.2 Top-Edge Workspace Alignment
+- **Components**: `StudioLayout.tsx`, `ControlPanel.tsx`, `CanvasWorkspace.tsx`
+- **Symmetric Baseline**:
+  - Both Left and Right columns start at the exact same horizontal horizon directly below the header.
+  - Studio Mode Switch on the left (`🎨 Generate Image` / `✨ Edit Image`) and Canvas Utility Toolbar on the right (`[Split Wipe] [Result] [Original] [Blend] | 1:1, 16:9...`) standardized to identical `h-12 min-h-[48px]` heights with matching `border-cyan-500/35 rounded-2xl` aesthetics.
+  - Removed asymmetrical top padding and offset containers.
+
+### 8.3 Expanded Interactive Canvas Dropzone
+- **Component**: `CanvasWorkspace.tsx`
+- **Empty State Enhancement**:
+  - Replaced small placeholder with a generous, immersive dashed dropzone: `w-full max-w-2xl h-[420px] border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/30 hover:border-cyan-500/50 hover:bg-slate-900/50 transition-all cursor-pointer p-6 text-center group/drop`.
+  - Added dedicated upload icon, clear file format helper (`Supported formats: PNG, JPG, WebP (up to 10MB)`), and prominent `Browse or Drag Image Here` button with cyan gradient.
+
 

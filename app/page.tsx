@@ -32,6 +32,8 @@ import {
   Cpu,
   Sun,
   Moon,
+  Menu,
+  X,
 } from "lucide-react";
 import CivitaiLoraHub from "./components/CivitaiLoraHub";
 import SentinelAiGateway from "./components/SentinelAiGateway";
@@ -61,6 +63,7 @@ import {
 export default function ImageEditorStudio() {
   // Navigation Tabs: Studio & Editor | AI Generator Hub | Civitai.red LoRA Hub | Outputs Gallery | Sentinel Gateway
   const [activeTab, setActiveTab] = useState<"studio" | "generators" | "loras" | "gallery" | "sentinel">("studio");
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
   const [studioMode, setStudioMode] = useState<"edit" | "generate">("edit");
   const [selectedStudioModel, setSelectedStudioModel] = useState<string>("kaggle-gpu");
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState<boolean>(false);
@@ -1151,306 +1154,180 @@ export default function ImageEditorStudio() {
 
   return (
     <div className={`flex flex-col min-h-screen bg-transparent text-slate-100 font-sans selection:bg-cyan-500 selection:text-black relative ${theme === "day" ? "theme-day" : "theme-night"}`}>
-      {/* ── Top Header ────────────────────────────────────────── */}
-      <header className="border-b border-cyan-500/40 bg-slate-950/90 backdrop-blur-2xl px-3 sm:px-6 py-2.5 lg:py-3.5 sticky top-0 z-50 shadow-[0_4px_30px_rgba(6,182,212,0.18)] w-full max-w-full">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-2.5 lg:gap-4 w-full">
-          {/* Top Row on Mobile: Brand on Left, Quick GPU Controls on Right */}
-          <div className="flex items-center justify-between w-full lg:w-auto gap-3">
-            {/* Brand Logo & Name */}
-            <div className="flex items-center gap-2.5 sm:gap-3.5">
-              <div className="bg-gradient-to-tr from-cyan-400 via-teal-400 to-indigo-500 p-2 sm:p-2.5 rounded-2xl text-black shadow-[0_0_20px_rgba(6,182,212,0.55)] shrink-0 animate-neon-cyan">
-                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 fill-black" />
-              </div>
-              <div>
-                <h1 className="app-title-main font-black text-xl sm:text-2xl lg:text-3xl xl:text-4xl leading-tight tracking-tight bg-gradient-to-r from-white via-cyan-200 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_0_16px_rgba(6,182,212,0.6)]">
-                  Qwen Image Editor Studio
-                </h1>
-                <p className="text-[11px] sm:text-xs text-cyan-300/90 font-extrabold tracking-wide">Dual Tesla T4 &bull; 5 TB Google Drive Vault</p>
-              </div>
+      {/* ── Top Unified Header Bar ────────────────────────────── */}
+      <header className="border-b border-cyan-500/30 bg-slate-950/95 backdrop-blur-2xl px-4 lg:px-8 py-2.5 sticky top-0 z-50 shadow-[0_4px_30px_rgba(6,182,212,0.15)] w-full">
+        <div className="w-full flex items-center justify-between gap-3 lg:gap-6">
+          {/* Left: Brand Identity */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="bg-gradient-to-tr from-cyan-400 via-teal-400 to-indigo-500 p-2 rounded-xl text-black shadow-[0_0_15px_rgba(6,182,212,0.45)] shrink-0 animate-neon-cyan">
+              <Sparkles className="w-5 h-5 fill-black" />
             </div>
-
-            {/* Mobile GPU Power & Theme Controls (Right side on mobile only) */}
-            <div className="flex items-center gap-1.5 lg:hidden shrink-0">
-              {isConnected ? (
-                <div className="flex items-center gap-1.5">
-                  <span
-                    title={modelStatusMessage}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-extrabold ${
-                      isModelReady
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/60 shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-neon-emerald"
-                        : "bg-amber-500/20 text-amber-300 border border-amber-400/60 shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-neon-amber"
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${isModelReady ? "bg-emerald-400" : "bg-amber-400 animate-ping"}`} />
-                    <span>{isModelReady ? "Ready" : "Warming..."}</span>
-                  </span>
-                  <button
-                    onClick={handleShutdownGpu}
-                    disabled={isShuttingDown}
-                    title="GPU is ON. Click to stop and deallocate Kaggle GPU immediately."
-                    className="group flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/25 hover:bg-rose-600/90 border border-emerald-400 hover:border-rose-400 text-emerald-200 hover:text-white rounded-lg text-[11px] font-black shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 group-hover:bg-rose-300 animate-pulse" />
-                    <Power className={`w-3 h-3 text-emerald-300 group-hover:text-white ${isShuttingDown ? "animate-spin" : ""}`} />
-                    <span className="group-hover:hidden">Power: ON</span>
-                    <span className="hidden group-hover:inline">{isShuttingDown ? "Stopping" : "Stop"}</span>
-                  </button>
-                </div>
-              ) : isStartingGpu ? (
-                <button
-                  onClick={handleShutdownGpu}
-                  disabled={isShuttingDown}
-                  title="GPU is booting on Kaggle. Tap to cancel and halt."
-                  className="group flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/20 hover:bg-rose-600 border border-amber-400/80 hover:border-rose-400 text-amber-200 hover:text-white rounded-lg text-[10px] font-bold animate-neon-amber transition active:scale-95 disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3 h-3 text-amber-300 group-hover:text-white ${isShuttingDown ? "animate-spin" : "animate-spin"}`} />
-                  <span className="group-hover:hidden">{isShuttingDown ? "Halting..." : "Booting..."}</span>
-                  <span className="hidden group-hover:inline">{isShuttingDown ? "Halting..." : "Stop"}</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleStartGpu()}
-                  title="Boot Kaggle GPU"
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900/90 hover:bg-emerald-500/20 border border-cyan-500/40 hover:border-emerald-400 text-cyan-200 hover:text-emerald-300 rounded-lg text-[11px] font-black shadow-[0_0_10px_rgba(6,182,212,0.2)] transition active:scale-95"
-                >
-                  <Power className="w-3 h-3 text-cyan-400" />
-                  <span>Turn On GPU</span>
-                </button>
-              )}
-
-              {/* Day / Night Theme Toggle Mobile */}
-              <button
-                onClick={() => handleToggleTheme(theme === "day" ? "night" : "day")}
-                title={theme === "day" ? "Switch to Night Mode (Cyberpunk Dark)" : "Switch to Day Mode (3D Neomorphism Pastel Yellow #F9EE99)"}
-                className={`p-1.5 rounded-lg border text-[11px] font-black transition flex items-center gap-1 active:scale-95 ${
-                  theme === "day"
-                    ? "bg-amber-300 border-amber-500/80 text-amber-950 shadow-[inset_2px_2px_4px_rgba(180,165,75,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.8)]"
-                    : "bg-slate-900/90 border-cyan-500/40 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-                }`}
-              >
-                {theme === "day" ? (
-                  <Sun className="w-3.5 h-3.5 text-amber-800 fill-amber-500" />
-                ) : (
-                  <Moon className="w-3.5 h-3.5 text-cyan-300 fill-cyan-400/20" />
-                )}
-              </button>
-
-              {/* NSFW Toggle Mobile */}
-              <button
-                onClick={() => handleToggleNsfwMode(!isNsfwMode)}
-                title={isNsfwMode ? "NSFW Mode Active (Tap to enable SFW Safe Mode)" : "SFW Safe Mode Active (Tap to enable NSFW Mode)"}
-                className={`p-1.5 rounded-lg border text-[10px] font-black transition flex items-center gap-1 ${
-                  isNsfwMode
-                    ? "bg-rose-500/20 border-rose-500/80 text-rose-300 animate-pulse"
-                    : "bg-emerald-500/15 border-emerald-500/60 text-emerald-300"
-                }`}
-              >
-                <span>{isNsfwMode ? "🔞" : "🛡️"}</span>
-              </button>
-              <button
-                onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
-                className="p-1.5 bg-slate-900/90 border border-cyan-500/30 text-cyan-400 rounded-lg shadow-sm hover:border-cyan-400 transition"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Tab Switcher Navigation - Full width with clean horizontal swipe on mobile, center on desktop */}
-          <div className="w-full lg:w-auto overflow-x-auto no-scrollbar py-0.5">
-            <div className="flex items-center gap-1 sm:gap-1.5 bg-black/80 p-1 sm:p-1.5 rounded-2xl border border-cyan-500/35 shadow-[0_0_18px_rgba(6,182,212,0.18)] w-max mx-auto lg:mx-0 tab-nav-container">
-              <button
-                onClick={() => setActiveTab("studio")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 transition ${
-                  activeTab === "studio"
-                    ? "tab-active bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "tab-inactive text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                <span>Studio &amp; Editor</span>
-              </button>
-              <button
-                onClick={() => setActiveTab("generators")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 transition ${
-                  activeTab === "generators"
-                    ? "tab-active bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "tab-inactive text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>AI Generators</span>
-                <span className="px-1.5 py-0.2 bg-amber-500/20 border border-amber-400/60 rounded-full text-[9px] text-amber-300 font-extrabold shadow-[0_0_8px_rgba(245,158,11,0.3)]">
-                  NEW
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab("loras")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 transition ${
-                  activeTab === "loras"
-                    ? "tab-active bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "tab-inactive text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5 shrink-0" />
-                <span>Civitai LoRA Hub</span>
-                {availableLoras.length > 0 && (
-                  <span className="px-1.5 py-0.2 bg-slate-900 border border-cyan-500/40 rounded-full text-[10px] text-cyan-300 font-mono font-black shadow-[0_0_8px_rgba(6,182,212,0.25)]">
-                    {availableLoras.length}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab("gallery")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 transition ${
-                  activeTab === "gallery"
-                    ? "tab-active bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "tab-inactive text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
-                }`}
-              >
-                <ImageIcon className="w-3.5 h-3.5 shrink-0" />
-                <span>Gallery</span>
-                {gallery.length > 0 && (
-                  <span className="px-1.5 py-0.2 bg-slate-900 border border-slate-700/80 rounded-full text-[10px] text-slate-300 font-mono font-bold">
-                    {gallery.length}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab("sentinel")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 transition ${
-                  activeTab === "sentinel"
-                    ? "tab-active bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
-                    : "tab-inactive text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span>Sentinel</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Desktop GPU 1-Click Power Hub (Hidden on mobile, visible on desktop) */}
-          <div className="hidden lg:flex items-center gap-3 shrink-0">
-            {/* Status Badge */}
-            <div
-              title={isConnected ? modelStatusMessage : undefined}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold backdrop-blur-md transition ${
-                isConnected
-                  ? isModelReady
-                    ? "bg-emerald-950/80 border-emerald-500/70 text-emerald-200 shadow-[0_0_18px_rgba(16,185,129,0.35)] animate-neon-emerald"
-                    : "bg-amber-950/80 border-amber-500/70 text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.35)] animate-neon-amber"
-                  : isStartingGpu
-                  ? "bg-amber-950/80 border-amber-500/70 text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.35)] animate-neon-amber"
-                  : "bg-slate-900/90 border border-cyan-500/30 text-slate-300 shadow-[0_0_10px_rgba(6,182,212,0.1)]"
-              }`}
-            >
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isConnected
-                    ? isModelReady
-                      ? "bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
-                      : "bg-amber-400 animate-ping"
-                    : isStartingGpu
-                    ? "bg-amber-400 animate-pulse"
-                    : "bg-slate-500"
-                }`}
-              />
-              <span>
-                {isConnected
-                  ? isModelReady
-                    ? "Dual Tesla T4 Ready"
-                    : "Dual T4 Warming Up (~60s)"
-                  : isStartingGpu
-                  ? "Booting Kaggle GPU..."
-                  : "GPU Offline (Quota Safe)"}
+            <div className="flex flex-col">
+              <h1 className="font-black text-base sm:text-lg lg:text-xl leading-none tracking-tight bg-gradient-to-r from-white via-cyan-200 to-cyan-400 bg-clip-text text-transparent">
+                Qwen Image Editor Studio
+              </h1>
+              <span className="text-[10px] text-cyan-300/80 font-mono font-semibold tracking-wider mt-1">
+                Dual Tesla T4 &bull; 5 TB Vault
               </span>
             </div>
+          </div>
 
-            {/* 1-Click Power Toggle */}
+          {/* Center: Main View Tabs (Desktop Segmented Control) */}
+          <nav className="hidden lg:flex items-center gap-1 bg-black/80 p-1 rounded-2xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.12)]">
+            <button
+              onClick={() => setActiveTab("studio")}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition ${
+                activeTab === "studio"
+                  ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                  : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Studio &amp; Editor</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("generators")}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition ${
+                activeTab === "generators"
+                  ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                  : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>AI Generators</span>
+              <span className="px-1.5 py-0.2 bg-amber-500/20 border border-amber-400/60 rounded-full text-[9px] text-amber-300 font-extrabold shadow-[0_0_8px_rgba(245,158,11,0.3)]">
+                NEW
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("loras")}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition ${
+                activeTab === "loras"
+                  ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                  : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Civitai LoRA Hub</span>
+              {availableLoras.length > 0 && (
+                <span className="px-1.5 py-0.2 bg-slate-900 border border-cyan-500/40 rounded-full text-[10px] text-cyan-300 font-mono font-black">
+                  {availableLoras.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("gallery")}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition ${
+                activeTab === "gallery"
+                  ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                  : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
+              }`}
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span>Gallery</span>
+              {gallery.length > 0 && (
+                <span className="px-1.5 py-0.2 bg-slate-900 border border-slate-700/80 rounded-full text-[10px] text-slate-300 font-mono font-bold">
+                  {gallery.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("sentinel")}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition ${
+                activeTab === "sentinel"
+                  ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+                  : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Sentinel</span>
+            </button>
+          </nav>
+
+          {/* Right: System Status Cluster */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Unified GPU Toggle Button: Green dot if online, amber if offline */}
             {isConnected ? (
               <button
                 onClick={handleShutdownGpu}
                 disabled={isShuttingDown}
-                title="GPU is ON. Click to stop Kaggle GPU immediately to preserve quota."
-                className="group flex items-center gap-2 px-3.5 py-1.5 bg-emerald-500/20 hover:bg-rose-500/25 border border-emerald-400 hover:border-rose-400 text-emerald-200 hover:text-rose-200 rounded-xl text-xs font-bold shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] animate-neon-emerald transition-all active:scale-95 disabled:opacity-50"
+                title="GPU is Online. Click to turn off and save quota."
+                className="group flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/20 hover:bg-rose-500/25 border border-emerald-400/80 hover:border-rose-400 text-emerald-200 hover:text-rose-200 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all active:scale-95 disabled:opacity-50"
               >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 group-hover:bg-rose-400"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 group-hover:bg-rose-400"></span>
                 </span>
-                <Power className={`w-3.5 h-3.5 text-emerald-300 group-hover:text-rose-400 ${isShuttingDown ? "animate-spin" : ""}`} />
-                <span className="group-hover:hidden">Power: ON</span>
-                <span className="hidden group-hover:inline text-rose-300">{isShuttingDown ? "Stopping..." : "Turn Off GPU"}</span>
+                <span className="hidden sm:inline group-hover:hidden">GPU Online</span>
+                <span className="inline sm:hidden group-hover:hidden">Online</span>
+                <span className="hidden group-hover:inline text-rose-300">{isShuttingDown ? "Stopping..." : "Turn Off"}</span>
               </button>
             ) : isStartingGpu ? (
               <button
                 onClick={handleShutdownGpu}
                 disabled={isShuttingDown}
-                title="GPU is booting on Kaggle. Click to cancel and halt the session."
-                className="group flex items-center gap-2 px-3.5 py-1.5 bg-amber-500/20 hover:bg-rose-500/25 border border-amber-400 hover:border-rose-400 text-amber-200 hover:text-rose-200 rounded-xl text-xs font-semibold shadow-[0_0_20px_rgba(245,158,11,0.4)] animate-neon-amber transition-all active:scale-95 disabled:opacity-50"
+                title="GPU is booting on Kaggle (~90s). Click to halt."
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-rose-500/25 border border-amber-400/80 hover:border-rose-400 text-amber-200 hover:text-rose-200 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all active:scale-95 disabled:opacity-50"
               >
-                <RefreshCw className={`w-3.5 h-3.5 text-amber-300 group-hover:text-rose-400 ${isShuttingDown ? "animate-spin" : "animate-spin"}`} />
-                <span className="group-hover:hidden">Power: Booting ({bootMessage.includes("~90s") ? "~90s" : "Warming"}...)</span>
-                <span className="hidden group-hover:inline text-rose-300">{isShuttingDown ? "Halting..." : "Cancel / Stop GPU"}</span>
+                <RefreshCw className="w-3.5 h-3.5 text-amber-300 animate-spin" />
+                <span className="hidden sm:inline">{isShuttingDown ? "Halting..." : "Booting GPU..."}</span>
+                <span className="sm:hidden">{isShuttingDown ? "Stop" : "Booting"}</span>
               </button>
             ) : (
               <button
                 onClick={() => handleStartGpu()}
-                title="One-click boot Kaggle Dual Tesla T4s and auto-connect tunnel"
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-900/90 hover:bg-emerald-500/20 border border-cyan-500/40 hover:border-emerald-400 text-slate-200 hover:text-emerald-300 rounded-xl text-xs font-bold transition active:scale-95 shadow-[0_0_12px_rgba(6,182,212,0.18)] hover:shadow-[0_0_18px_rgba(16,185,129,0.3)]"
+                title="Click to Turn On Kaggle Dual Tesla T4 GPU"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900/90 hover:bg-emerald-500/20 border border-amber-500/50 hover:border-emerald-400 text-amber-300 hover:text-emerald-300 shadow-[0_0_12px_rgba(245,158,11,0.2)] hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all active:scale-95"
               >
-                <Power className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Turn On GPU</span>
+                <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                <span className="hidden sm:inline">⚡ GPU Offline</span>
+                <span className="sm:hidden">Offline</span>
+                <span className="hidden md:inline text-[10px] text-slate-400 font-normal pl-0.5">&bull; Turn On</span>
               </button>
             )}
 
-            {/* Day / Night Theme Toggle Desktop */}
+            {/* Theme Toggle ("🌙 NIGHT" / "☀️ DAY NEO") */}
             <button
               onClick={() => handleToggleTheme(theme === "day" ? "night" : "day")}
-              title={theme === "day" ? "Switch to Cyberpunk Night Theme" : "Switch to 3D Neomorphism Pastel Yellow Day Theme (#F9EE99)"}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black transition active:scale-95 ${
+              title={theme === "day" ? "Switch to Night Mode" : "Switch to Day Mode"}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-black transition active:scale-95 ${
                 theme === "day"
-                  ? "bg-amber-300/80 hover:bg-amber-300 border-amber-500/70 text-amber-950 shadow-[4px_4px_10px_rgba(175,158,65,0.4),-4px_-4px_10px_rgba(255,255,245,0.95)]"
-                  : "bg-slate-900/90 hover:bg-slate-800 border-cyan-500/40 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]"
+                  ? "bg-amber-300 border-amber-500/80 text-amber-950 shadow-sm"
+                  : "bg-slate-900/90 hover:bg-slate-800 border-cyan-500/40 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.15)]"
               }`}
             >
               {theme === "day" ? (
                 <>
                   <Sun className="w-3.5 h-3.5 text-amber-800 fill-amber-500" />
-                  <span className="font-extrabold tracking-wide">DAY NEO</span>
+                  <span className="hidden md:inline font-extrabold tracking-wide">DAY NEO</span>
                 </>
               ) : (
                 <>
                   <Moon className="w-3.5 h-3.5 text-cyan-300 fill-cyan-400/20" />
-                  <span className="font-extrabold tracking-wide">NIGHT</span>
+                  <span className="hidden md:inline font-extrabold tracking-wide">NIGHT</span>
                 </>
               )}
             </button>
 
-            {/* Quick NSFW/SFW Mode Switcher Badge */}
+            {/* Safety Toggle ("🛡️ SFW SAFE" / "🔞 NSFW ON") */}
             <button
               onClick={() => handleToggleNsfwMode(!isNsfwMode)}
-              title={
+              title={isNsfwMode ? "NSFW Active (Click to enable SFW Safe Mode)" : "SFW Safe Mode Active (Click to unlock NSFW Mode)"}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition active:scale-95 ${
                 isNsfwMode
-                  ? "NSFW Mode Active: Click to switch to Safe (SFW) Mode"
-                  : "SFW Safe Mode Active: Click to unlock 18+ NSFW Mode"
-              }
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition active:scale-95 ${
-                isNsfwMode
-                  ? "bg-rose-500/20 hover:bg-rose-500/30 border-rose-500/80 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.35)] animate-pulse"
+                  ? "bg-rose-500/20 hover:bg-rose-500/30 border-rose-500/80 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.3)] animate-pulse"
                   : "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/60 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
               }`}
             >
               {isNsfwMode ? (
                 <>
-                  <span className="text-sm leading-none">🔞</span>
-                  <span className="font-extrabold tracking-wide">NSFW ON</span>
+                  <span className="text-xs leading-none">🔞</span>
+                  <span className="hidden md:inline font-extrabold tracking-wide">NSFW ON</span>
                 </>
               ) : (
                 <>
                   <Shield className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="font-extrabold tracking-wide">SFW SAFE</span>
+                  <span className="hidden md:inline font-extrabold tracking-wide">SFW SAFE</span>
                 </>
               )}
             </button>
@@ -1458,20 +1335,83 @@ export default function ImageEditorStudio() {
             {/* Advanced / Manual URL Override Toggle */}
             <button
               onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
-              title="Advanced: Inspect or override tunnel URL"
-              className="p-1.5 bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/30 hover:border-cyan-400 text-cyan-400 hover:text-cyan-200 rounded-lg shadow-sm transition"
+              title="Inspect backend tunnel URL"
+              className="p-1.5 bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/30 hover:border-cyan-400 text-cyan-400 hover:text-cyan-200 rounded-xl shadow-sm transition"
             >
               <Settings className="w-3.5 h-3.5" />
             </button>
 
-            {/* Storage Badge */}
-            <div className="hidden xl:flex items-center gap-2 bg-slate-900/90 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs shadow-[0_0_10px_rgba(6,182,212,0.1)]">
-              <Database className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-slate-400">Vault:</span>
-              <span className="text-cyan-200 font-medium">5.0 TiB Google Drive</span>
-            </div>
+            {/* Mobile Hamburger Toggle for Center Tabs */}
+            <button
+              onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+              className="lg:hidden p-1.5 bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 rounded-xl transition"
+              title="Open Navigation Menu"
+            >
+              {isMobileNavOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Slide-Out Drawer / Dropdown */}
+        {isMobileNavOpen && (
+          <div className="lg:hidden mt-3 pt-3 border-t border-cyan-500/25 grid grid-cols-2 sm:grid-cols-3 gap-2 animate-fadeIn">
+            <button
+              onClick={() => { setActiveTab("studio"); setIsMobileNavOpen(false); }}
+              className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-black transition ${
+                activeTab === "studio"
+                  ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-md"
+                  : "bg-slate-900/80 border border-slate-800 text-slate-300"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Studio &amp; Editor</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("generators"); setIsMobileNavOpen(false); }}
+              className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-black transition ${
+                activeTab === "generators"
+                  ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-md"
+                  : "bg-slate-900/80 border border-slate-800 text-slate-300"
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>AI Generators</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("loras"); setIsMobileNavOpen(false); }}
+              className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-black transition ${
+                activeTab === "loras"
+                  ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-md"
+                  : "bg-slate-900/80 border border-slate-800 text-slate-300"
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Civitai LoRAs</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("gallery"); setIsMobileNavOpen(false); }}
+              className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-black transition ${
+                activeTab === "gallery"
+                  ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-md"
+                  : "bg-slate-900/80 border border-slate-800 text-slate-300"
+              }`}
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span>Gallery</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("sentinel"); setIsMobileNavOpen(false); }}
+              className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-black transition ${
+                activeTab === "sentinel"
+                  ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-md"
+                  : "bg-slate-900/80 border border-slate-800 text-slate-300"
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Sentinel</span>
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Booting Notification Banner */}

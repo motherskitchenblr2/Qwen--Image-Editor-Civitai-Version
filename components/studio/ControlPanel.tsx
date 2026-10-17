@@ -234,9 +234,9 @@ export default function ControlPanel({
   );
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-5 bg-slate-950/85 border border-cyan-500/40 shadow-[0_0_25px_rgba(6,182,212,0.18)] hover:shadow-[0_0_35px_rgba(6,182,212,0.28)] p-3.5 sm:p-5 rounded-3xl w-full max-w-full overflow-hidden transition-all duration-300">
-      {/* ── Studio Mode Segmented Switch ── */}
-      <div className="flex items-center gap-1.5 bg-black/80 p-1.5 rounded-2xl border border-cyan-500/35 shadow-[0_0_15px_rgba(6,182,212,0.15)] w-full">
+    <div className="flex flex-col gap-3 w-full max-w-full">
+      {/* ── Studio Mode Segmented Switch (Aligned with Canvas Toolbar) ── */}
+      <div className="min-h-[48px] h-12 flex items-center gap-1.5 bg-black/80 p-1.5 rounded-2xl border border-cyan-500/35 shadow-[0_0_15px_rgba(6,182,212,0.15)] w-full shrink-0">
         <button
           type="button"
           onClick={() => setStudioMode("generate")}
@@ -262,6 +262,9 @@ export default function ControlPanel({
           <span>✨ Edit Image</span>
         </button>
       </div>
+
+      {/* ── Main Controls Card ── */}
+      <div className="flex flex-col gap-4 sm:gap-5 bg-slate-950/85 border border-cyan-500/40 shadow-[0_0_25px_rgba(6,182,212,0.18)] hover:shadow-[0_0_35px_rgba(6,182,212,0.28)] p-3.5 sm:p-5 rounded-3xl w-full max-w-full overflow-hidden transition-all duration-300">
 
       {/* ── AI Engine Model Selector ── */}
       <div className="space-y-1.5">
@@ -589,11 +592,12 @@ export default function ControlPanel({
       <div className="hidden lg:block pt-2 border-t border-cyan-500/30">
         {renderActionButton(false)}
       </div>
-
-      {/* ── Mobile Sticky Bottom Action Bar ── */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 z-50 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.85)]">
-        {renderActionButton(true)}
-      </div>
     </div>
+
+    {/* ── Mobile Sticky Bottom Action Bar ── */}
+    <div className="fixed bottom-0 left-0 right-0 p-3 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 z-50 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.85)]">
+      {renderActionButton(true)}
+    </div>
+  </div>
   );
 }
