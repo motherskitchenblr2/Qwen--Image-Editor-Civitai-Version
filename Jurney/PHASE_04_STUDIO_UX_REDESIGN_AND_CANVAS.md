@@ -313,6 +313,31 @@ flowchart TD
   - On desktop (`lg:`): The workspace remains locked to `100dvh` viewport height with zero page scroll; the left sidebar scrolls independently.
   - On mobile (`<lg`): Smooth vertical scrolling is enabled through `overflow-y-auto`, while the header bar remains permanently frozen at the top and the action bar remains pinned at the bottom.
 
+---
+
+## 13. Off-White Neumorphic Dashboard UI Kit & HUD Infographic System
+
+### 13.1 Design Overhaul: Pastel Yellow to Off-White Neumorphism
+- **Context & Motivation**:
+  - Replaced the previous pastel yellow (`#F9EE99`) palette with a professional, soft **off-white neumorphic design system** (`#E8ECF2` / `#EEF2F7` / `#DFE5ED`).
+  - Tailored to give the application the aesthetic of an advanced **Admin Panel vector design template**, complete with HUD diagram elements, telemetry indicators, tactile inset inputs, and extruded dashboard cards.
+- **Color Tokens & Dual-Shadow Physics**:
+  - **Base Canvas**: `#E8ECF2` with subtle radial lighting gradients (`rgba(255, 255, 255, 0.85)` to `rgba(205, 215, 228, 0.4)`).
+  - **Raised / Extruded Surfaces (`.neo-card`, `.neo-btn`)**:
+    - Light reflection (top-left): `-8px -8px 18px rgba(255, 255, 255, 0.95)`
+    - Drop shadow (bottom-right): `8px 8px 18px rgba(163, 177, 198, 0.5)`
+    - Edge bevel: `1px solid rgba(255, 255, 255, 0.9)`
+  - **Sunken / Inset Surfaces (`.neo-card-inset`, `.neo-input`, tab wells)**:
+    - Inner shadow: `inset 4px 4px 8px rgba(163, 177, 198, 0.5), inset -4px -4px 8px rgba(255, 255, 255, 0.95)`
+    - Surface fill: `#E1E6EE` / `#E2E7EE`
+- **Dashboard HUD & Infographic Components**:
+  - `.neo-hud-panel`: Extruded dashboard tiles for telemetry, model indicators, and system metrics.
+  - `.neo-hud-gauge`: Sunken dial-and-slider tracks for inference steps, guidance scale, and brush size.
+  - `.hud-indicator-led`: Convex status indicators with high-contrast state coloring (Emerald for GPU online, Amber for booting/warning, Sky for active telemetry).
+- **High-Contrast Readability & Accessibility**:
+  - Deep slate navy typography (`#0F172A` / `#334155` / `#64748B`), delivering WCAG AAA contrast ratio across all forms, buttons, titles, and telemetry chips.
+
+
 
 
 

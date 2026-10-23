@@ -196,7 +196,7 @@ export default function ImageEditorStudio() {
     if (showToast) {
       showToast(
         newTheme === "day"
-          ? "☀️ 3D Neomorphism Day Theme (#F9EE99) Activated"
+          ? "☀️ Neumorphic Dashboard Off-White Day Theme Activated"
           : "🌙 Cyberpunk Night Theme Activated",
         "info"
       );
@@ -1292,13 +1292,13 @@ export default function ImageEditorStudio() {
               title={theme === "day" ? "Switch to Night Mode" : "Switch to Day Mode"}
               className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-black transition active:scale-95 ${
                 theme === "day"
-                  ? "bg-amber-300 border-amber-500/80 text-amber-950 shadow-sm"
+                  ? "bg-slate-100 hover:bg-white border-white/90 text-slate-900 shadow-[2px_2px_6px_rgba(163,177,198,0.45),-2px_-2px_6px_#ffffff]"
                   : "bg-slate-900/90 hover:bg-slate-800 border-cyan-500/40 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.15)]"
               }`}
             >
               {theme === "day" ? (
                 <>
-                  <Sun className="w-3.5 h-3.5 text-amber-800 fill-amber-500" />
+                  <Sun className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
                   <span className="hidden md:inline font-extrabold tracking-wide">DAY NEO</span>
                 </>
               ) : (
