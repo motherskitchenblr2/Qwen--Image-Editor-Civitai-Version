@@ -159,6 +159,7 @@ export default function ControlPanel({
   const renderActionButton = (isMobileBar = false) => (
     <div className={`space-y-2 ${isMobileBar ? "w-full max-w-lg mx-auto" : "w-full"}`}>
       <button
+        type="button"
         onClick={handleGenerate}
         disabled={isGenerateDisabled}
         title={
@@ -166,32 +167,34 @@ export default function ControlPanel({
             ? "Upload an image to enable editing"
             : undefined
         }
-        className={`w-full h-11 px-4 rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 transition ${
+        className={`w-full py-3.5 rounded-xl border text-sm flex flex-col items-center justify-center gap-0.5 transition ${
           isGenerateDisabled
-            ? "bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800"
-            : "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/20 active:scale-[0.99]"
+            ? "border-slate-750 bg-slate-900/80 text-slate-350 font-medium cursor-not-allowed"
+            : "border-cyan-500/50 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/20 active:scale-[0.99]"
         }`}
       >
-        {isGenerating ? (
-          <>
-            <RefreshCw className="w-4 h-4 animate-spin text-white" />
-            <span>Synthesizing Diffusion...</span>
-          </>
-        ) : studioMode === "generate" ? (
-          <>
-            <Sparkles className="w-4 h-4 fill-current" />
-            <span>Generate Image</span>
-          </>
-        ) : (
-          <>
-            <Zap className="w-4 h-4 fill-current" />
-            <span>Apply Image Edit</span>
-          </>
-        )}
+        <span className="flex items-center gap-2 font-semibold">
+          {isGenerating ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin text-white" />
+              <span>Synthesizing Diffusion...</span>
+            </>
+          ) : studioMode === "generate" ? (
+            <>
+              <Sparkles className="w-4 h-4 fill-current" />
+              <span>Generate Image</span>
+            </>
+          ) : (
+            <>
+              <Zap className="w-4 h-4 fill-current" />
+              <span>Apply Image Edit</span>
+            </>
+          )}
+        </span>
       </button>
 
       {studioMode === "edit" && !originalImage && (
-        <p className="text-slate-400 text-xs font-medium text-center">
+        <p className="text-slate-400 text-xs font-normal text-center">
           Upload an image to enable editing
         </p>
       )}
@@ -594,9 +597,30 @@ export default function ControlPanel({
       </div>
     </div>
 
-    {/* ── Mobile Sticky Bottom Action Bar ── */}
-    <div className="fixed bottom-0 left-0 right-0 p-3 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 z-50 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.85)]">
-      {renderActionButton(true)}
+    {/* ── Mobile Sticky Bottom Action Bar with Docked Status Badge ── */}
+    <div className="fixed bottom-0 left-0 right-0 p-3 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 z-40 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.85)]">
+      <div className="flex items-center gap-2 max-w-lg mx-auto">
+        <div className="flex-1 min-w-0">
+          {renderActionButton(true)}
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("open-ai-guardian"));
+            }
+          }}
+          className="h-[52px] px-2.5 flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-300 text-xs font-mono font-bold shrink-0 transition active:scale-95 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+          title="Open AI Guardian Health Diagnostics (95%)"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+          </span>
+          <span className="text-[11px] font-black text-cyan-300">95%</span>
+          <span className="w-4 h-4 rounded-full text-[9px] font-bold bg-amber-500 text-black flex items-center justify-center">1</span>
+        </button>
+      </div>
     </div>
   </div>
   );

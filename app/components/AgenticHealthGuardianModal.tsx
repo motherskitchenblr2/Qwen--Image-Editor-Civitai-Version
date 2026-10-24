@@ -109,6 +109,16 @@ export default function AgenticHealthGuardianModal({
     return () => clearInterval(interval);
   }, []);
 
+  // Listen for global open event
+  useEffect(() => {
+    const handleOpen = () => {
+      setIsOpen(true);
+      setIsMinimized(false);
+    };
+    window.addEventListener("open-ai-guardian", handleOpen);
+    return () => window.removeEventListener("open-ai-guardian", handleOpen);
+  }, []);
+
   // Run initial prompt analysis in playground
   useEffect(() => {
     if (testPrompt) {
@@ -218,8 +228,8 @@ export default function AgenticHealthGuardianModal({
 
   return (
     <>
-      {/* ── Floating Indicator Trigger Button (Bottom-Right) ── */}
-      <div className="fixed bottom-5 right-5 z-50 select-none">
+      {/* ── Floating Indicator Trigger Button (Desktop Only Bottom-Right; Docked in Sticky Footer on Mobile) ── */}
+      <div className="hidden lg:flex fixed bottom-5 right-5 z-40 select-none">
         <button
           onClick={() => {
             setIsOpen(true);

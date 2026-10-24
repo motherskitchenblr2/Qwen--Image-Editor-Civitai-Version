@@ -11,6 +11,11 @@ module.exports = {
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        slate: {
+          350: "#a1b0cb",
+          750: "#233044",
+          850: "#172033",
+        },
       },
     },
   },

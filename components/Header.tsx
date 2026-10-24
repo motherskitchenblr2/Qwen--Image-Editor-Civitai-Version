@@ -230,6 +230,25 @@ export default function Header({
             )}
           </button>
 
+          {/* AI Guardian Health Status Button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("open-ai-guardian"));
+              }
+            }}
+            title="Open AI Health Guardian & Fix Sentinel (Health 95%)"
+            className="h-10 px-2.5 flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 text-xs font-mono font-bold transition active:scale-95 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+            </span>
+            <span className="text-[11px] font-black text-cyan-300">95%</span>
+            <span className="w-4 h-4 rounded-full text-[9px] font-bold bg-amber-500 text-black flex items-center justify-center">1</span>
+          </button>
+
           {/* Settings Button (Inspect backend tunnel URL, Minimum 40x40 touch target) */}
           <button
             onClick={onToggleAdvancedUrl}

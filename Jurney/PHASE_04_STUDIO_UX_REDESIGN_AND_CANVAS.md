@@ -433,6 +433,35 @@ flowchart TD
 - **0 TypeScript errors** (`npm run typecheck`).
 - Clean production Next.js 15 build (`npm run build`).
 
+---
+
+## 17. Studio DOM Ordering, High-Contrast Disabled State & Status Badge Docking
+
+### 17.1 Unification of Mobile DOM Flow (`StudioLayout.tsx`)
+- **Ordering**:
+  - Maintained contiguous prompt input groups inside `ControlPanel.tsx`: Prompt label, consolidated action buttons toolbar (`PromptActionButtons`), and textarea are strictly contiguous and never sliced.
+  - Sized mobile canvas in `StudioLayout.tsx` with `order-1 lg:order-2 h-[380px] sm:h-[440px] lg:h-full shrink-0` to render dead-top on mobile while sitting in the right workstation rail on desktop.
+  - Sized controls container with `order-2 lg:order-1 h-auto lg:h-full pb-32 lg:pb-4` to render below the canvas on mobile with ample scroll clearance above the sticky footer.
+
+### 17.2 High-Contrast Disabled CTA & Typography (`ControlPanel.tsx` & `tailwind.config.js`)
+- **Tailwind Palette Extension**: Added `slate-350` (`#a1b0cb`), `slate-750` (`#233044`), and `slate-850` (`#172033`) into `tailwind.config.js`.
+- **Disabled Primary CTA**:
+  ```tsx
+  className={`w-full py-3.5 rounded-xl border text-sm flex flex-col items-center justify-center gap-0.5 transition ${
+    isGenerateDisabled
+      ? "border-slate-750 bg-slate-900/80 text-slate-350 font-medium cursor-not-allowed"
+      : "border-cyan-500/50 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/20 active:scale-[0.99]"
+  }`}
+  ```
+- **Helper Typography**:
+  `<p className="text-slate-400 text-xs font-normal text-center">Upload an image to enable editing</p>`
+
+### 17.3 Status Badge Docking & De-conflict (`ControlPanel.tsx`, `Header.tsx`, `AgenticHealthGuardianModal.tsx`)
+- **Docked in Sticky Footer**: In `ControlPanel.tsx`, placed the `🟢 95% (1)` status badge inside the mobile sticky footer's flex row alongside the primary action button (`<div className="flex items-center gap-2 max-w-lg mx-auto">`).
+- **Docked in Top Header**: Added the `🟢 95% (1)` status badge to `Header.tsx`'s system cluster for persistent 1-tap telemetry and modal access.
+- **Floating Overlap Elimination**: Removed mobile floating trigger by updating `AgenticHealthGuardianModal.tsx` trigger container to `hidden lg:flex fixed bottom-5 right-5 z-40 select-none`, completely eliminating CTA border overlap.
+
+
 
 
 
