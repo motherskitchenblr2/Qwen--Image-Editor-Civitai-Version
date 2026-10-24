@@ -1159,7 +1159,7 @@ export default function ImageEditorStudio() {
   };
 
   return (
-    <div className={`flex flex-col ${activeTab === "studio" ? "h-[100dvh] max-h-[100dvh] overflow-hidden" : "min-h-screen"} bg-transparent text-slate-100 font-sans selection:bg-cyan-500 selection:text-black relative ${theme === "day" ? "theme-day" : "theme-night"}`}>
+    <div className={`flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden bg-transparent text-slate-100 font-sans selection:bg-cyan-500 selection:text-black relative ${theme === "day" ? "theme-day" : "theme-night"}`}>
       {/* ── Top Unified Header Bar (Frozen at Top of Viewport) ── */}
       <Header
         theme={theme}
@@ -1179,8 +1179,8 @@ export default function ImageEditorStudio() {
         galleryCount={gallery.length}
       />
 
-      {/* Header spacer: preserves natural document flow height beneath frozen header */}
-      <div className="h-14 sm:h-16 shrink-0" aria-hidden="true" />
+      {/* Header spacer: exact 56px matching h-[calc(100dvh-56px)] */}
+      <div className="h-14 shrink-0" aria-hidden="true" />
 
       {/* Booting Notification Banner */}
       {bootMessage && (
@@ -1659,22 +1659,22 @@ export default function ImageEditorStudio() {
               isGenerating={isGenerating}
               generationProgress={generationProgress}
               history={gallery}
-            />
-          }
-          historyRibbon={
-            <HistoryRibbon
-              gallery={gallery}
-              activeImage={editedImage || originalImage}
-              onSelectImage={(img) => {
-                setEditedImage(img);
-                setViewMode("result");
-              }}
-              onSendToInput={(img) => {
-                setOriginalImage(img);
-                setEditedImage(null);
-                showToast("Image sent to input for iterative refinement!", "success");
-              }}
-              onClearHistory={() => setGallery([])}
+              historyRibbon={
+                <HistoryRibbon
+                  gallery={gallery}
+                  activeImage={editedImage || originalImage}
+                  onSelectImage={(img) => {
+                    setEditedImage(img);
+                    setViewMode("result");
+                  }}
+                  onSendToInput={(img) => {
+                    setOriginalImage(img);
+                    setEditedImage(null);
+                    showToast("Image sent to input for iterative refinement!", "success");
+                  }}
+                  onClearHistory={() => setGallery([])}
+                />
+              }
             />
           }
         />

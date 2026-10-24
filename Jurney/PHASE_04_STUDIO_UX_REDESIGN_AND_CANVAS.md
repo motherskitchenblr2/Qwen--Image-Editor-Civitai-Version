@@ -385,6 +385,55 @@ flowchart TD
   - **ControlPanel Mode & T2I Validation**: Direct verification that Kaggle GPU in Generate mode enables the primary CTA without requiring source image upload.
 - **Verification**: **69 / 69 passing tests** across 10 test files (`npm test`), **0 TypeScript errors** (`npm run typecheck`).
 
+---
+
+## 16. Viewport Height Hard-Lock (100dvh) & 3-Tier Canvas Architecture
+
+### 16.1 Elimination of the ~2,400px Vertical Stretch Defect
+- **Root Cause Analysis**:
+  - In previous revisions, `StudioLayout` used loose viewport paddings (`pb-36 lg:pb-2`) alongside unconstrained flex containers in `CanvasWorkspace`, allowing the canvas stage to expand vertically down to ~2,400px.
+  - The left sidebar terminated around pixel 900 while the right canvas dropped the upload card to ~1,600px and the session history bar down to pixel ~2,400, leaving a massive empty black void beneath the sidebar.
+- **Root Boundary Resolution (`app/globals.css`)**:
+  - Enforced strict CSS viewport lock on root DOM elements:
+    ```css
+    html,
+    body {
+      height: 100%;
+      max-height: 100dvh;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    ```
+  - Standardized the frozen top header spacer in `app/page.tsx` to exact `h-14 shrink-0` (56px).
+
+### 16.2 StudioLayout Hard-Locking (`StudioLayout.tsx`)
+- Outer container locked to exact remaining dynamic viewport height:
+  ```tsx
+  <div className="h-[calc(100dvh-56px)] w-full grid grid-cols-1 lg:grid-cols-[440px_1fr] xl:grid-cols-[460px_1fr] overflow-hidden bg-[#070b14]">
+    <aside className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 p-4 border-r border-slate-800/80 space-y-4">
+      {controlPanel}
+    </aside>
+    <main className="h-full flex flex-col justify-between overflow-hidden bg-[#050811]">
+      {canvasWorkspace}
+    </main>
+  </div>
+  ```
+- Prevents the sidebar controls from inflating the page height. Left rail scrolls smoothly and independently with hidden/thin scrollbars.
+
+### 16.3 3-Tier Canvas Stage Architecture (`CanvasWorkspace.tsx`)
+- Replaced ambiguous nested wrappers with an explicit 3-tier flex column:
+  - **Tier A (Fixed Top Toolbar)**: `h-11 border-b border-slate-800/70 px-4 flex items-center justify-between bg-[#0a0f1d]/50 shrink-0` (View Mode switches, Inpaint brush toggle, Aspect presets, Zoom).
+  - **Tier B (Auto-Centered Stage)**: `flex-1 min-h-0 relative flex items-center justify-center p-6 overflow-hidden shadow-[inset_0_0_50px_rgba(0,0,0,0.85)] group`. The upload dropzone card (`w-full max-w-lg p-8 border-2 border-dashed border-slate-700/80 hover:border-cyan-500/60 rounded-2xl bg-slate-900/40`) is pinned dead-center in the user's primary field of view.
+  - **Tier C (Bottom Session History)**: `h-20 border-t border-slate-800/80 bg-[#080d1a]/95 px-4 flex items-center shrink-0 overflow-x-auto`. Hosts `HistoryRibbon` directly below the stage with `w-14 h-14` thumbnail tiles that scroll horizontally without expanding page height.
+
+### 16.4 Parity & Quality Gates
+- Mirrored all modifications identically between `app/components/studio/*` and `components/studio/*`.
+- **69 / 69 Vitest tests passing** across 10 test files (`npm test`).
+- **0 TypeScript errors** (`npm run typecheck`).
+- Clean production Next.js 15 build (`npm run build`).
+
+
 
 
 

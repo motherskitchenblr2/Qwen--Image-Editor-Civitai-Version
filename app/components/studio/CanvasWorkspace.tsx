@@ -298,9 +298,9 @@ export default function CanvasWorkspace({
   const activeDisplayImage = editedImage || originalImage;
 
   return (
-    <div className="h-full flex flex-col justify-between overflow-hidden bg-[#050811] rounded-xl border border-slate-800/60 select-none">
-      {/* ── Top Workspace Toolbar (Aligned with Mode Switch) ── */}
-      <div className="min-h-[50px] flex items-center justify-between gap-2 pt-3 px-3 pb-1 sm:px-4 bg-slate-950/85 border-b border-cyan-500/35 shrink-0">
+    <section className="h-full flex flex-col justify-between overflow-hidden bg-[#050811] relative select-none">
+      {/* Tier A: Fixed Top Toolbar (h-11 shrink-0) */}
+      <div className="h-11 border-b border-slate-800/70 px-4 flex items-center justify-between bg-[#0a0f1d]/50 shrink-0">
         {/* Left: View Mode Toggles */}
         <div className="flex items-center gap-1 bg-black/80 p-1 rounded-xl border border-cyan-500/30">
           {originalImage && editedImage && (
@@ -588,7 +588,7 @@ export default function CanvasWorkspace({
           </div>
         ) : studioMode === "generate" ? (
           /* Empty State: Text-to-Image Generation Mode */
-          <div className="w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40 hover:border-cyan-500/60 transition-all cursor-pointer">
+          <div className="w-full max-w-lg p-8 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40 hover:border-cyan-500/60 transition-all cursor-pointer">
             <div className="p-3.5 bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 border border-cyan-400/60 rounded-2xl text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.35)] mb-3 animate-pulse">
               <Sparkles className="w-8 h-8" />
             </div>
@@ -603,7 +603,7 @@ export default function CanvasWorkspace({
           /* Empty State: Image-to-Image Edit Mode (Upload Dropzone) */
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="w-full max-w-md p-6 border-2 border-dashed border-slate-700/80 rounded-2xl flex flex-col items-center justify-center text-center bg-slate-900/40 hover:border-cyan-500/60 transition-all cursor-pointer"
+            className="w-full max-w-lg p-8 border-2 border-dashed border-slate-700/80 hover:border-cyan-500/60 rounded-2xl bg-slate-900/40 flex flex-col items-center justify-center text-center transition-all cursor-pointer"
           >
             <div className="p-3.5 bg-slate-900/90 border border-cyan-500/30 rounded-2xl text-cyan-400 group-hover:text-white group-hover:border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all mb-3">
               <Upload className="w-8 h-8 group-hover:scale-110 transition-transform" />
@@ -679,12 +679,10 @@ export default function CanvasWorkspace({
         </div>
       )}
 
-      {/* Optional Session History Ribbon (only render when history items exist: history.length > 0) */}
-      {historyRibbon && history && history.length > 0 && (
-        <div className="shrink-0 border-t border-slate-800/60 pt-2 px-1">
-          {historyRibbon}
-        </div>
-      )}
-    </div>
+      {/* Tier C: Bottom Session History (h-20 shrink-0) */}
+      <div className="h-20 border-t border-slate-800/80 bg-[#080d1a]/95 px-4 flex items-center shrink-0 overflow-x-auto">
+        {historyRibbon}
+      </div>
+    </section>
   );
 }
