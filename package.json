@@ -8,7 +8,12 @@
     "start": "next start",
     "test": "./node_modules/.bin/vitest run",
     "test:watch": "./node_modules/.bin/vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start-gpu": "start-gpu",
+    "stop-gpu": "stop-gpu",
+    "gpu:start": "start-gpu",
+    "gpu:stop": "stop-gpu",
+    "gpu:status": "python3 backend/kaggle_guard.py status"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

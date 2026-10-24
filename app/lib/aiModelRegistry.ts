@@ -868,3 +868,11 @@ export async function getConsolidatedLiveProviders(forceRefresh = false): Promis
     freeModelsCount: freeCount,
   };
 }
+
+export const LIVE_MODEL_REGISTRY = BASE_PROVIDERS.flatMap((p) =>
+  p.models.map((m) => ({
+    ...m,
+    free: Boolean(m.isFree || m.isFreeTier),
+  }))
+);
+
