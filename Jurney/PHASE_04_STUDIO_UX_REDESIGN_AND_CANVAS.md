@@ -337,6 +337,28 @@ flowchart TD
 - **High-Contrast Readability & Accessibility**:
   - Deep slate navy typography (`#0F172A` / `#334155` / `#64748B`), delivering WCAG AAA contrast ratio across all forms, buttons, titles, and telemetry chips.
 
+---
+
+## 14. Strict TDD Implementation: Studio Job Pricing & Resource Calculation Engine
+
+### 14.1 Architecture & Motivation
+- Implemented `calculateStudioJobTotal` utility and `/api/pricing/estimate` endpoint following strict Test-Driven Development (TDD).
+- **Core Capabilities**:
+  - Automatically identifies Free Tier models (Pollinations Turbo, Kaggle GPU cluster, Hugging Face free models) to guarantee deterministic `$0.00` total price.
+  - Multi-tier dynamic pricing for commercial engines:
+    - Base price per image batch (4¢ baseline).
+    - Resolution multiplier (2.0x scaling for >2MP high-res outputs like 2048x2048).
+    - Compute step surcharges (2¢ per 25 excess sampling steps over baseline).
+    - Active LoRA fusion fee (1¢ per LoRA injection per output).
+    - Coupon & percentage discount calculation without permitting sub-zero totals.
+  - Strict input validation raising typed `PricingValidationError` for invalid resolutions, negative steps, or NaN quantities.
+
+### 14.2 Test Suite Evolution
+- **RED Phase**: Initialized unit suite `tests/unit/pricing_calculator.test.ts` and integration suite `tests/functional/pricing_integration.test.ts` asserting missing modules.
+- **GREEN Phase**: Implemented minimal robust code in `app/lib/pricingCalculator.ts`, `app/lib/aiModelRegistry.ts`, and `app/api/pricing/estimate/route.ts`.
+- **Validation**: All 63 tests across 9 test files pass (100% green). Full Next.js production build verified.
+
+
 
 
 
