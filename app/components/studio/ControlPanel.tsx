@@ -153,8 +153,8 @@ export default function ControlPanel({
 
   const isGenerateDisabled =
     isGenerating ||
-    (selectedStudioModel === "kaggle-gpu" && (!originalImage || !isConnected)) ||
-    (studioMode === "edit" && !originalImage && selectedStudioModel !== "kaggle-gpu");
+    (selectedStudioModel === "kaggle-gpu" && !isConnected) ||
+    (studioMode === "edit" && !originalImage);
 
   const renderActionButton = (isMobileBar = false) => (
     <div className={`space-y-2 ${isMobileBar ? "w-full max-w-lg mx-auto" : "w-full"}`}>

@@ -358,6 +358,34 @@ flowchart TD
 - **GREEN Phase**: Implemented minimal robust code in `app/lib/pricingCalculator.ts`, `app/lib/aiModelRegistry.ts`, and `app/api/pricing/estimate/route.ts`.
 - **Validation**: All 63 tests across 9 test files pass (100% green). Full Next.js production build verified.
 
+---
+
+## 15. Direct Kaggle Text-to-Image Synthesis & Automated Canvas E2E Suite
+
+### 15.1 Direct Text-to-Image Synthesis via Blank White Latent Canvas
+- **Motivation**:
+  - The Kaggle Dual Tesla T4 GPU backend previously enforced mandatory `image_base64` input, restricting GPU generation exclusively to Image-to-Image editing and blocking pure Text-to-Image synthesis on Kaggle.
+- **Architecture & Implementation**:
+  - In `backend/kaggle_backend.py` & `kaggle/kaggle_backend.py`:
+    - Updated `EditRequest` schema to allow `image_base64: Optional[str] = None`.
+    - In `orchestrator.generate()`, when `input_image is None`, dynamically initializes a blank white latent canvas `Image.new("RGB", (target_w, target_h), (255, 255, 255))` conforming to requested or default 512x512 resolution (scaled to `MAX_INFERENCE_DIM`).
+    - Uses runtime inspection (`inspect.signature(self.pipe.__call__).parameters`) to transparently support both image-conditioned pipelines (`QwenImageEditPlusPipeline`, `QwenImageEditPipeline`) and text-only diffusion pipelines.
+    - Accurately tracks async progress with stage description `"Synthesizing text-to-image on Tesla T4..."`.
+  - In `app/api/edit/route.ts` & `app/page.tsx`:
+    - Removed mandatory image block when in `generate` mode for `kaggle-gpu`.
+    - Aligned `ControlPanel.tsx` (in both `app/components/studio/` and `components/studio/`) so the primary action button is fully enabled in Generate mode when Kaggle GPU is online.
+  - Synchronized notebook cell 2 in `backend/qwen_image_editor_backend.ipynb` and `kaggle/qwen_image_editor_backend.ipynb`.
+
+### 15.2 Automated Canvas & Navigation Interaction Suite
+- **Component**: `tests/functional/canvas_interactions.test.tsx`
+- **Coverage**:
+  - **Header Navigation & Quick Toggles**: All 5 tabs (`studio`, `generators`, `loras`, `gallery`, `sentinel`), Night/Day theme toggling, and SFW/NSFW safety toggle dispatching.
+  - **Interactive Split-Wipe Curtain**: Dual-image rendering, divider drag handle mouse tracking with viewport coordinate scaling, and percentage boundary clamping.
+  - **HTML5 Inpaint Masking**: Brush activation, stroke recording on mask canvas context, and alpha mask history tracking.
+  - **ControlPanel Mode & T2I Validation**: Direct verification that Kaggle GPU in Generate mode enables the primary CTA without requiring source image upload.
+- **Verification**: **69 / 69 passing tests** across 10 test files (`npm test`), **0 TypeScript errors** (`npm run typecheck`).
+
+
 
 
 

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "NSFW Blocked by Admin" }, { status: 403 });
     }
 
-    if (!image_base64) {
+    if (!image_base64 && body.mode === "edit") {
       return NextResponse.json(
         { error: "A source image is required for Image-to-Image editing on GPU." },
         { status: 400 }
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     const gpuPayload: any = {
-      image_base64,
+      image_base64: image_base64 || null,
       prompt: prompt.trim(),
       negative_prompt,
       true_cfg_scale: Number(true_cfg_scale),

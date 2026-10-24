@@ -939,7 +939,7 @@ export default function ImageEditorStudio() {
   const handleGenerate = async () => {
     // Validation based on mode & model
     if (selectedStudioModel === "kaggle-gpu") {
-      if (!originalImage) {
+      if (studioMode === "edit" && !originalImage) {
         alert("Please upload a source image for Image-to-Image editing on Kaggle GPU.");
         return;
       }
@@ -976,11 +976,17 @@ export default function ImageEditorStudio() {
     try {
       if (selectedStudioModel === "kaggle-gpu") {
         setTotalGenerationSteps(Number(steps));
-        setGenerationStatusText(Number(steps) <= 4 ? "⚡ Initializing 4-Step Rapid Edit (~15-25s)..." : "Initializing GPU inference job...");
+        setGenerationStatusText(
+          Number(steps) <= 4
+            ? "⚡ Initializing 4-Step Rapid Inference (~15-25s)..."
+            : !originalImage
+            ? "⚡ Initializing Kaggle GPU Text-to-Image synthesis..."
+            : "Initializing GPU inference job..."
+        );
 
         const cleanUrl = backendUrl.replace(/\/+$/, "");
         const payload = {
-          image_base64: originalImage,
+          image_base64: originalImage || null,
           prompt: prompt,
           negative_prompt: negativePrompt,
           true_cfg_scale: Number(trueCfgScale),

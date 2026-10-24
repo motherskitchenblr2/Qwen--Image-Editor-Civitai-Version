@@ -816,8 +816,8 @@ class ModelOrchestrator:
 
     def generate(
         self,
-        input_image: Image.Image,
-        prompt: str,
+        input_image: Optional[Image.Image] = None,
+        prompt: str = "",
         negative_prompt: str = "blurry, distorted, low quality, deformed, pixelated, saturated, oversaturated",
         true_cfg_scale: float = 4.0,
         guidance_scale: float = 1.0,
@@ -828,7 +828,7 @@ class ModelOrchestrator:
         task_id: Optional[str] = None,
         loras: Optional[List[Dict[str, Any]]] = None
     ) -> Image.Image:
-        """Execute image edit inference."""
+        """Execute image edit or text-to-image inference."""
         import torch
 
         with self.lock:
@@ -841,23 +841,25 @@ class ModelOrchestrator:
             gen = torch.manual_seed(seed) if seed is not None else None
 
             # Calculate safe inference dimensions for Tesla T4 (prevents quadratic attention OOM)
-            orig_w, orig_h = input_image.size
+            orig_w = int(width) if width else (input_image.size[0] if input_image else 512)
+            orig_h = int(height) if height else (input_image.size[1] if input_image else 512)
             max_dim = int(os.environ.get("MAX_INFERENCE_DIM", 768))
-            if width and height:
-                scale = min(max_dim / max(int(width), int(height)), 1.0)
-                target_w = max(256, (int(int(width) * scale) // 16) * 16)
-                target_h = max(256, (int(int(height) * scale) // 16) * 16)
-            else:
-                scale = min(max_dim / max(orig_w, orig_h), 1.0)
-                target_w = max(256, (int(orig_w * scale) // 16) * 16)
-                target_h = max(256, (int(orig_h * scale) // 16) * 16)
+            scale = min(max_dim / max(orig_w, orig_h), 1.0)
+            target_w = max(256, (int(orig_w * scale) // 16) * 16)
+            target_h = max(256, (int(orig_h * scale) // 16) * 16)
 
-            logger.info(f"Executing inference: prompt='{prompt[:60]}...', steps={num_inference_steps}, target_res={target_w}x{target_h}")
+            # Pure Text-to-Image synthesis via empty white latent canvas conditioning
+            is_text2img = input_image is None
+            if is_text2img:
+                logger.info(f"⚡ [Text-to-Image] Initializing empty white latent canvas conditioning ({target_w}x{target_h}).")
+                input_image = Image.new("RGB", (target_w, target_h), (255, 255, 255))
+
+            logger.info(f"Executing inference: mode={'t2i' if is_text2img else 'i2i'}, prompt='{prompt[:60]}...', steps={num_inference_steps}, target_res={target_w}x{target_h}")
             torch.cuda.empty_cache()
             gc.collect()
 
             if task_id and task_id in JOBS:
-                JOBS[task_id]["stage"] = "Encoding prompt & input image on Tesla T4..."
+                JOBS[task_id]["stage"] = "Synthesizing text-to-image on Tesla T4..." if is_text2img else "Encoding prompt & input image on Tesla T4..."
                 JOBS[task_id]["progress"] = 8.0
 
             def step_cb(pipe_obj, step_idx, timestep, callback_kwargs):
@@ -876,7 +878,6 @@ class ModelOrchestrator:
             try:
                 with torch.inference_mode():
                     call_kwargs = {
-                        "image": input_image,
                         "prompt": prompt,
                         "guidance_scale": guidance_scale,
                         "num_inference_steps": num_inference_steps,
@@ -884,6 +885,13 @@ class ModelOrchestrator:
                         "height": target_h,
                         "width": target_w,
                     }
+                    if hasattr(self.pipe, "__call__"):
+                        import inspect
+                        pipe_params = inspect.signature(self.pipe.__call__).parameters
+                        if "image" in pipe_params and input_image is not None:
+                            call_kwargs["image"] = input_image
+                    else:
+                        call_kwargs["image"] = input_image
 
                     # Viggle Turbo exact 6-step or 9-step sigma schedule
                     sigmas = raw_nodes(num_inference_steps)
@@ -960,7 +968,7 @@ class LoRALoadRequest(BaseModel):
 
 
 class EditRequest(BaseModel):
-    image_base64: str
+    image_base64: Optional[str] = None
     prompt: str
     negative_prompt: str = ""
     true_cfg_scale: float = 1.0
@@ -1346,14 +1354,16 @@ def edit_image(req: EditRequest):
     if not orchestrator.is_ready:
         raise HTTPException(status_code=503, detail="Pipeline is still initializing. Please wait.")
 
-    try:
-        clean_b64 = req.image_base64
-        if "base64," in clean_b64:
-            clean_b64 = clean_b64.split("base64,")[1]
-        img_bytes = base64.b64decode(clean_b64)
-        input_image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid image format: {e}")
+    input_image = None
+    if req.image_base64 and req.image_base64.strip():
+        try:
+            clean_b64 = req.image_base64
+            if "base64," in clean_b64:
+                clean_b64 = clean_b64.split("base64,")[1]
+            img_bytes = base64.b64decode(clean_b64)
+            input_image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid image format: {e}")
 
     lora_dicts = [l.dict() for l in req.loras] if req.loras else []
 
@@ -1381,7 +1391,7 @@ def edit_image(req: EditRequest):
 
         def async_worker():
             JOBS[task_id]["status"] = "processing"
-            JOBS[task_id]["stage"] = "Encoding prompt & input image on Tesla T4..."
+            JOBS[task_id]["stage"] = "Encoding prompt & input image on Tesla T4..." if input_image else "Synthesizing text-to-image on Tesla T4..."
             JOBS[task_id]["progress"] = 8.0
             try:
                 output_image = orchestrator.generate(
