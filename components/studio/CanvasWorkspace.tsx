@@ -32,6 +32,8 @@ interface CanvasWorkspaceProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   isGenerating?: boolean;
   generationProgress?: number;
+  history?: string[];
+  historyRibbon?: React.ReactNode;
 }
 
 export default function CanvasWorkspace({
@@ -44,6 +46,8 @@ export default function CanvasWorkspace({
   fileInputRef,
   isGenerating = false,
   generationProgress = 0,
+  history,
+  historyRibbon,
 }: CanvasWorkspaceProps) {
   // View Modes: "split" | "result" | "original" | "opacity"
   const [viewMode, setViewMode] = useState<"split" | "result" | "original" | "opacity">("split");
@@ -672,6 +676,13 @@ export default function CanvasWorkspace({
             className="flex-1 accent-purple-400 h-1.5 bg-slate-800 rounded cursor-pointer"
           />
           <span className="text-purple-300 font-bold shrink-0">Result ({opacityBlend}%)</span>
+        </div>
+      )}
+
+      {/* Optional Session History Ribbon (only render when history items exist: history.length > 0) */}
+      {historyRibbon && history && history.length > 0 && (
+        <div className="shrink-0 border-t border-slate-800/60 pt-2 px-1">
+          {historyRibbon}
         </div>
       )}
     </div>

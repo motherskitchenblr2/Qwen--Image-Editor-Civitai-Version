@@ -41,19 +41,9 @@ export default function HistoryRibbon({
   if (gallery.length === 0) {
     return (
       <div className="w-full">
-        {/* Mobile Compact Bar (<1024px) */}
-        <div className="lg:hidden border-t border-b border-slate-800/60 py-1.5 px-3 text-xs flex items-center justify-between bg-black/60 rounded-lg text-slate-400">
-          <div className="flex items-center gap-2">
-            <History className="w-3.5 h-3.5 text-cyan-400/70" />
-            <span className="font-semibold text-slate-300">Session History</span>
-          </div>
-          <span className="text-[10px] font-mono text-cyan-400/60 uppercase tracking-wider">
-            0 Items
-          </span>
-        </div>
-
-        {/* Desktop Ribbon (>=1024px) */}
-        <div className="hidden lg:flex bg-black/60 border border-cyan-500/25 rounded-2xl p-2.5 px-4 items-center justify-between text-xs text-slate-400">
+        {/* On mobile (<1024px): Empty state is completely hidden so it never pushes down the canvas */}
+        {/* On desktop (>=1024px): Subtle informational ribbon */}
+        <div className="hidden lg:flex bg-black/60 border border-cyan-500/25 rounded-2xl p-2 px-4 items-center justify-between text-xs text-slate-400">
           <div className="flex items-center gap-2">
             <History className="w-3.5 h-3.5 text-cyan-400/70" />
             <span className="font-semibold text-slate-300">Session History</span>
