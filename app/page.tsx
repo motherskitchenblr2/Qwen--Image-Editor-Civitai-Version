@@ -442,7 +442,8 @@ export default function ImageEditorStudio() {
     }
   };
 
-  const handleStartGpu = async (forceRestart: boolean = false) => {
+  const handleStartGpu = async (forceRestartInput: boolean | any = false) => {
+    const forceRestart = forceRestartInput === true;
     setIsStartingGpu(true);
     setBootMessage(forceRestart ? "Force restarting Kaggle GPU session..." : "Checking Kaggle Dual Tesla T4 GPU status...");
     try {
@@ -482,7 +483,8 @@ export default function ImageEditorStudio() {
     } catch (e: any) {
       setIsStartingGpu(false);
       setBootMessage("");
-      alert(`Launch error: ${e.message}`);
+      const errorMsg = e instanceof Error ? e.message : typeof e === "string" ? e : "Could not initialize GPU session.";
+      alert(`Launch error: ${errorMsg}`);
     }
   };
 
@@ -1169,7 +1171,7 @@ export default function ImageEditorStudio() {
         isConnected={isConnected}
         isStartingGpu={isStartingGpu}
         isShuttingDown={isShuttingDown}
-        onStartGpu={handleStartGpu}
+        onStartGpu={() => handleStartGpu(false)}
         onShutdownGpu={handleShutdownGpu}
         showAdvancedUrl={showAdvancedUrl}
         onToggleAdvancedUrl={() => setShowAdvancedUrl(!showAdvancedUrl)}

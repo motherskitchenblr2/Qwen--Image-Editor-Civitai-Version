@@ -461,6 +461,27 @@ flowchart TD
 - **Docked in Top Header**: Added the `🟢 95% (1)` status badge to `Header.tsx`'s system cluster for persistent 1-tap telemetry and modal access.
 - **Floating Overlap Elimination**: Removed mobile floating trigger by updating `AgenticHealthGuardianModal.tsx` trigger container to `hidden lg:flex fixed bottom-5 right-5 z-40 select-none`, completely eliminating CTA border overlap.
 
+---
+
+## 18. Fix for React Synthetic Event Circular JSON Serialization in GPU Boot Trigger
+
+### 18.1 Root Cause Analysis
+- **Error Trigger**: `Converting circular structure to JSON --> starting at object with constructor 'HTMLSpanElement' property '_reactFiber$1162c6tfn4x' -> object with constructor 'rn' --- property 'stateNode' closes the circle`.
+- **Mechanism**:
+  - In `Header.tsx`, the GPU offline button invoked `onClick={onStartGpu}`.
+  - In `app/page.tsx`, the prop was bound as `onStartGpu={handleStartGpu}` where `handleStartGpu = async (forceRestart: boolean = false)`.
+  - When invoked via React's `onClick`, the Synthetic `MouseEvent` was passed as the first parameter to `handleStartGpu`, assigning `forceRestart = event`.
+  - Inside `handleStartGpu`, `JSON.stringify({ force_restart: forceRestart })` attempted to serialize the React Synthetic Event containing DOM nodes (`HTMLSpanElement`), internal React Fiber trees (`_reactFiber...`), and cyclic `stateNode` references, throwing a fatal circular JSON serialization error.
+
+### 18.2 Resolution
+- In `app/page.tsx`:
+  - Enforced strict boolean normalization: `const forceRestart = forceRestartInput === true;`.
+  - Changed Header binding: `onStartGpu={() => handleStartGpu(false)}`.
+  - Enhanced error handling: `const errorMsg = e instanceof Error ? e.message : typeof e === "string" ? e : "Could not initialize GPU session.";`.
+- In `Header.tsx` & `components/Header.tsx`:
+  - Updated button click handlers to zero-argument lambdas (`onClick={() => onStartGpu()}` and `onClick={() => onShutdownGpu()}`).
+
+
 
 
 

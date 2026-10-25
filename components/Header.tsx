@@ -147,7 +147,7 @@ export default function Header({
           {/* Unified GPU Toggle Button */}
           {isConnected ? (
             <button
-              onClick={onShutdownGpu}
+              onClick={() => onShutdownGpu()}
               disabled={isShuttingDown}
               title="GPU is Online. Click to turn off and save quota."
               className="group h-10 px-3 flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl text-xs font-bold bg-emerald-500/20 hover:bg-rose-500/25 border border-emerald-400/80 hover:border-rose-400 text-emerald-200 hover:text-rose-200 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all active:scale-95 disabled:opacity-50"
@@ -162,7 +162,7 @@ export default function Header({
             </button>
           ) : isStartingGpu ? (
             <button
-              onClick={onShutdownGpu}
+              onClick={() => onShutdownGpu()}
               disabled={isShuttingDown}
               title="GPU is booting on Kaggle (~90s). Click to halt."
               className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-rose-500/25 border border-amber-400/80 hover:border-rose-400 text-amber-200 hover:text-rose-200 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all active:scale-95 disabled:opacity-50"
@@ -173,7 +173,7 @@ export default function Header({
             </button>
           ) : (
             <button
-              onClick={onStartGpu}
+              onClick={() => onStartGpu()}
               title="Click to Turn On Kaggle Dual Tesla T4 GPU"
               className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold bg-slate-900/90 hover:bg-emerald-500/20 border border-amber-500/50 hover:border-emerald-400 text-amber-300 hover:text-emerald-300 shadow-[0_0_12px_rgba(245,158,11,0.2)] hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all active:scale-95"
             >
