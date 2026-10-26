@@ -285,5 +285,57 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
       expect(Array.isArray(json.issues)).toBe(true);
       expect(typeof json.reportMarkdown).toBe("string");
     });
+
+    it("/api/civitai GET forwards cursor, nsfw flags and maps video previews properly", async () => {
+      // Mock global fetch for upstream Civitai endpoint
+      const mockCivitaiResponse = {
+        items: [
+          {
+            id: 99901,
+            name: "Cyberpunk Glow LoRA",
+            description: "<p>Awesome glowing cyberpunk style</p>",
+            modelVersions: [
+              {
+                id: 1001,
+                name: "v1.0",
+                baseModel: "SDXL 1.0",
+                images: [
+                  { id: 1, url: "https://image.civitai.com/preview.mp4", width: 512, height: 768, type: "video" },
+                  { id: 2, url: "https://image.civitai.com/preview.jpg", width: 512, height: 768, type: "image" },
+                ],
+                files: [{ primary: true, name: "cyberpunk_glow.safetensors", sizeKB: 102400 }],
+              },
+            ],
+          },
+        ],
+        metadata: {
+          nextCursor: "eyJ0aW1lc3RhbXAiOjE3MDAwMDAwMDB9",
+          totalItems: 1,
+          currentPage: 1,
+          pageSize: 16,
+        },
+      };
+
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockCivitaiResponse,
+      }) as any;
+
+      try {
+        const req = new NextRequest("http://localhost:3000/api/civitai?cursor=eyJ0ZXN0IjoxfQ&nsfw=true");
+        const res = await civitaiRoute.GET(req);
+        expect(res.status).toBe(200);
+
+        const data = await res.json();
+        expect(data.metadata.nextCursor).toBe("eyJ0aW1lc3RhbXAiOjE3MDAwMDAwMDB9");
+        expect(data.items.length).toBe(1);
+        expect(data.items[0].images[0].type).toBe("video");
+        expect(data.items[0].images[1].type).toBe("image");
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
   });
 });

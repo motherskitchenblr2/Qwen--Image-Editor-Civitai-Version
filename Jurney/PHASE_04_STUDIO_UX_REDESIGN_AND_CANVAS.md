@@ -481,6 +481,39 @@ flowchart TD
 - In `Header.tsx` & `components/Header.tsx`:
   - Updated button click handlers to zero-argument lambdas (`onClick={() => onStartGpu()}` and `onClick={() => onShutdownGpu()}`).
 
+---
+
+## 19. Kaggle Inactivity Watchdog, Multi-GPU Sharding & Civitai Explorer Previews & Pagination Fixes
+
+### 19.1 Task 1: Kaggle Inactivity Watchdog & Multi-GPU Strategy
+- **Watchdog Startup Premature Termination**:
+  - `IDLE_TIMEOUT_SECONDS` updated to `60 * 60` (60 min default).
+  - `AUTO_SHUTDOWN_ENABLED` defaults to `False` (`os.environ.get("AUTO_SHUTDOWN_ENABLED", "False").lower() in ("true", "1")`).
+  - Added `check_and_activate_watchdog()` with `watchdog_active = False` flag: the countdown only activates once both `orchestrator.is_ready` AND Cloudflare tunnel ingress registration succeed. The activity timestamp is reset at activation time, eliminating startup download countdown.
+- **Diffusers Multi-GPU Allocation Strategy**:
+  - Replaced unsupported `device_map="auto"` with `device_map="balanced"` across dual Tesla T4 GPUs (`{0: "10.0GiB", 1: "13.5GiB", "cpu": "16GiB"}`).
+  - Cascades gracefully to `"cuda"` with model offloading if balanced sharding is rejected.
+- **Notebook & Server Sync**:
+  - Mirrored changes between `backend/kaggle_backend.py` and `kaggle/kaggle_backend.py`.
+  - Re-encoded cell 2 in `app/api/backend/start/notebook.json`, `backend/qwen_image_editor_backend.ipynb`, and `kaggle/qwen_image_editor_backend.ipynb`.
+
+### 19.2 Task 2: Civitai Previews & Media Rendering
+- **Referrer Policy**:
+  - Added `referrerPolicy="no-referrer"` to preview `<img>` and `<video>` tags in `app/components/CivitaiLoraHub.tsx` to prevent 403 Forbidden blocking from `image.civitai.com`.
+- **HTML5 Video Previews**:
+  - Added video extension (`.mp4`, `.webm`) and `type === 'video'` detection.
+  - Rendered HTML5 `<video>` tag with `muted`, `autoPlay`, `loop`, `playsInline`, and `referrerPolicy="no-referrer"`.
+- **NSFW Stripping Fix**:
+  - Updated `app/api/civitai/route.ts` to accept `nsfw` param (defaulting to `"true"`), forwarding all content and sample images without stripping.
+
+### 19.3 Task 3: Infinite Scroll & Pagination
+- **Cursor Tracking**:
+  - Forwarded `cursor` param from API requests in `app/api/civitai/route.ts` and captured `metadata.nextCursor`.
+  - Managed `nextCursor`, `hasMore`, and `isLoadingMore` in `app/components/CivitaiLoraHub.tsx`.
+- **Intersection Observer**:
+  - Added bottom sentinel `<div ref={observerTarget} />` triggering `fetchNextPage()`.
+  - Appended unique models to state (`setModels(prev => [...prev, ...uniqueItems])`).
+
 
 
 

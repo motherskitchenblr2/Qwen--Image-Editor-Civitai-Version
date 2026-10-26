@@ -60,6 +60,8 @@ export interface CivitaiModelItem {
     url: string;
     width: number;
     height: number;
+    type?: string;
+    nsfwLevel?: number;
   }>;
 }
 
@@ -103,6 +105,12 @@ export default function CivitaiLoraHub({
   const [models, setModels] = useState<CivitaiModelItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Pagination & Infinite Scroll states
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const observerTarget = useRef<HTMLDivElement | null>(null);
 
   // Download states: { [modelId_or_versionId]: { state: 'idle'|'downloading'|'completed'|'error', msg?: string } }
   const [downloadStates, setDownloadStates] = useState<Record<string, { status: string; message?: string }>>({});
@@ -213,6 +221,8 @@ export default function CivitaiLoraHub({
   const fetchModels = async (query = searchQuery, tag = activeTag, baseM = selectedBaseModel, sort = sortOrder) => {
     setIsLoading(true);
     setError(null);
+    setNextCursor(null);
+    setHasMore(true);
     try {
       const q = query.trim() || (tag !== "All" ? tag : "");
       const params = new URLSearchParams();
@@ -220,11 +230,16 @@ export default function CivitaiLoraHub({
       params.append("sort", sort);
       if (baseM !== "All") params.append("baseModel", baseM);
       params.append("limit", "16");
+      params.append("nsfw", "true");
 
       const res = await fetch(`/api/civitai?${params.toString()}`);
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const data = await res.json();
-      setModels(data.items || []);
+      const newItems = data.items || [];
+      setModels(newItems);
+      const cursor = data.metadata?.nextCursor || null;
+      setNextCursor(cursor);
+      setHasMore(Boolean(cursor));
     } catch (e: any) {
       console.error("Civitai fetch error:", e);
       setError(e.message || "Failed to load Civitai LoRA models");
@@ -233,9 +248,62 @@ export default function CivitaiLoraHub({
     }
   };
 
+  const fetchNextPage = async () => {
+    if (isLoading || isLoadingMore || !hasMore || !nextCursor) return;
+    setIsLoadingMore(true);
+    try {
+      const q = searchQuery.trim() || (activeTag !== "All" ? activeTag : "");
+      const params = new URLSearchParams();
+      if (q) params.append("query", q);
+      params.append("sort", sortOrder);
+      if (selectedBaseModel !== "All") params.append("baseModel", selectedBaseModel);
+      params.append("limit", "16");
+      params.append("nsfw", "true");
+      params.append("cursor", nextCursor);
+
+      const res = await fetch(`/api/civitai?${params.toString()}`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const data = await res.json();
+      const newItems = data.items || [];
+      if (newItems.length > 0) {
+        setModels((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const uniqueItems = newItems.filter((m: CivitaiModelItem) => !existingIds.has(m.id));
+          return [...prev, ...uniqueItems];
+        });
+      }
+      const cursor = data.metadata?.nextCursor || null;
+      setNextCursor(cursor);
+      setHasMore(Boolean(cursor));
+    } catch (e: any) {
+      console.error("Civitai next page error:", e);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
   useEffect(() => {
     fetchModels();
   }, [activeTag, selectedBaseModel, sortOrder]);
+
+  useEffect(() => {
+    const target = observerTarget.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasMore && !isLoading && !isLoadingMore && nextCursor) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1, rootMargin: "300px" }
+    );
+
+    observer.observe(target);
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, isLoading, isLoadingMore, nextCursor, searchQuery, activeTag, selectedBaseModel, sortOrder]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -653,10 +721,13 @@ export default function CivitaiLoraHub({
             const currentVersion =
               model.allVersions.find((v) => v.id === currentVersionId) || model.version;
 
+            const primaryItem = model.images && model.images[0];
             const primaryImage =
-              model.images && model.images[0]
-                ? model.images[0].url
-                : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80";
+              primaryItem?.url ||
+              "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80";
+            const isVideo =
+              primaryItem?.type === "video" ||
+              Boolean(primaryImage.match(/\.(mp4|webm)$/i));
 
             const downloadKey = `${model.id}_${currentVersion.id}`;
             const downloadState = downloadStates[downloadKey];
@@ -667,15 +738,28 @@ export default function CivitaiLoraHub({
                 key={model.id}
                 className="group bg-slate-950/85 hover:bg-slate-950 border border-cyan-500/35 hover:border-cyan-400 rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-[0_0_25px_rgba(6,182,212,0.35)] hover:-translate-y-1"
               >
-                {/* ── Large Thumbnail with Overlay Badges ── */}
+                {/* ── Large Thumbnail / Video Preview with Overlay Badges ── */}
                 <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-950">
-                  <img
-                    src={primaryImage}
-                    alt={model.name}
-                    loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-black/30" />
+                  {isVideo ? (
+                    <video
+                      src={primaryImage}
+                      muted
+                      autoPlay
+                      loop
+                      playsInline
+                      {...({ referrerPolicy: "no-referrer" } as any)}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                    />
+                  ) : (
+                    <img
+                      src={primaryImage}
+                      alt={model.name}
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-black/30 pointer-events-none" />
 
                   {/* Top Badges */}
                   <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
@@ -825,6 +909,21 @@ export default function CivitaiLoraHub({
               </div>
             );
           })}
+
+          {/* ── Infinite Scroll Sentinel & Loader ── */}
+          <div ref={observerTarget} className="col-span-full py-8 flex flex-col items-center justify-center min-h-[60px]">
+            {isLoadingMore && (
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-slate-900/90 border border-cyan-500/30 rounded-full shadow-lg">
+                <RefreshCw className="w-4 h-4 animate-spin text-cyan-400" />
+                <span className="text-xs font-semibold text-cyan-300">Loading more LoRA models...</span>
+              </div>
+            )}
+            {!hasMore && models.length > 0 && (
+              <div className="text-center text-xs text-slate-500 py-2">
+                All available models loaded
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

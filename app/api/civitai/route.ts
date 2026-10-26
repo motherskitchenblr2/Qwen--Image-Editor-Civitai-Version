@@ -8,7 +8,9 @@ export async function GET(request: NextRequest) {
   const sort = searchParams.get("sort") || "Most Downloaded";
   const period = searchParams.get("period") || "AllTime";
   const limit = searchParams.get("limit") || "16";
-  const page = searchParams.get("page") || "1";
+  const page = searchParams.get("page") || "";
+  const cursor = searchParams.get("cursor") || "";
+  const nsfw = searchParams.get("nsfw") ?? "true";
   const baseModel = searchParams.get("baseModel") || "";
 
   // Map user-friendly sort to Civitai API sort parameters
@@ -24,12 +26,17 @@ export async function GET(request: NextRequest) {
     params.append("period", period);
   }
   params.append("limit", limit);
-  params.append("nsfw", "false"); // Default to SFW models
+  // Pass nsfw=true or designated levels so previews and sample images aren't stripped
+  params.append("nsfw", nsfw);
 
   if (query.trim()) {
     params.append("query", query.trim());
     // Civitai API rule: 'page' cannot be used with query search (only cursor or none)
-  } else if (page) {
+  }
+
+  if (cursor) {
+    params.append("cursor", cursor);
+  } else if (!query.trim() && page) {
     params.append("page", page);
   }
 
@@ -98,6 +105,7 @@ export async function GET(request: NextRequest) {
       width: img.width || 512,
       height: img.height || 768,
       nsfwLevel: img.nsfwLevel || 1,
+      type: img.type || (img.url?.match(/\.(mp4|webm)$/i) ? "video" : "image"),
     }));
 
     // Calculate file size in MB

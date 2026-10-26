@@ -91,8 +91,10 @@ def raw_nodes(steps: int):
     return [1.0 - 0.125 * i / (steps - 4) for i in range(steps - 4)] + [0.875, 0.75, 0.5, 0.25]
 
 # ─── 0. INACTIVITY WATCHDOG & AUTO-SHUTDOWN GUARD ───────────────────────────
-IDLE_TIMEOUT_SECONDS = int(os.environ.get("IDLE_TIMEOUT_SECONDS", 20 * 60)) # Default 20 minutes (prevents premature termination) -> auto-stop GPU
-AUTO_SHUTDOWN_ENABLED = True
+IDLE_TIMEOUT_SECONDS = int(os.environ.get("IDLE_TIMEOUT_SECONDS", 60 * 60)) # Default 60 minutes (prevents premature termination) -> auto-stop GPU
+AUTO_SHUTDOWN_ENABLED = os.environ.get("AUTO_SHUTDOWN_ENABLED", "False").lower() in ("true", "1") # Default False during model initialization
+watchdog_active = False # Only activated after model loading AND tunnel registration succeed
+tunnel_is_ready = False
 last_activity_time = time.time()
 
 def touch_activity():
@@ -100,13 +102,23 @@ def touch_activity():
     global last_activity_time
     last_activity_time = time.time()
 
+def check_and_activate_watchdog():
+    """Activates the watchdog only after both pipeline and tunnel are fully ready."""
+    global watchdog_active, last_activity_time, tunnel_is_ready
+    orch = globals().get("orchestrator")
+    pipeline_ready = bool(orch and getattr(orch, "is_ready", False))
+    if pipeline_ready and tunnel_is_ready and not watchdog_active:
+        watchdog_active = True
+        last_activity_time = time.time() # Reset so 15-20 min startup download is NOT counted
+        logger.info(f"🛡️ Quota Protection Watchdog ACTIVE: auto-stops after {IDLE_TIMEOUT_SECONDS // 60} min idle.")
+
 def idle_watchdog():
     """Continuously monitors for idle state. If idle for IDLE_TIMEOUT_SECONDS, kills process to deallocate GPUs."""
-    global IDLE_TIMEOUT_SECONDS, AUTO_SHUTDOWN_ENABLED, last_activity_time
-    logger.info(f"🛡️ Quota Protection Watchdog active: auto-stops after {IDLE_TIMEOUT_SECONDS // 60} min idle.")
+    global IDLE_TIMEOUT_SECONDS, AUTO_SHUTDOWN_ENABLED, last_activity_time, watchdog_active
+    logger.info(f"🛡️ Quota Protection Watchdog thread running: timeout={IDLE_TIMEOUT_SECONDS // 60} min, enabled={AUTO_SHUTDOWN_ENABLED}.")
     while True:
         time.sleep(15)
-        if not AUTO_SHUTDOWN_ENABLED:
+        if not AUTO_SHUTDOWN_ENABLED or not watchdog_active:
             continue
         idle_duration = time.time() - last_activity_time
         if idle_duration > IDLE_TIMEOUT_SECONDS:
@@ -619,18 +631,22 @@ class ModelOrchestrator:
                     max_memory = {0: "10.0GiB", 1: "13.5GiB", "cpu": "16GiB"}
                     transformer = None
                     if QwenImageTransformer2DModel is not None:
-                        try:
-                            transformer = QwenImageTransformer2DModel.from_pretrained(
-                                MODEL_ID,
-                                subfolder="transformer",
-                                torch_dtype=preferred_dtype,
-                                device_map="auto",
-                                max_memory=max_memory,
-                                low_cpu_mem_usage=True
-                            )
-                        except Exception as te:
-                            logger.warning(f"Standalone transformer load note: {te}")
-                            transformer = None
+                        for dmap in ["balanced", "cuda"]:
+                            try:
+                                logger.info(f"Trying QwenImageTransformer2DModel with device_map='{dmap}'...")
+                                transformer = QwenImageTransformer2DModel.from_pretrained(
+                                    MODEL_ID,
+                                    subfolder="transformer",
+                                    torch_dtype=preferred_dtype,
+                                    device_map=dmap,
+                                    max_memory=max_memory if dmap == "balanced" else None,
+                                    low_cpu_mem_usage=True
+                                )
+                                logger.info(f"✅ Loaded transformer with device_map='{dmap}'")
+                                break
+                            except Exception as te:
+                                logger.warning(f"multi-GPU device_map='{dmap}' failed: {te}")
+                                transformer = None
 
                     pipe_kwargs = {
                         "torch_dtype": preferred_dtype,
@@ -638,10 +654,22 @@ class ModelOrchestrator:
                     }
                     if transformer is not None:
                         pipe_kwargs["transformer"] = transformer
+                        self.pipe = PipelineClass.from_pretrained(MODEL_ID, **pipe_kwargs)
+                    else:
+                        # Cascade: PipelineClass with device_map="balanced" cascading to "cuda" with model offload
+                        try:
+                            logger.info("Attempting PipelineClass.from_pretrained with device_map='balanced'...")
+                            self.pipe = PipelineClass.from_pretrained(
+                                MODEL_ID,
+                                device_map="balanced",
+                                max_memory=max_memory,
+                                **pipe_kwargs
+                            )
+                        except Exception as p_e:
+                            logger.warning(f"multi-GPU device_map='balanced' failed: {p_e}. Cascading to cuda...")
+                            self.pipe = PipelineClass.from_pretrained(MODEL_ID, **pipe_kwargs)
+                            self.pipe.enable_model_cpu_offload(gpu_id=0)
 
-                    self.pipe = PipelineClass.from_pretrained(MODEL_ID, **pipe_kwargs)
-                    if transformer is None:
-                        self.pipe.enable_model_cpu_offload(gpu_id=0)
                     self.pipe.set_progress_bar_config(disable=None)
                     logger.info("✅ Strategy 2 success: Pipeline loaded with sharded multi-GPU transformer.")
                     loaded = True
@@ -762,6 +790,7 @@ class ModelOrchestrator:
                 self.is_ready = True
                 self.status_message = f"Model ready on {num_gpus} GPU(s) ({', '.join(device_names)})."
                 logger.info(f"✅ {self.status_message}")
+                check_and_activate_watchdog()
             else:
                 self.is_ready = False
                 self.status_message = f"Pipeline initialization error: {last_error}"
@@ -1049,11 +1078,12 @@ class IdleTimeoutConfig(BaseModel):
 @app.get("/api/settings/idle-timeout")
 def get_idle_timeout():
     """Get current idle timeout watchdog configuration and remaining idle seconds."""
-    global IDLE_TIMEOUT_SECONDS, AUTO_SHUTDOWN_ENABLED, last_activity_time
-    idle_secs = time.time() - last_activity_time
-    remaining_secs = max(0, IDLE_TIMEOUT_SECONDS - idle_secs) if AUTO_SHUTDOWN_ENABLED else None
+    global IDLE_TIMEOUT_SECONDS, AUTO_SHUTDOWN_ENABLED, last_activity_time, watchdog_active
+    idle_secs = time.time() - last_activity_time if watchdog_active else 0
+    remaining_secs = max(0, IDLE_TIMEOUT_SECONDS - idle_secs) if (AUTO_SHUTDOWN_ENABLED and watchdog_active) else None
     return {
         "enabled": AUTO_SHUTDOWN_ENABLED,
+        "watchdog_active": watchdog_active,
         "timeout_minutes": IDLE_TIMEOUT_SECONDS // 60,
         "timeout_seconds": IDLE_TIMEOUT_SECONDS,
         "current_idle_seconds": round(idle_secs, 1),
@@ -1068,10 +1098,12 @@ def set_idle_timeout(cfg: IdleTimeoutConfig):
     touch_activity()
     AUTO_SHUTDOWN_ENABLED = cfg.enabled
     timeout_m = int(cfg.timeout_minutes)
-    if timeout_m not in [5, 10, 15, 30]:
+    if timeout_m not in [5, 10, 15, 30, 60]:
         timeout_m = max(1, timeout_m)
     IDLE_TIMEOUT_SECONDS = timeout_m * 60
     logger.info(f"⚙️ [Watchdog Config] Auto-shutdown updated: enabled={AUTO_SHUTDOWN_ENABLED}, timeout={timeout_m} min")
+    if AUTO_SHUTDOWN_ENABLED:
+        check_and_activate_watchdog()
 
     try:
         conf_file = CONFIGS_DIR / "idle_config.json"
@@ -1558,6 +1590,10 @@ def tunnel_supervisor(port: int = 8000):
             except Exception as e:
                 logger.warning(f"Vercel auto-registration note: {e}")
 
+            global tunnel_is_ready
+            tunnel_is_ready = True
+            check_and_activate_watchdog()
+
         # Wait on process; if it drops, supervisor loop restarts it cleanly
         proc.wait()
         logger.warning("Cloudflare Tunnel disconnected. Reconnecting in 3 seconds...")
@@ -1588,8 +1624,8 @@ def main():
         if conf_file.exists():
             with open(conf_file, "r") as f:
                 cdata = json.load(f)
-                AUTO_SHUTDOWN_ENABLED = cdata.get("enabled", True)
-                IDLE_TIMEOUT_SECONDS = int(cdata.get("timeout_minutes", 5)) * 60
+                AUTO_SHUTDOWN_ENABLED = cdata.get("enabled", False)
+                IDLE_TIMEOUT_SECONDS = int(cdata.get("timeout_minutes", 60)) * 60
                 logger.info(f"Loaded persistent idle schedule: enabled={AUTO_SHUTDOWN_ENABLED}, timeout={IDLE_TIMEOUT_SECONDS // 60}m")
     except Exception as ie:
         logger.info(f"Idle config note: {ie}")
