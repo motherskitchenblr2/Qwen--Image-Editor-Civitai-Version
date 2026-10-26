@@ -474,85 +474,97 @@ export default function CivitaiLoraHub({
   return (
     <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto p-3.5 sm:p-6 animate-fadeIn">
       {/* ── Header Banner ────────────────────────────────────────── */}
-      <div className="bg-slate-950/90 border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] rounded-3xl p-6 relative overflow-hidden">
+      <div className="bg-slate-950/90 border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] rounded-3xl p-5 sm:p-6 lg:p-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/15 border border-cyan-400 rounded-full text-xs font-bold text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-                Civitai.red Live LoRA Explorer
-              </div>
-              {isConnected && (
-                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                  isModelReady
-                    ? "bg-emerald-500/20 border border-emerald-400 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-neon-emerald"
-                    : "bg-amber-500/20 border border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.3)] animate-neon-amber"
-                }`}>
-                  <span className={`w-2 h-2 rounded-full ${isModelReady ? "bg-emerald-400" : "bg-amber-400 animate-ping"}`} />
-                  <span>{isModelReady ? "Dual T4 GPU Ready" : "Dual T4 Warming Up (~60s)"}</span>
-                </div>
-              )}
+
+        {/* Hidden Local Upload File Input */}
+        <input
+          type="file"
+          ref={localHubInputRef}
+          onChange={handleLocalUpload}
+          accept=".safetensors"
+          className="hidden"
+        />
+
+        {/* Top: Badges & Hero Copy (Full Width Guaranteed, Zero Corner Squishing) */}
+        <div className="relative z-10 space-y-3 w-full">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/15 border border-cyan-400 rounded-full text-xs font-bold text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+              <span>Civitai.red Live LoRA Explorer</span>
             </div>
-            <h2 className="text-2xl lg:text-3xl font-black bg-gradient-to-r from-white via-cyan-100 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
-              Browse, Download &amp; Fuse LoRAs to 5 TB Vault
-            </h2>
-            <p className="text-xs text-cyan-200/80 max-w-2xl leading-relaxed">
-              Explore thousands of community-crafted LoRAs directly from Civitai.red. Download in seconds straight to
-              your persistent Google Drive Vault (`AI_Storage/loras/`) and inject them dynamically into the Dual Tesla T4
-              pipeline with zero restart.
-            </p>
+            {isConnected && (
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                isModelReady
+                  ? "bg-emerald-500/20 border border-emerald-400 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-neon-emerald"
+                  : "bg-amber-500/20 border border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.3)] animate-neon-amber"
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${isModelReady ? "bg-emerald-400" : "bg-amber-400 animate-ping"}`} />
+                <span>{isModelReady ? "Dual T4 GPU Ready" : "Dual T4 Warming Up (~60s)"}</span>
+              </div>
+            )}
           </div>
 
-          {/* Action Cards: Browse Local LoRA + Direct Civitai Download */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-            {/* Browse & Upload Local LoRA */}
-            <input
-              type="file"
-              ref={localHubInputRef}
-              onChange={handleLocalUpload}
-              accept=".safetensors"
-              className="hidden"
-            />
-            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl flex flex-col justify-between gap-2.5 w-full sm:w-64 shadow-lg">
-              <span className="text-[11px] font-semibold text-emerald-300 flex items-center gap-1.5">
-                <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
-                Upload Local LoRA
-              </span>
-              <p className="text-[10px] text-slate-400 leading-tight">
-                Select downloaded <code className="text-emerald-400">.safetensors</code> from your local disk/phone to upload into GPU storage.
-              </p>
-              <button
-                onClick={() => localHubInputRef.current?.click()}
-                disabled={isUploadingLocal || !isConnected}
-                className="w-full py-2 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-700/80 text-emerald-200 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40"
-              >
-                {isUploadingLocal ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-                    <span>Uploading {uploadProgress}%</span>
-                  </>
-                ) : (
-                  <>
-                    <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Browse Local File</span>
-                  </>
-                )}
-              </button>
-            </div>
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-black bg-gradient-to-r from-white via-cyan-100 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.4)] tracking-tight leading-snug">
+            Browse, Download &amp; Fuse LoRAs to 5 TB Vault
+          </h2>
+          <p className="text-xs sm:text-sm text-cyan-200/80 leading-relaxed max-w-3xl">
+            Explore thousands of community-crafted LoRAs directly from Civitai.red. Download in seconds straight to
+            your persistent Google Drive Vault (<code className="text-cyan-300 font-mono">AI_Storage/loras/</code>) and inject them dynamically into the Dual Tesla T4
+            pipeline with zero restart.
+          </p>
+        </div>
 
-            {/* Quick Direct Link Input */}
-            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl flex flex-col gap-2 w-full sm:w-72 shadow-lg">
-              <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                <HardDrive className="w-3.5 h-3.5 text-cyan-400" />
+        {/* Bottom / Action Cards: Responsive 2-Column Grid Underneath Hero Text */}
+        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4 pt-5 mt-5 border-t border-cyan-500/25">
+          {/* Card 1: Browse & Upload Local LoRA */}
+          <div className="bg-slate-900/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-lg transition">
+            <div className="space-y-1">
+              <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                <FolderOpen className="w-4 h-4 text-emerald-400" />
+                Upload Local LoRA (.safetensors)
+              </span>
+              <p className="text-[11px] text-slate-400 leading-normal">
+                Select downloaded <code className="text-emerald-300 bg-black/60 px-1 py-0.5 rounded font-mono">.safetensors</code> from your local disk or phone to upload into GPU storage.
+              </p>
+            </div>
+            <button
+              onClick={() => localHubInputRef.current?.click()}
+              disabled={isUploadingLocal || !isConnected}
+              className="w-full py-2.5 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-600/80 text-emerald-200 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40 shadow-sm"
+            >
+              {isUploadingLocal ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                  <span>Uploading {uploadProgress}%</span>
+                </>
+              ) : (
+                <>
+                  <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Browse Local File</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Card 2: Quick Direct Civitai Download */}
+          <div className="bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-lg transition">
+            <div className="space-y-1">
+              <span className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                <HardDrive className="w-4 h-4 text-cyan-400" />
                 Direct Civitai Download
               </span>
+              <p className="text-[11px] text-slate-400 leading-normal">
+                Paste any model URL or ID from Civitai / Civitai.red to auto-download straight into your Google Drive Vault.
+              </p>
+            </div>
+            <div className="space-y-2">
               <input
                 type="text"
                 placeholder="Paste Civitai / Civitai.red URL or ID"
                 value={directUrl}
                 onChange={(e) => setDirectUrl(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(6,182,212,0.25)] transition"
               />
               <div className="flex gap-2">
                 <input
@@ -560,7 +572,7 @@ export default function CivitaiLoraHub({
                   placeholder="Custom filename (optional)"
                   value={directName}
                   onChange={(e) => setDirectName(e.target.value)}
-                  className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  className="flex-1 min-w-0 bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(6,182,212,0.25)] transition"
                 />
                 <button
                   onClick={handleDirectDownload}
@@ -570,9 +582,10 @@ export default function CivitaiLoraHub({
                       ? "Download and save to 5 TB Google Drive Vault on Kaggle GPU"
                       : "Direct browser download to your device (GPU offline)"
                   }
-                  className="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black text-xs font-bold rounded-lg transition disabled:opacity-40"
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-400 to-indigo-500 hover:from-cyan-300 hover:to-indigo-400 text-black text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40 shadow-[0_0_12px_rgba(6,182,212,0.3)] shrink-0"
                 >
-                  {isDirectDownloading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  {isDirectDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  <span className="hidden sm:inline">Download</span>
                 </button>
               </div>
             </div>

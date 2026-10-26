@@ -496,7 +496,7 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
+          <div className="space-y-2 flex-1 min-w-0 max-w-3xl">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-2xl bg-gradient-to-br from-cyan-400 via-teal-400 to-indigo-600 text-black shadow-[0_0_20px_rgba(6,182,212,0.5)]">
                 <Shield className="w-6 h-6 stroke-[2.5]" />
@@ -516,7 +516,7 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
           </div>
 
           {/* Quick Metrics & Save All */}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap shrink-0">
             <div className="bg-black/80 border border-cyan-500/35 px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 shadow-[0_0_10px_rgba(6,182,212,0.15)]">
               <Lock className="w-3.5 h-3.5 text-emerald-400" />
               <span className="text-slate-300">In Vercel Env:</span>

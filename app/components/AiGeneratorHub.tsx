@@ -299,23 +299,23 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
   return (
     <div className="flex-1 max-w-7xl mx-auto w-full p-3.5 sm:p-6 space-y-6 animate-fadeIn">
       {/* ── Top Header Banner ── */}
-      <div className="bg-slate-950/90 border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] rounded-3xl p-6 lg:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
-        <div className="space-y-2 z-10 max-w-2xl">
+      <div className="bg-slate-950/90 border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] rounded-3xl p-5 sm:p-6 lg:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+        <div className="space-y-2 z-10 flex-1 min-w-0 max-w-3xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400 text-cyan-300 text-xs font-bold shadow-[0_0_10px_rgba(6,182,212,0.3)]">
             <Sparkles className="w-3.5 h-3.5 fill-cyan-400" />
             <span>Multi-Model AI Generator Hub</span>
           </div>
-          <h2 className="text-2xl lg:text-3xl font-black bg-gradient-to-r from-white via-cyan-100 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-black bg-gradient-to-r from-white via-cyan-100 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
             AI Image Generator &amp; Precision Editor Hub
           </h2>
-          <p className="text-xs lg:text-sm text-cyan-200/80 leading-relaxed">
+          <p className="text-xs sm:text-sm text-cyan-200/80 leading-relaxed">
             Generate and edit images instantly across Alibaba Qwen Cloud, Nano Banana Turbo, and Cloudflare Workers AI edge.
             Switch models freely and pipe results directly into the Studio Editor.
           </p>
         </div>
 
         {/* Quick Stats Pill */}
-        <div className="flex flex-wrap md:flex-col gap-2 z-10 w-full md:w-auto">
+        <div className="flex flex-wrap md:flex-col gap-2 z-10 w-full md:w-auto shrink-0">
           <div className="flex items-center gap-2 bg-black/80 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.2)] px-3.5 py-2 rounded-xl text-xs">
             <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
             <span className="text-slate-300">Nano Banana:</span>
