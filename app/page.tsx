@@ -1181,9 +1181,6 @@ export default function ImageEditorStudio() {
         galleryCount={gallery.length}
       />
 
-      {/* Header spacer: matching mobile h-[88px] sm:h-[92px] and desktop h-14 (56px) */}
-      <div className="h-[88px] sm:h-[92px] lg:h-14 shrink-0" aria-hidden="true" />
-
       {/* Booting Notification Banner */}
       {bootMessage && (
         <div className="bg-cyan-950/70 border-b border-cyan-800/80 px-6 py-2 flex items-center justify-between text-xs text-cyan-200">
@@ -1499,188 +1496,196 @@ export default function ImageEditorStudio() {
       </div>
     )}
 
-      {/* ── MAIN CONTENT BY TAB ──────────────────────────────────── */}
-      {activeTab === "generators" ? (
-        <AiGeneratorHub
-          onSendToStudio={(imageUrl, promptText) => {
-            setOriginalImage(imageUrl);
-            setEditedImage(null);
-            if (promptText) setPrompt(promptText);
-            setStudioMode("edit");
-            setActiveTab("studio");
-          }}
-        />
-      ) : activeTab === "loras" ? (
-        <CivitaiLoraHub
-          backendUrl={backendUrl}
-          isConnected={isConnected}
-          isModelReady={isModelReady}
-          availableLoras={availableLoras}
-          onLoraDownloaded={(name) => {
-            if (backendUrl) fetchAvailableLoras(backendUrl);
-          }}
-          onSelectForStudio={handleSelectForStudio}
-        />
-      ) : activeTab === "gallery" ? (
-        <div className="flex-1 max-w-7xl mx-auto w-full p-6 space-y-6 animate-fadeIn">
-          <div className="flex items-center justify-between border-b border-cyan-500/30 pb-4">
-            <div>
-              <h2 className="text-xl font-extrabold text-white flex items-center gap-2 drop-shadow-[0_0_10px_rgba(6,182,212,0.4)]">
-                <ImageIcon className="w-5 h-5 text-cyan-400 animate-pulse" />
-                Persistent Output Gallery
-              </h2>
-              <p className="text-xs text-cyan-300/80">All outputs auto-sync to Google Drive `AI_Storage/outputs/`</p>
-            </div>
-            <button
-              onClick={() => setActiveTab("studio")}
-              className="px-4 py-2 bg-slate-900 hover:bg-cyan-950/60 border border-cyan-500/40 rounded-xl text-xs font-bold text-cyan-300 flex items-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.2)] transition active:scale-95"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Back to Editor</span>
-            </button>
+      {/* ── UNIVERSAL SCROLLABLE VIEWPORT CONTAINER ── */}
+      <main className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden relative scrollbar-thin scrollbar-thumb-slate-800 -webkit-overflow-scrolling-touch">
+        {activeTab === "generators" ? (
+          <div className="w-full pb-28 lg:pb-8">
+            <AiGeneratorHub
+              onSendToStudio={(imageUrl, promptText) => {
+                setOriginalImage(imageUrl);
+                setEditedImage(null);
+                if (promptText) setPrompt(promptText);
+                setStudioMode("edit");
+                setActiveTab("studio");
+              }}
+            />
           </div>
-
-          {gallery.length === 0 ? (
-            <div className="bg-black/60 border border-cyan-500/35 shadow-[0_0_25px_rgba(6,182,212,0.15)] rounded-3xl p-16 text-center space-y-3">
-              <ImageIcon className="w-12 h-12 text-cyan-500/50 mx-auto animate-pulse" />
-              <p className="text-sm font-bold text-white">No images generated in this session yet</p>
-              <p className="text-xs text-slate-300">
-                Uploaded images and edits are automatically mirrored to your 5 TB Google Drive Vault.
-              </p>
-              <button
-                onClick={() => setActiveTab("studio")}
-                className="mt-2 px-6 py-2.5 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-extrabold text-xs rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.7)] transition active:scale-95"
-              >
-                Create First Edit
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {gallery.map((img, idx) => (
-                <div
-                  key={idx}
-                  className="group bg-slate-950/90 border border-cyan-500/35 hover:border-cyan-400 rounded-2xl overflow-hidden flex flex-col hover:shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all duration-300"
-                >
-                  <div className="aspect-square bg-black relative overflow-hidden">
-                    <img src={img} alt={`Output ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
-                  </div>
-                  <div className="p-3 bg-slate-950 flex items-center justify-between gap-2 border-t border-slate-800">
-                    <span className="text-[11px] font-mono text-cyan-300/80">Creation #{gallery.length - idx}</span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => {
-                          setOriginalImage(img);
-                          setEditedImage(null);
-                          setActiveTab("studio");
-                        }}
-                        className="px-2.5 py-1 bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-500/50 text-[11px] font-semibold text-slate-200 hover:text-cyan-200 rounded-lg transition"
-                        title="Send back to editor for iterative refinement"
-                      >
-                        Refine
-                      </button>
-                      <a
-                        href={img}
-                        download={`qwen_creation_${idx + 1}.png`}
-                        className="p-1.5 bg-cyan-400 hover:bg-cyan-300 text-black rounded-lg shadow-[0_0_10px_rgba(6,182,212,0.4)] transition"
-                        title="Download full quality PNG"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : activeTab === "sentinel" ? (
-        <SentinelAiGateway />
-      ) : (
-        /* ── TWO-COLUMN STUDIO & LIVE CANVAS WORKSPACE ─────────────── */
-        <StudioLayout
-          controlPanel={
-            <ControlPanel
-              studioMode={studioMode}
-              setStudioMode={setStudioMode}
-              selectedStudioModel={selectedStudioModel}
-              setSelectedStudioModel={setSelectedStudioModel}
-              prompt={prompt}
-              setPrompt={setPrompt}
-              negativePrompt={negativePrompt}
-              setNegativePrompt={setNegativePrompt}
-              handleEnhancePrompt={handleEnhancePrompt}
-              isEnhancingPrompt={isEnhancingPrompt}
-              showToast={showToast}
-              trueCfgScale={trueCfgScale}
-              setTrueCfgScale={setTrueCfgScale}
-              guidanceScale={guidanceScale}
-              setGuidanceScale={setGuidanceScale}
-              steps={steps}
-              setSteps={setSteps}
-              seed={seed}
-              setSeed={setSeed}
-              activeLoras={activeLoras}
-              setActiveLoras={setActiveLoras}
-              availableLoras={availableLoras}
-              onOpenLoraModal={() => setIsLoraModalOpen(true)}
-              handleFuseLora={handleFuseLora}
-              handleUnloadLoras={handleUnloadLoras}
-              isFusingLora={isFusingLora}
-              fusedStatusMessage={fusedStatusMessage}
+        ) : activeTab === "loras" ? (
+          <div className="w-full pb-28 lg:pb-8">
+            <CivitaiLoraHub
+              backendUrl={backendUrl}
               isConnected={isConnected}
               isModelReady={isModelReady}
-              modelStatusMessage={modelStatusMessage}
-              handleGenerate={handleGenerate}
-              isGenerating={isGenerating}
-              originalImage={originalImage}
-              generationStatusText={generationStatusText}
-              generationProgress={generationProgress}
-              generationElapsed={generationElapsed}
-              onSwitchToCloud={() => {
-                setIsGenerating(false);
-                setSelectedStudioModel("nano-banana");
-                setGenerationStatusText("");
+              availableLoras={availableLoras}
+              onLoraDownloaded={(name) => {
+                if (backendUrl) fetchAvailableLoras(backendUrl);
               }}
+              onSelectForStudio={handleSelectForStudio}
             />
-          }
-          canvasWorkspace={
-            <CanvasWorkspace
-              originalImage={originalImage}
-              editedImage={editedImage}
-              studioMode={studioMode}
-              onUploadImage={handleImageUpload}
-              onSendResultToInput={() => {
-                if (editedImage) {
-                  setOriginalImage(editedImage);
-                  setEditedImage(null);
-                  showToast("Result sent to input for iterative refinement!", "success");
-                }
-              }}
-              onMaskChange={setInpaintMask}
-              fileInputRef={fileInputRef}
-              isGenerating={isGenerating}
-              generationProgress={generationProgress}
-              history={gallery}
-              historyRibbon={
-                <HistoryRibbon
-                  gallery={gallery}
-                  activeImage={editedImage || originalImage}
-                  onSelectImage={(img) => {
-                    setEditedImage(img);
-                    setViewMode("result");
-                  }}
-                  onSendToInput={(img) => {
-                    setOriginalImage(img);
+          </div>
+        ) : activeTab === "gallery" ? (
+          <div className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 pb-28 lg:pb-8 space-y-6 animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-cyan-500/30 pb-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-white flex items-center gap-2 drop-shadow-[0_0_10px_rgba(6,182,212,0.4)]">
+                  <ImageIcon className="w-5 h-5 text-cyan-400 animate-pulse" />
+                  Persistent Output Gallery
+                </h2>
+                <p className="text-xs text-cyan-300/80">All outputs auto-sync to Google Drive `AI_Storage/outputs/`</p>
+              </div>
+              <button
+                onClick={() => setActiveTab("studio")}
+                className="px-4 py-2 bg-slate-900 hover:bg-cyan-950/60 border border-cyan-500/40 rounded-xl text-xs font-bold text-cyan-300 flex items-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.2)] transition active:scale-95"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Back to Editor</span>
+              </button>
+            </div>
+
+            {gallery.length === 0 ? (
+              <div className="bg-black/60 border border-cyan-500/35 shadow-[0_0_25px_rgba(6,182,212,0.15)] rounded-3xl p-16 text-center space-y-3">
+                <ImageIcon className="w-12 h-12 text-cyan-500/50 mx-auto animate-pulse" />
+                <p className="text-sm font-bold text-white">No images generated in this session yet</p>
+                <p className="text-xs text-slate-300">
+                  Uploaded images and edits are automatically mirrored to your 5 TB Google Drive Vault.
+                </p>
+                <button
+                  onClick={() => setActiveTab("studio")}
+                  className="mt-2 px-6 py-2.5 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-extrabold text-xs rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.7)] transition active:scale-95"
+                >
+                  Create First Edit
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {gallery.map((img, idx) => (
+                  <div
+                    key={idx}
+                    className="group bg-slate-950/90 border border-cyan-500/35 hover:border-cyan-400 rounded-2xl overflow-hidden flex flex-col hover:shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all duration-300"
+                  >
+                    <div className="aspect-square bg-black relative overflow-hidden">
+                      <img src={img} alt={`Output ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                    </div>
+                    <div className="p-3 bg-slate-950 flex items-center justify-between gap-2 border-t border-slate-800">
+                      <span className="text-[11px] font-mono text-cyan-300/80">Creation #{gallery.length - idx}</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setOriginalImage(img);
+                            setEditedImage(null);
+                            setActiveTab("studio");
+                          }}
+                          className="px-2.5 py-1 bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-500/50 text-[11px] font-semibold text-slate-200 hover:text-cyan-200 rounded-lg transition"
+                          title="Send back to editor for iterative refinement"
+                        >
+                          Refine
+                        </button>
+                        <a
+                          href={img}
+                          download={`qwen_creation_${idx + 1}.png`}
+                          className="p-1.5 bg-cyan-400 hover:bg-cyan-300 text-black rounded-lg shadow-[0_0_10px_rgba(6,182,212,0.4)] transition"
+                          title="Download full quality PNG"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : activeTab === "sentinel" ? (
+          <div className="w-full pb-28 lg:pb-8">
+            <SentinelAiGateway />
+          </div>
+        ) : (
+          /* ── TWO-COLUMN STUDIO & LIVE CANVAS WORKSPACE ─────────────── */
+          <StudioLayout
+            controlPanel={
+              <ControlPanel
+                studioMode={studioMode}
+                setStudioMode={setStudioMode}
+                selectedStudioModel={selectedStudioModel}
+                setSelectedStudioModel={setSelectedStudioModel}
+                prompt={prompt}
+                setPrompt={setPrompt}
+                negativePrompt={negativePrompt}
+                setNegativePrompt={setNegativePrompt}
+                handleEnhancePrompt={handleEnhancePrompt}
+                isEnhancingPrompt={isEnhancingPrompt}
+                showToast={showToast}
+                trueCfgScale={trueCfgScale}
+                setTrueCfgScale={setTrueCfgScale}
+                guidanceScale={guidanceScale}
+                setGuidanceScale={setGuidanceScale}
+                steps={steps}
+                setSteps={setSteps}
+                seed={seed}
+                setSeed={setSeed}
+                activeLoras={activeLoras}
+                setActiveLoras={setActiveLoras}
+                availableLoras={availableLoras}
+                onOpenLoraModal={() => setIsLoraModalOpen(true)}
+                handleFuseLora={handleFuseLora}
+                handleUnloadLoras={handleUnloadLoras}
+                isFusingLora={isFusingLora}
+                fusedStatusMessage={fusedStatusMessage}
+                isConnected={isConnected}
+                isModelReady={isModelReady}
+                modelStatusMessage={modelStatusMessage}
+                handleGenerate={handleGenerate}
+                isGenerating={isGenerating}
+                originalImage={originalImage}
+                generationStatusText={generationStatusText}
+                generationProgress={generationProgress}
+                generationElapsed={generationElapsed}
+                onSwitchToCloud={() => {
+                  setIsGenerating(false);
+                  setSelectedStudioModel("nano-banana");
+                  setGenerationStatusText("");
+                }}
+              />
+            }
+            canvasWorkspace={
+              <CanvasWorkspace
+                originalImage={originalImage}
+                editedImage={editedImage}
+                studioMode={studioMode}
+                onUploadImage={handleImageUpload}
+                onSendResultToInput={() => {
+                  if (editedImage) {
+                    setOriginalImage(editedImage);
                     setEditedImage(null);
-                    showToast("Image sent to input for iterative refinement!", "success");
-                  }}
-                  onClearHistory={() => setGallery([])}
-                />
-              }
-            />
-          }
-        />
-      )}
+                    showToast("Result sent to input for iterative refinement!", "success");
+                  }
+                }}
+                onMaskChange={setInpaintMask}
+                fileInputRef={fileInputRef}
+                isGenerating={isGenerating}
+                generationProgress={generationProgress}
+                history={gallery}
+                historyRibbon={
+                  <HistoryRibbon
+                    gallery={gallery}
+                    activeImage={editedImage || originalImage}
+                    onSelectImage={(img) => {
+                      setEditedImage(img);
+                      setViewMode("result");
+                    }}
+                    onSendToInput={(img) => {
+                      setOriginalImage(img);
+                      setEditedImage(null);
+                      showToast("Image sent to input for iterative refinement!", "success");
+                    }}
+                    onClearHistory={() => setGallery([])}
+                  />
+                }
+              />
+            }
+          />
+        )}
+      </main>
 
       {/* Hidden LoRA File Input for Local Safetensors */}
       <input

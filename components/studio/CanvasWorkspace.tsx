@@ -300,9 +300,9 @@ export default function CanvasWorkspace({
   return (
     <section className="h-full flex flex-col justify-between overflow-hidden bg-[#050811] relative select-none">
       {/* Tier A: Fixed Top Toolbar (h-11 shrink-0) */}
-      <div className="h-11 border-b border-slate-800/70 px-4 flex items-center justify-between bg-[#0a0f1d]/50 shrink-0">
+      <div className="h-11 border-b border-slate-800/70 px-3 sm:px-4 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar bg-[#0a0f1d]/50 shrink-0">
         {/* Left: View Mode Toggles */}
-        <div className="flex items-center gap-1 bg-black/80 p-1 rounded-xl border border-cyan-500/30">
+        <div className="flex items-center gap-1 bg-black/80 p-1 rounded-xl border border-cyan-500/30 shrink-0">
           {originalImage && editedImage && (
             <button
               onClick={() => setViewMode("split")}
@@ -364,7 +364,7 @@ export default function CanvasWorkspace({
 
         {/* Center: Inpaint Mask Mode Toggle */}
         {originalImage && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setIsInpaintingActive(!isInpaintingActive)}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black transition border ${
@@ -409,7 +409,7 @@ export default function CanvasWorkspace({
         )}
 
         {/* Right: Zoom & Aspect Presets */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Aspect Presets */}
           <div className="hidden xl:flex items-center gap-1 bg-black/60 p-1 rounded-lg border border-slate-800">
             {["1:1", "16:9", "9:16", "4:5"].map((ratio) => (

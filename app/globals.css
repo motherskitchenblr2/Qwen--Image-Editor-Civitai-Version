@@ -12,6 +12,7 @@ body {
   height: 100%;
   max-height: 100dvh;
   overflow: hidden;
+  -webkit-overflow-scrolling: touch;
   margin: 0;
   padding: 0;
   color: hsl(var(--foreground));

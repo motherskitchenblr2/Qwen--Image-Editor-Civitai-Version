@@ -149,7 +149,7 @@ export default function ControlPanel({
         { s: 30, label: "30 Steps", sub: "Ultra Detail" },
       ];
 
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState<boolean>(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState<boolean>(true);
 
   const isGenerateDisabled =
     isGenerating ||
@@ -598,7 +598,7 @@ export default function ControlPanel({
     </div>
 
     {/* ── Mobile Sticky Bottom Action Bar with Docked Status Badge ── */}
-    <div className="fixed bottom-0 left-0 right-0 p-3 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 z-40 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.85)]">
+    <div className="fixed bottom-0 left-0 right-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-slate-950/95 backdrop-blur-md border-t border-slate-800 z-40 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.85)]">
       <div className="flex items-center gap-2 max-w-lg mx-auto">
         <div className="flex-1 min-w-0">
           {renderActionButton(true)}

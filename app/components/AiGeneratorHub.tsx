@@ -297,7 +297,7 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
   };
 
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-6 space-y-6 animate-fadeIn">
+    <div className="flex-1 max-w-7xl mx-auto w-full p-3.5 sm:p-6 space-y-6 animate-fadeIn">
       {/* ── Top Header Banner ── */}
       <div className="bg-slate-950/90 border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] rounded-3xl p-6 lg:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
         <div className="space-y-2 z-10 max-w-2xl">
