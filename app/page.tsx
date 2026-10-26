@@ -1181,8 +1181,8 @@ export default function ImageEditorStudio() {
         galleryCount={gallery.length}
       />
 
-      {/* Header spacer: exact 56px matching h-[calc(100dvh-56px)] */}
-      <div className="h-14 shrink-0" aria-hidden="true" />
+      {/* Header spacer: matching mobile h-[88px] sm:h-[92px] and desktop h-14 (56px) */}
+      <div className="h-[88px] sm:h-[92px] lg:h-14 shrink-0" aria-hidden="true" />
 
       {/* Booting Notification Banner */}
       {bootMessage && (

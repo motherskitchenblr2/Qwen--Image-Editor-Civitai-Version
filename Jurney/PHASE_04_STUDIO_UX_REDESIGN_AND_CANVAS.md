@@ -514,6 +514,29 @@ flowchart TD
   - Added bottom sentinel `<div ref={observerTarget} />` triggering `fetchNextPage()`.
   - Appended unique models to state (`setModels(prev => [...prev, ...uniqueItems])`).
 
+---
+
+## 20. Mobile Navigation Header Horizontal Bar & Responsive UI/UX Overhaul
+
+### 20.1 Problem & Root Cause
+- **Symptoms**:
+  - On mobile/tablet devices (< 1024px), the top navigation bar buttons (`Studio & Editor`, `AI Generators`, `Civitai LoRA Hub`, `Gallery`, `Sentinel`) were completely hidden via `hidden lg:flex`, stranding users without visible navigation buttons.
+  - The right status cluster contained 6 oversized buttons in a single flex line without wrapping, exceeding 570px and causing the entire header to overflow the mobile viewport (360px–414px), shoving left-hand buttons into an unclickable, clipped left corner.
+
+### 20.2 Resolution (Tri-Role UI/UX Pro Max + Ponytail)
+- **Single Responsive `<nav>` (Native CSS Flexbox Reordering)**:
+  - Replaced the desktop-only hidden `<nav>` with a single responsive `<nav aria-label="Main Navigation">` using `order-3 lg:order-2 w-full lg:w-auto`.
+  - On Desktop (`lg:`): Sits centered between Brand (left) and System Status (right) as a segmented control.
+  - On Mobile (`<lg`): Drops into an always-visible, touch-friendly horizontal swipe bar row (`w-full overflow-x-auto no-scrollbar scroll-smooth flex items-center gap-1.5`) directly below the brand bar.
+  - Eliminated the redundant hamburger drawer and dead state (`isMobileNavOpen`), cutting 140+ lines of duplicate DOM elements.
+- **Mobile Viewport Clearance & Height Synchronization**:
+  - Brand identity truncates gracefully (`Qwen Studio` on `<sm`, full `Qwen Image Editor Studio` on `sm+`).
+  - Right system status cluster uses responsive touch-target scaling (`h-9 sm:h-10 px-2 sm:px-3 rounded-xl`), fitting within 360px width without horizontal overflow.
+  - Updated header spacer in `app/page.tsx` to `h-[88px] sm:h-[92px] lg:h-14` and matched `StudioLayout.tsx` viewport constraints to `h-[calc(100dvh-88px)] sm:h-[calc(100dvh-92px)] lg:h-[calc(100dvh-56px)]`.
+- **Parity & Verification**:
+  - Mirrored exact code between `app/components/Header.tsx` and `components/Header.tsx`, as well as `app/components/studio/StudioLayout.tsx` and `components/studio/StudioLayout.tsx`.
+  - Verified 70/70 passing vitest tests and 0 TypeScript build errors.
+
 
 
 
