@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   FolderOpen,
 } from "lucide-react";
+import ImagePreviewModal, { PreviewMediaData } from "../ImagePreviewModal";
 
 interface CanvasWorkspaceProps {
   originalImage: string | null;
@@ -60,6 +61,7 @@ export default function CanvasWorkspace({
   const [brushRadius, setBrushRadius] = useState<number>(24);
   const [maskHistory, setMaskHistory] = useState<ImageData[]>([]);
   const [isCopied, setIsCopied] = useState<boolean>(false);
+  const [previewModalMedia, setPreviewModalMedia] = useState<PreviewMediaData | null>(null);
 
   // Aspect ratio guide preset (null = original/free)
   const [aspectPreset, setAspectPreset] = useState<string | null>(null);
@@ -297,6 +299,23 @@ export default function CanvasWorkspace({
 
   const activeDisplayImage = editedImage || originalImage;
 
+  const handleOpenFullscreen = () => {
+    if (!activeDisplayImage) return;
+    setPreviewModalMedia({
+      src: activeDisplayImage,
+      title: viewMode === "result" && editedImage ? "Studio Result" : "Studio Canvas Image",
+      subtitle: originalImage && editedImage ? "Qwen Dual Tesla T4 Synthesis" : "Source Canvas Media",
+      downloadFileName: `qwen_studio_${Date.now()}.png`,
+      actionButton: editedImage
+        ? {
+            label: "Refine Result",
+            onClick: onSendResultToInput,
+            icon: <RotateCcw className="w-3.5 h-3.5" />,
+          }
+        : undefined,
+    });
+  };
+
   return (
     <section className="h-full flex flex-col justify-between overflow-hidden bg-[#050811] relative select-none">
       {/* Tier A: Fixed Top Toolbar (h-11 shrink-0) */}
@@ -436,9 +455,13 @@ export default function CanvasWorkspace({
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
-            <span className="text-[10px] font-mono font-bold text-cyan-300 w-9 text-center">
+            <button
+              onClick={() => setZoomLevel(100)}
+              className="text-[10px] font-mono font-bold text-cyan-300 px-1 hover:text-white transition"
+              title="Reset Zoom to 100%"
+            >
               {zoomLevel}%
-            </span>
+            </button>
             <button
               onClick={() => setZoomLevel((z) => Math.min(200, z + 25))}
               className="p-1 text-slate-400 hover:text-white transition"
@@ -446,13 +469,15 @@ export default function CanvasWorkspace({
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
-            <button
-              onClick={() => setZoomLevel(100)}
-              className="p-1 text-slate-400 hover:text-white transition ml-0.5"
-              title="Reset Zoom"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-            </button>
+            {activeDisplayImage && (
+              <button
+                onClick={handleOpenFullscreen}
+                className="p-1 text-slate-400 hover:text-cyan-300 transition ml-0.5"
+                title="Open Large Popup Preview"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -563,7 +588,21 @@ export default function CanvasWorkspace({
               </div>
             ) : (
               /* View Mode: Single Image (Result or Original) */
-              <div className="relative max-h-[580px] w-auto overflow-hidden rounded-2xl shadow-2xl">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={!isInpaintingActive ? handleOpenFullscreen : undefined}
+                onKeyDown={(e) => {
+                  if ((e.key === "Enter" || e.key === " ") && !isInpaintingActive) {
+                    e.preventDefault();
+                    handleOpenFullscreen();
+                  }
+                }}
+                className={`relative max-h-[580px] w-auto overflow-hidden rounded-2xl shadow-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
+                  !isInpaintingActive ? "cursor-zoom-in group/canvasimg" : ""
+                }`}
+                title={!isInpaintingActive ? "Click to open large uncropped popup preview" : undefined}
+              >
                 <img
                   ref={imageRef}
                   src={viewMode === "result" && editedImage ? editedImage : originalImage!}
@@ -571,6 +610,14 @@ export default function CanvasWorkspace({
                   onLoad={handleImageLoad}
                   className="max-h-[580px] w-auto object-contain block"
                 />
+                {!isInpaintingActive && (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/canvasimg:opacity-100 transition-opacity bg-black/35 backdrop-blur-[1px] pointer-events-none">
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/90 text-black font-extrabold text-xs shadow-[0_0_15px_rgba(6,182,212,0.6)]">
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      Tap to Preview Full Size
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -651,6 +698,14 @@ export default function CanvasWorkspace({
               {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
 
+            <button
+              onClick={handleOpenFullscreen}
+              className="p-2 bg-slate-900 hover:bg-cyan-950/70 text-slate-200 hover:text-cyan-300 rounded-xl text-xs font-bold transition border border-slate-700 hover:border-cyan-500/50"
+              title="Open Large Popup Lightbox Preview"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+
             <a
               href={editedImage || originalImage!}
               download="qwen_studio_masterpiece.png"
@@ -683,6 +738,13 @@ export default function CanvasWorkspace({
       <div className="h-20 border-t border-slate-800/80 bg-[#080d1a]/95 px-4 flex items-center shrink-0 overflow-x-auto">
         {historyRibbon}
       </div>
+
+      {/* ── Fullscreen High-Resolution Lightbox Preview Modal for Canvas ── */}
+      <ImagePreviewModal
+        isOpen={Boolean(previewModalMedia)}
+        onClose={() => setPreviewModalMedia(null)}
+        media={previewModalMedia}
+      />
     </section>
   );
 }

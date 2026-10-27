@@ -19,9 +19,11 @@ import {
   Cpu,
   Flame,
   Plus,
+  Maximize2,
 } from "lucide-react";
 import LiveAiModelSelector from "./LiveAiModelSelector";
 import PromptActionButtons from "./PromptActionButtons";
+import ImagePreviewModal, { PreviewMediaData } from "./ImagePreviewModal";
 import { LiveAiModel } from "@/app/lib/aiModelRegistry";
 import {
   isNsfwContent,
@@ -167,6 +169,7 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
   const [lastModelUsed, setLastModelUsed] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState<boolean>(false);
+  const [previewModalMedia, setPreviewModalMedia] = useState<PreviewMediaData | null>(null);
 
   const handleEnhancePrompt = async () => {
     if (!prompt.trim()) return;
@@ -553,11 +556,36 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
               <ImageIcon className="w-4 h-4 text-purple-400 animate-pulse" />
               Generator Output Preview
             </span>
-            {lastLatency !== null && (
-              <span className="text-[11px] font-mono bg-emerald-950/80 border border-emerald-400/80 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)] px-2.5 py-0.5 rounded-full font-bold">
-                ⚡ Generated in {(lastLatency / 1000).toFixed(2)}s &bull; {lastModelUsed}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {lastLatency !== null && (
+                <span className="text-[11px] font-mono bg-emerald-950/80 border border-emerald-400/80 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)] px-2.5 py-0.5 rounded-full font-bold">
+                  ⚡ Generated in {(lastLatency / 1000).toFixed(2)}s &bull; {lastModelUsed}
+                </span>
+              )}
+              {generatedImage && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPreviewModalMedia({
+                      src: generatedImage,
+                      title: "AI Generator High-Res Output",
+                      subtitle: `Generated with ${lastModelUsed || selectedModel}`,
+                      downloadFileName: `ai_generator_${Date.now()}.png`,
+                      actionButton: onSendToStudio
+                        ? {
+                            label: "Send to Studio",
+                            onClick: () => onSendToStudio(generatedImage, prompt),
+                          }
+                        : undefined,
+                    })
+                  }
+                  className="p-1.5 bg-slate-900 hover:bg-purple-950/60 border border-slate-700 hover:border-purple-500/40 text-purple-300 rounded-lg text-xs font-semibold transition"
+                  title="Expand to Fullscreen Lightbox"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Canvas Display */}
@@ -573,12 +601,54 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
                 </div>
               </div>
             ) : generatedImage ? (
-              <div className="flex flex-col items-center justify-center max-h-[440px]">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() =>
+                  setPreviewModalMedia({
+                    src: generatedImage,
+                    title: "AI Generator High-Res Output",
+                    subtitle: `Generated with ${lastModelUsed || selectedModel}`,
+                    downloadFileName: `ai_generator_${Date.now()}.png`,
+                    actionButton: onSendToStudio
+                      ? {
+                          label: "Send to Studio",
+                          onClick: () => onSendToStudio(generatedImage, prompt),
+                        }
+                      : undefined,
+                  })
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setPreviewModalMedia({
+                      src: generatedImage,
+                      title: "AI Generator High-Res Output",
+                      subtitle: `Generated with ${lastModelUsed || selectedModel}`,
+                      downloadFileName: `ai_generator_${Date.now()}.png`,
+                      actionButton: onSendToStudio
+                        ? {
+                            label: "Send to Studio",
+                            onClick: () => onSendToStudio(generatedImage, prompt),
+                          }
+                        : undefined,
+                    });
+                  }
+                }}
+                className="relative flex flex-col items-center justify-center max-h-[440px] cursor-pointer group/genimg focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-xl overflow-hidden"
+                title="Click to view full uncropped image in popup"
+              >
                 <img
                   src={generatedImage}
                   alt="AI Generated"
-                  className="max-h-[400px] w-auto object-contain rounded-xl shadow-2xl border border-slate-800"
+                  className="max-h-[400px] w-auto object-contain rounded-xl shadow-2xl border border-slate-800 group-hover/genimg:scale-102 transition duration-300"
                 />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/genimg:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px] rounded-xl">
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/90 text-white font-extrabold text-xs shadow-[0_0_15px_rgba(168,85,247,0.6)]">
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    Tap to Expand Full Size
+                  </span>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 text-slate-600 text-center">
@@ -616,6 +686,13 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
           )}
         </div>
       </div>
+
+      {/* ── Fullscreen High-Resolution Lightbox Preview Modal ── */}
+      <ImagePreviewModal
+        isOpen={Boolean(previewModalMedia)}
+        onClose={() => setPreviewModalMedia(null)}
+        media={previewModalMedia}
+      />
     </div>
   );
 }

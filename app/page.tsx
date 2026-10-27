@@ -34,7 +34,9 @@ import {
   Moon,
   Menu,
   X,
+  Maximize2,
 } from "lucide-react";
+import ImagePreviewModal, { PreviewMediaData } from "./components/ImagePreviewModal";
 import CivitaiLoraHub from "./components/CivitaiLoraHub";
 import SentinelAiGateway from "./components/SentinelAiGateway";
 import AiGeneratorHub from "./components/AiGeneratorHub";
@@ -133,6 +135,7 @@ export default function ImageEditorStudio() {
 
   // Gallery
   const [gallery, setGallery] = useState<string[]>([]);
+  const [galleryPreviewMedia, setGalleryPreviewMedia] = useState<PreviewMediaData | null>(null);
   const [viewMode, setViewMode] = useState<"result" | "original">("result");
 
   // NSFW / SFW Mode Controller state (Default: SFW safe mode)
@@ -1563,8 +1566,67 @@ export default function ImageEditorStudio() {
                     key={idx}
                     className="group bg-slate-950/90 border border-cyan-500/35 hover:border-cyan-400 rounded-2xl overflow-hidden flex flex-col hover:shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all duration-300"
                   >
-                    <div className="aspect-square bg-black relative overflow-hidden">
-                      <img src={img} alt={`Output ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() =>
+                        setGalleryPreviewMedia({
+                          src: img,
+                          title: `Creation #${gallery.length - idx}`,
+                          subtitle: "Studio Generated Output",
+                          downloadFileName: `qwen_creation_${gallery.length - idx}.png`,
+                          actionButton: {
+                            label: "Refine in Studio",
+                            onClick: () => {
+                              setOriginalImage(img);
+                              setEditedImage(null);
+                              setActiveTab("studio");
+                            },
+                          },
+                        })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setGalleryPreviewMedia({
+                            src: img,
+                            title: `Creation #${gallery.length - idx}`,
+                            subtitle: "Studio Generated Output",
+                            downloadFileName: `qwen_creation_${gallery.length - idx}.png`,
+                            actionButton: {
+                              label: "Refine in Studio",
+                              onClick: () => {
+                                setOriginalImage(img);
+                                setEditedImage(null);
+                              setActiveTab("studio");
+                            },
+                          },
+                        });
+                      }
+                    }}
+                      className="aspect-square bg-slate-950 relative overflow-hidden cursor-pointer group/thumb focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                      title="Click to view full uncropped preview"
+                    >
+                      {/* Ambient Blurred Background (Ensures zero black void while keeping uncropped foreground) */}
+                      <img
+                        src={img}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover filter blur-xl opacity-35 scale-125 pointer-events-none"
+                      />
+                      {/* Foreground 100% Uncropped Media */}
+                      <img
+                        src={img}
+                        alt={`Output ${idx + 1}`}
+                        className="relative z-10 w-full h-full object-contain group-hover/thumb:scale-105 transition duration-300"
+                      />
+                      {/* Hover / Tap Hint Indicator */}
+                      <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
+                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/90 text-black font-extrabold text-xs shadow-[0_0_15px_rgba(6,182,212,0.6)]">
+                          <Maximize2 className="w-3.5 h-3.5" />
+                          Tap to Expand
+                        </span>
+                      </div>
                     </div>
                     <div className="p-3 bg-slate-950 flex items-center justify-between gap-2 border-t border-slate-800">
                       <span className="text-[11px] font-mono text-cyan-300/80">Creation #{gallery.length - idx}</span>
@@ -1594,6 +1656,13 @@ export default function ImageEditorStudio() {
                 ))}
               </div>
             )}
+
+            {/* ── Fullscreen High-Resolution Lightbox Preview Modal for Gallery ── */}
+            <ImagePreviewModal
+              isOpen={Boolean(galleryPreviewMedia)}
+              onClose={() => setGalleryPreviewMedia(null)}
+              media={galleryPreviewMedia}
+            />
           </div>
         ) : activeTab === "sentinel" ? (
           <div className="w-full pb-28 lg:pb-8">
