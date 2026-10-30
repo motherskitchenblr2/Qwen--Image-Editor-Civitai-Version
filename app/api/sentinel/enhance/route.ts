@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
 
     // Default fast intelligent fallback using promptIntelligence engine
     if (isBrainstorm) {
-      const bs = brainstormPrompt(prompt);
+      const bs = brainstormPrompt(prompt, nsfw_enabled);
       return NextResponse.json({
         enhancedPrompt: bs.prompt,
         suggestedNegative: bs.suggestedNegative,
@@ -176,10 +176,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Reform casual user text into balanced professional prompt
-    const reformed = reformUserPrompt(prompt);
+    const reformed = reformUserPrompt(prompt, nsfw_enabled, isEditMode ? "edit" : "generate");
     return NextResponse.json({
       enhancedPrompt: reformed,
-      mode: "enhance",
+      mode: isEditMode ? "edit" : "enhance",
       isBrainstormed: false,
     });
   } catch (err: any) {

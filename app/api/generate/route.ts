@@ -34,10 +34,34 @@ async function generateWithTurboNeural(
       : Math.floor(Math.random() * 900000) + 100000;
 
   let cleanModel = (modelName || "turbo").replace(/^pollinations\//, "").trim();
-  if (!cleanModel || cleanModel === "nano-banana") cleanModel = "turbo";
+  if (!cleanModel || cleanModel === "nano-banana" || cleanModel === "turbo") {
+    cleanModel = "turbo";
+  } else if (cleanModel === "midjourney-v6" || cleanModel === "midjourney") {
+    cleanModel = "midjourney";
+  } else if (cleanModel === "cf-flux" || cleanModel === "flux" || cleanModel.includes("schnell")) {
+    cleanModel = "flux";
+  } else if (cleanModel === "cf-lucid" || cleanModel.includes("realism")) {
+    cleanModel = "flux-realism";
+  } else if (cleanModel.includes("anime")) {
+    cleanModel = "flux-anime";
+  } else if (cleanModel.includes("3d")) {
+    cleanModel = "flux-3d";
+  } else if (cleanModel.includes("Qwen2-VL") || cleanModel.includes("mradermacher")) {
+    cleanModel = "flux";
+  }
+
+  // Quality Booster: Enrich prompt based on target model aesthetic specialization
+  let enrichedPrompt = prompt.trim();
+  if (cleanModel === "midjourney" && !enrichedPrompt.includes("cinematic")) {
+    enrichedPrompt = `${enrichedPrompt}, cinematic composition, dramatic volumetric lighting, photorealistic textures, 8k resolution, award-winning cinematography`;
+  } else if (cleanModel === "flux-realism" && !enrichedPrompt.includes("shot on")) {
+    enrichedPrompt = `${enrichedPrompt}, shot on 85mm f/1.4 lens, natural skin textures, pore details, realistic ambient lighting, uncompressed 8k raw photo`;
+  } else if (cleanModel === "flux-anime" && !enrichedPrompt.includes("cel shading")) {
+    enrichedPrompt = `${enrichedPrompt}, vibrant colors, Makoto Shinkai studio lighting, crisp cel shading, dynamic anime linework, 4k digital illustration`;
+  }
 
   const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
-    prompt.trim()
+    enrichedPrompt
   )}?width=${width}&height=${height}&seed=${numericSeed}&nologo=true&model=${encodeURIComponent(
     cleanModel
   )}`;

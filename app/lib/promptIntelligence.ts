@@ -339,7 +339,7 @@ export function brainstormPrompt(
   const cleanSeed = (seedTopic || "").trim().toLowerCase();
 
   // In SFW mode, strictly refuse and avoid generating NSFW content
-  const NSFW_REGEX = /\b(nsfw|nude|nudity|naked|porn|porno|pornography|xxx|hentai|erotic|erotica|sex|sexy|sexual|explicit|genitals|penis|vagina|boobs|breasts|topless|bottomless|fellatio|blowjob|masturbat\w*|cum|orgasm|bdsm|bondage|fetish|lewd|milf|waifu\s+nude|ecchi|r18|uncensored\s+nudity|uncensored\s+sex|gangbang|hardcore|softcore|anal|penetration|stripper|undressed|unclothed|erotic\s+art|naked\s+body|naked\s+woman|naked\s+man)\b/i;
+  const NSFW_REGEX = /\b(nsfw|nude|nudity|naked|porn|porno|pornography|xxx|hentai|erotic|erotica|sex|sexy|sexual|explicit|genitals|penis|vagina|boobs|breasts|topless|bottomless|fellatio|blowjob|masturbat\w*|cum|orgasm|bdsm|bondage|fetish|lewd|milf|waifu\s+nude|ecchi|r18|uncensored\s+nudity|uncensored\s+sex|gangbang|hardcore|softcore|anal|penetration|stripper|undressed|unclothed|erotic\s+art|naked\s+body|naked\s+woman|naked\s+man|sensual|boudoir|lingerie|provocative)\b/i;
   if (!isNsfwAllowed && NSFW_REGEX.test(cleanSeed)) {
     return {
       prompt: "NSFW Blocked by Admin",
@@ -368,7 +368,7 @@ export function brainstormPrompt(
   // If seed topic contains specific keywords, synthesize tailored professional compositions:
   if (cleanSeed.includes("car") || cleanSeed.includes("auto") || cleanSeed.includes("vehicle") || cleanSeed.includes("supercar")) {
     return {
-      prompt: `Cinematic commercial photography of an exotic high-performance ${cleanSeed} parked on a rain-slicked mountain pass at golden hour, dynamic 3/4 low angle, sharp reflections on metallic pearlescent clearcoat, glowing LED taillight ribbons, wet asphalt spray, shot on 50mm f/1.8 anamorphic lens, 8k resolution masterwork`,
+      prompt: `Cinematic commercial photography of an exotic high-performance ${cleanSeed} parked on a rain-slicked mountain pass at golden hour, dynamic 3/4 low angle, dramatic lighting and sharp reflections on metallic pearlescent clearcoat, glowing LED taillight ribbons, wet asphalt spray, shot on 50mm f/1.8 anamorphic lens, 8k resolution masterwork`,
       suggestedNegative: "cartoon, anime, 3d render, clay, plastic toy, lowres, blurry, distorted wheel geometry, bad lighting, watermark, signature",
     };
   }
@@ -404,11 +404,16 @@ export function brainstormPrompt(
 /**
  * Prompt Reformer: Transforms casual, improper, or raw imaginative user text
  * into a balanced, professional prompt with image enhancing descriptors.
+ * Supports both Text-to-Image Generation and Surgical Image Editing modes.
  */
-export function reformUserPrompt(rawText: string, isNsfwAllowed: boolean = false): string {
+export function reformUserPrompt(
+  rawText: string,
+  isNsfwAllowed: boolean = false,
+  mode: "generate" | "edit" = "generate"
+): string {
   if (!rawText || !rawText.trim()) return "";
 
-  const NSFW_REGEX = /\b(nsfw|nude|nudity|naked|porn|porno|pornography|xxx|hentai|erotic|erotica|sex|sexy|sexual|explicit|genitals|penis|vagina|boobs|breasts|topless|bottomless|fellatio|blowjob|masturbat\w*|cum|orgasm|bdsm|bondage|fetish|lewd|milf|waifu\s+nude|ecchi|r18|uncensored\s+nudity|uncensored\s+sex|gangbang|hardcore|softcore|anal|penetration|stripper|undressed|unclothed|erotic\s+art|naked\s+body|naked\s+woman|naked\s+man)\b/i;
+  const NSFW_REGEX = /\b(nsfw|nude|nudity|naked|porn|porno|pornography|xxx|hentai|erotic|erotica|sex|sexy|sexual|explicit|genitals|penis|vagina|boobs|breasts|topless|bottomless|fellatio|blowjob|masturbat\w*|cum|orgasm|bdsm|bondage|fetish|lewd|milf|waifu\s+nude|ecchi|r18|uncensored\s+nudity|uncensored\s+sex|gangbang|hardcore|softcore|anal|penetration|stripper|undressed|unclothed|erotic\s+art|naked\s+body|naked\s+woman|naked\s+man|sensual|boudoir|lingerie|provocative)\b/i;
 
   if (!isNsfwAllowed && NSFW_REGEX.test(rawText)) {
     return "NSFW Blocked by Admin";
@@ -420,7 +425,12 @@ export function reformUserPrompt(rawText: string, isNsfwAllowed: boolean = false
   cleaned = cleaned.replace(/^(please\s+)?(can\s+you\s+)?(i\s+want\s+(a\s+)?|create\s+(a\s+)?|make\s+(a\s+)?|draw\s+(a\s+)?|generate\s+(a\s+)?|show\s+me\s+(a\s+)?|picture\s+of\s+|photo\s+of\s+)/i, "");
   cleaned = cleaned.replace(/[.!?]+$/, ""); // strip trailing punctuation
 
-  // Build balanced professional prompt
+  // In Image-to-Image / Surgical Edit mode, prioritize identity & geometry preservation
+  if (mode === "edit") {
+    return `Precise surgical image edit: ${cleaned}, maintaining original facial likeness, body anatomy, pose, and background environment unchanged with seamless lighting coherence and 8k photorealistic detail`;
+  }
+
+  // Build balanced professional prompt with Midjourney & DALL-E 3 visual aesthetics
   return `Artfully crafted masterpiece of ${cleaned}, balanced cinematic composition, rich ambient lighting with delicate contrast, crisp photographic depth of field, hyper-detailed natural textures, 8k resolution, professional studio finish`;
 }
 
