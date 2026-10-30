@@ -1,6 +1,15 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-slate-350: #a1b0cb;
+  --color-slate-750: #233044;
+  --color-slate-850: #172033;
+}
 
 :root {
   --background: 220 20% 4%;
