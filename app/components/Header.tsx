@@ -196,11 +196,11 @@ export default function Header({
           </button>
         </div>
 
-        {/* Center / Row 2: Navigation Horizontal Bar (Smooth scrolling on mobile with flex-shrink-0 pills) */}
-        <div className="order-3 lg:order-2 w-full lg:w-auto relative group">
+        {/* Center / Row 2: Navigation Horizontal Bar (Smooth swipeable scrolling on mobile with flex-shrink-0 pills) */}
+        <div className="order-3 lg:order-2 w-full min-w-0 max-w-full lg:w-auto relative">
           <nav
             aria-label="Main Navigation"
-            className="flex items-center gap-2 overflow-x-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden px-2 py-1 w-full max-w-full bg-black/80 rounded-xl lg:rounded-2xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.12)] shrink-0 touch-pan-x scroll-smooth"
+            className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-nowrap w-full px-2 py-1 bg-black/80 rounded-xl lg:rounded-2xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.12)] shrink-0 touch-pan-x scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           >
             <button
               onClick={() => onNavigateTab("studio")}

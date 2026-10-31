@@ -79,7 +79,7 @@ export default function StudioLayout({
           <button
             type="button"
             onClick={() => setMobileView("both")}
-            className={`hidden md:inline-flex items-center px-2 py-1 rounded-md text-[11px] font-bold transition ${
+            className={`hidden sm:inline-flex items-center px-2 py-1 rounded-md text-[11px] font-bold transition ${
               mobileView === "both"
                 ? "bg-cyan-500/25 border border-cyan-400/80 text-cyan-200 shadow-sm"
                 : "text-slate-400 hover:text-white"

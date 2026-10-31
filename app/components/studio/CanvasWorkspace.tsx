@@ -318,8 +318,12 @@ export default function CanvasWorkspace({
 
   return (
     <section className="h-full flex flex-col justify-between overflow-hidden bg-[#050811] relative select-none">
-      {/* Tier A: Fixed Top Toolbar (h-10 sm:h-11 shrink-0) */}
-      <div className="h-10 sm:h-11 border-b border-slate-800/70 px-2 sm:px-4 flex items-center justify-between gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar bg-[#0a0f1d]/50 shrink-0">
+      {/* Tier A: Fixed Top Toolbar (h-10 sm:h-11 shrink-0, polished pre-upload state) */}
+      <div
+        className={`h-10 sm:h-11 border-b border-slate-800/70 px-2 sm:px-4 flex items-center justify-between gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar bg-[#0a0f1d]/50 shrink-0 transition-opacity ${
+          !activeDisplayImage ? "opacity-40 pointer-events-none select-none" : "opacity-100"
+        }`}
+      >
         {/* Left: View Mode Toggles */}
         <div className="flex items-center gap-1 bg-black/80 p-1 rounded-xl border border-cyan-500/30 shrink-0">
           {originalImage && editedImage && (
@@ -647,13 +651,13 @@ export default function CanvasWorkspace({
             </div>
           </div>
         ) : (
-          /* Empty State: Image-to-Image Edit Mode (Compact Aspect Ratio Dropzone) */
+          /* Empty State: Image-to-Image Edit Mode (Tuned Mobile Dropzone Height) */
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="w-full max-w-sm sm:max-w-lg min-h-[220px] max-h-[300px] aspect-[4/3] p-4 sm:p-6 border-2 border-dashed border-slate-700/80 hover:border-cyan-500/60 rounded-2xl bg-slate-900/40 flex flex-col items-center justify-center text-center transition-all cursor-pointer shadow-lg active:scale-[0.99] my-auto"
+            className="w-full max-w-sm sm:max-w-md min-h-[220px] max-h-[320px] py-8 px-4 border-2 border-dashed border-slate-700/80 hover:border-cyan-500/60 rounded-2xl bg-slate-900/40 flex flex-col items-center justify-center text-center transition-all cursor-pointer shadow-lg active:scale-[0.99] my-auto"
           >
-            <div className="p-2 sm:p-3 bg-slate-900/90 border border-cyan-500/30 rounded-2xl text-cyan-400 group-hover:text-white group-hover:border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all mb-2">
-              <Upload className="w-5 h-5 sm:w-7 sm:h-7 group-hover:scale-110 transition-transform" />
+            <div className="p-2.5 sm:p-3 bg-slate-900/90 border border-cyan-500/30 rounded-2xl text-cyan-400 group-hover:text-white group-hover:border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all mb-2.5">
+              <Upload className="w-6 h-6 sm:w-7 sm:h-7 group-hover:scale-110 transition-transform" />
             </div>
             <div className="space-y-1 max-w-xs">
               <p className="text-xs sm:text-sm font-black text-white">Upload source image to begin editing</p>
@@ -667,12 +671,12 @@ export default function CanvasWorkspace({
                 Supported formats: PNG, JPG, WebP (up to 10MB)
               </p>
             </div>
-            <div className="mt-2.5 sm:mt-3">
+            <div className="mt-3">
               <button
                 type="button"
-                className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition active:scale-[0.99] flex items-center gap-2 pointer-events-none"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition active:scale-[0.99] flex items-center gap-2 pointer-events-none"
               >
-                <FolderOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <FolderOpen className="w-4 h-4" />
                 <span className="sm:hidden">Tap to Choose Image</span>
                 <span className="hidden sm:inline">Browse or Drag Image Here</span>
               </button>
