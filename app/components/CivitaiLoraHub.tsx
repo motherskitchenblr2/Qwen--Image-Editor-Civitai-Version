@@ -152,9 +152,14 @@ export default function CivitaiLoraHub({
   // Smart NSFW Blur Overlay state (enabled by default; persisted in localStorage)
   const [globalNsfwBlur, setGlobalNsfwBlur] = useState<boolean>(true);
   const [cardBlurOverrides, setCardBlurOverrides] = useState<Record<number, boolean>>({});
+  const [isOverlayDisabled, setIsOverlayDisabled] = useState<boolean>(false);
 
   useEffect(() => {
     try {
+      const savedOverlay = localStorage.getItem("qwen_nsfw_overlay_disabled");
+      if (savedOverlay === "true") {
+        setIsOverlayDisabled(true);
+      }
       const saved = localStorage.getItem("qwen_nsfw_blur_overlay");
       if (saved !== null) {
         setGlobalNsfwBlur(saved === "true");
@@ -163,6 +168,16 @@ export default function CivitaiLoraHub({
   }, []);
 
   const handleToggleGlobalBlur = () => {
+    if (isOverlayDisabled) {
+      setIsOverlayDisabled(false);
+      setGlobalNsfwBlur(true);
+      setCardBlurOverrides({});
+      try {
+        localStorage.setItem("qwen_nsfw_blur_overlay", "true");
+        localStorage.removeItem("qwen_nsfw_overlay_disabled");
+      } catch {}
+      return;
+    }
     setGlobalNsfwBlur((prev) => {
       const next = !prev;
       try {
@@ -173,6 +188,7 @@ export default function CivitaiLoraHub({
   };
 
   const getCardIsBlurred = (modelId: number, isNsfw: boolean): boolean => {
+    if (isOverlayDisabled) return false;
     if (!isNsfw) return false;
     if (modelId in cardBlurOverrides) {
       return cardBlurOverrides[modelId];
@@ -188,12 +204,15 @@ export default function CivitaiLoraHub({
     }));
   };
 
+  // Re-created Reveal All function: Disables the overlay completely from all Civitai.red LoRA sample image & video previews
   const handleRevealAll = () => {
+    setIsOverlayDisabled(true);
     setGlobalNsfwBlur(false);
+    setCardBlurOverrides({});
     try {
       localStorage.setItem("qwen_nsfw_blur_overlay", "false");
+      localStorage.setItem("qwen_nsfw_overlay_disabled", "true");
     } catch {}
-    setCardBlurOverrides({});
   };
 
   // Direct URL paste
@@ -661,14 +680,18 @@ export default function CivitaiLoraHub({
           <button
             type="button"
             onClick={handleToggleGlobalBlur}
-            title={globalNsfwBlur ? "Click to Disable Blur overlay across all Civitai visuals" : "Click to Enable Blur overlay for all NSFW visuals"}
+            title={
+              !isOverlayDisabled && globalNsfwBlur
+                ? "Click to Disable Blur overlay across all Civitai visuals"
+                : "Click to Enable Blur overlay for all NSFW visuals"
+            }
             className={`flex items-center gap-1.5 px-3 py-2.5 rounded-2xl text-xs font-bold border transition-all duration-200 active:scale-95 shadow-sm cursor-pointer select-none ${
-              globalNsfwBlur
+              !isOverlayDisabled && globalNsfwBlur
                 ? "bg-rose-950/60 hover:bg-rose-950/80 border-rose-500/60 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.3)]"
                 : "bg-emerald-950/50 hover:bg-emerald-950/70 border-emerald-500/50 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.25)]"
             }`}
           >
-            {globalNsfwBlur ? (
+            {!isOverlayDisabled && globalNsfwBlur ? (
               <>
                 <EyeOff className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
                 <span>NSFW Blur: ON</span>
@@ -849,7 +872,7 @@ export default function CivitaiLoraHub({
                       aria-hidden="true"
                       {...({ referrerPolicy: "no-referrer" } as any)}
                       className={`absolute inset-0 w-full h-full object-cover filter blur-xl opacity-35 scale-125 pointer-events-none transition-all duration-300 ${
-                        itemIsNsfw && cardIsBlurred ? "blur-3xl saturate-200" : ""
+                        itemIsNsfw && cardIsBlurred && !isOverlayDisabled ? "blur-3xl saturate-200" : ""
                       }`}
                     />
                   ) : (
@@ -860,7 +883,7 @@ export default function CivitaiLoraHub({
                       loading="lazy"
                       referrerPolicy="no-referrer"
                       className={`absolute inset-0 w-full h-full object-cover filter blur-xl opacity-35 scale-125 pointer-events-none transition-all duration-300 ${
-                        itemIsNsfw && cardIsBlurred ? "blur-3xl saturate-200" : ""
+                        itemIsNsfw && cardIsBlurred && !isOverlayDisabled ? "blur-3xl saturate-200" : ""
                       }`}
                     />
                   )}
@@ -875,7 +898,7 @@ export default function CivitaiLoraHub({
                       playsInline
                       {...({ referrerPolicy: "no-referrer" } as any)}
                       className={`relative z-10 w-full h-full object-contain group-hover/thumb:scale-105 transition-all duration-300 ease-out ${
-                        itemIsNsfw && cardIsBlurred ? "filter blur-2xl scale-110 saturate-150" : "filter blur-none scale-100"
+                        itemIsNsfw && cardIsBlurred && !isOverlayDisabled ? "filter blur-2xl scale-110 saturate-150" : "filter blur-none scale-100"
                       }`}
                     />
                   ) : (
@@ -885,14 +908,14 @@ export default function CivitaiLoraHub({
                       loading="lazy"
                       referrerPolicy="no-referrer"
                       className={`relative z-10 w-full h-full object-contain group-hover/thumb:scale-105 transition-all duration-300 ease-out ${
-                        itemIsNsfw && cardIsBlurred ? "filter blur-2xl scale-110 saturate-150" : "filter blur-none scale-100"
+                        itemIsNsfw && cardIsBlurred && !isOverlayDisabled ? "filter blur-2xl scale-110 saturate-150" : "filter blur-none scale-100"
                       }`}
                     />
                   )}
                   <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950 via-transparent to-black/40 pointer-events-none" />
 
                   {/* Smart Blur Frosted Glass Overlay for NSFW Visuals */}
-                  {itemIsNsfw && cardIsBlurred && (
+                  {itemIsNsfw && cardIsBlurred && !isOverlayDisabled && (
                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-3 bg-slate-950/60 backdrop-blur-xl border border-rose-500/25 transition-all duration-300">
                       <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-2xl bg-black/85 border border-rose-500/35 backdrop-blur-md shadow-2xl max-w-[92%]">
                         <NeonGlowEyeIcon color="magenta" className="w-9 h-9" />
