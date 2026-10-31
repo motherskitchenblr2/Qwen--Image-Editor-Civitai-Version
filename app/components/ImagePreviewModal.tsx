@@ -11,6 +11,9 @@ import {
   ExternalLink,
   Layers,
   Zap,
+  Eye,
+  EyeOff,
+  ShieldAlert,
 } from "lucide-react";
 
 export interface PreviewMediaData {
@@ -23,6 +26,8 @@ export interface PreviewMediaData {
   sizeMB?: number | string;
   triggerWords?: string[];
   downloadFileName?: string;
+  isNsfw?: boolean;
+  blurOverlay?: boolean;
   actionButton?: {
     label: string;
     onClick: () => void;
@@ -42,6 +47,16 @@ export default function ImagePreviewModal({
   media,
 }: ImagePreviewModalProps) {
   const [copiedTrigger, setCopiedTrigger] = useState<string | null>(null);
+  const [isBlurred, setIsBlurred] = useState<boolean>(false);
+
+  // Sync blur state whenever modal opens with new media
+  useEffect(() => {
+    if (media?.isNsfw) {
+      setIsBlurred(media.blurOverlay !== false);
+    } else {
+      setIsBlurred(false);
+    }
+  }, [media]);
 
   // Close on Escape key
   useEffect(() => {
@@ -117,6 +132,31 @@ export default function ImagePreviewModal({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {media.isNsfw && (
+              <button
+                type="button"
+                onClick={() => setIsBlurred(!isBlurred)}
+                title={isBlurred ? "Click watermark to disable Blur overlay" : "Click watermark to enable Blur overlay"}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 shadow-sm ${
+                  isBlurred
+                    ? "bg-rose-950/80 hover:bg-rose-900 border-rose-500/50 text-rose-300 shadow-rose-950/50"
+                    : "bg-black/70 hover:bg-black/90 border-emerald-500/40 text-emerald-300"
+                }`}
+              >
+                {isBlurred ? (
+                  <>
+                    <EyeOff className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                    <span>Blur: ON</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Blur: OFF</span>
+                  </>
+                )}
+              </button>
+            )}
+
             {media.actionButton && (
               <button
                 type="button"
@@ -168,15 +208,44 @@ export default function ImagePreviewModal({
               loop
               playsInline
               {...({ referrerPolicy: "no-referrer" } as any)}
-              className="max-h-[64vh] sm:max-h-[70vh] w-auto max-w-full object-contain rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-cyan-500/30 relative z-10"
+              className={`max-h-[64vh] sm:max-h-[70vh] w-auto max-w-full object-contain rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-cyan-500/30 relative z-10 transition-all duration-300 ${
+                isBlurred ? "filter blur-3xl scale-105" : "filter blur-none scale-100"
+              }`}
             />
           ) : (
             <img
               src={media.src}
               alt={media.alt || media.title || "Full Preview"}
               referrerPolicy="no-referrer"
-              className="max-h-[64vh] sm:max-h-[70vh] w-auto max-w-full object-contain rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-cyan-500/30 relative z-10"
+              className={`max-h-[64vh] sm:max-h-[70vh] w-auto max-w-full object-contain rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-cyan-500/30 relative z-10 transition-all duration-300 ${
+                isBlurred ? "filter blur-3xl scale-105" : "filter blur-none scale-100"
+              }`}
             />
+          )}
+
+          {/* Smart Blur Overlay */}
+          {media.isNsfw && isBlurred && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-4 bg-slate-950/60 backdrop-blur-3xl transition-all duration-300">
+              <div className="flex flex-col items-center text-center gap-2 p-5 rounded-3xl bg-black/85 border border-rose-500/40 backdrop-blur-xl shadow-2xl max-w-sm">
+                <div className="w-12 h-12 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.4)]">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-black tracking-wider text-rose-300 uppercase">
+                  18+ NSFW Visual
+                </h3>
+                <p className="text-xs text-slate-300">
+                  Smart Blur overlay is active to protect sensitive visual content.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsBlurred(false)}
+                  className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-rose-500/30 transition-transform active:scale-95 cursor-pointer"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>Reveal Full Visual</span>
+                </button>
+              </div>
+            </div>
           )}
         </div>
 

@@ -29,6 +29,9 @@ import {
   Tag,
   Undo2,
   Shield,
+  ShieldAlert,
+  Eye,
+  EyeOff,
   Cpu,
   Sun,
   Moon,
@@ -137,6 +140,44 @@ export default function ImageEditorStudio() {
   const [gallery, setGallery] = useState<string[]>([]);
   const [galleryPreviewMedia, setGalleryPreviewMedia] = useState<PreviewMediaData | null>(null);
   const [viewMode, setViewMode] = useState<"result" | "original">("result");
+
+  // Smart NSFW Blur Overlay for Gallery
+  const [galleryNsfwBlur, setGalleryNsfwBlur] = useState<boolean>(true);
+  const [galleryBlurOverrides, setGalleryBlurOverrides] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("qwen_nsfw_blur_overlay");
+      if (saved !== null) {
+        setGalleryNsfwBlur(saved === "true");
+      }
+    } catch {}
+  }, []);
+
+  const handleToggleGalleryBlur = () => {
+    setGalleryNsfwBlur((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("qwen_nsfw_blur_overlay", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const isGalleryCardBlurred = (idx: number): boolean => {
+    if (idx in galleryBlurOverrides) {
+      return galleryBlurOverrides[idx];
+    }
+    return galleryNsfwBlur;
+  };
+
+  const toggleGalleryCardBlur = (idx: number) => {
+    const currentlyBlurred = isGalleryCardBlurred(idx);
+    setGalleryBlurOverrides((prev) => ({
+      ...prev,
+      [idx]: !currentlyBlurred,
+    }));
+  };
 
   // NSFW / SFW Mode Controller state (Default: SFW safe mode)
   const [isNsfwMode, setIsNsfwMode] = useState<boolean>(false);
@@ -1540,13 +1581,39 @@ export default function ImageEditorStudio() {
                 </h2>
                 <p className="text-xs text-cyan-300/80">All outputs auto-sync to Google Drive `AI_Storage/outputs/`</p>
               </div>
-              <button
-                onClick={() => setActiveTab("studio")}
-                className="px-4 py-2 bg-slate-900 hover:bg-cyan-950/60 border border-cyan-500/40 rounded-xl text-xs font-bold text-cyan-300 flex items-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.2)] transition active:scale-95"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Back to Editor</span>
-              </button>
+              <div className="flex items-center gap-2.5">
+                {/* Smartest Blur Overlay Watermark Toggle Button for Gallery */}
+                <button
+                  type="button"
+                  onClick={handleToggleGalleryBlur}
+                  title={galleryNsfwBlur ? "Click to Disable Blur overlay across Gallery visuals" : "Click to Enable Blur overlay across Gallery visuals"}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all duration-200 active:scale-95 shadow-sm cursor-pointer select-none ${
+                    galleryNsfwBlur
+                      ? "bg-rose-950/60 hover:bg-rose-950/80 border-rose-500/60 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.3)]"
+                      : "bg-emerald-950/50 hover:bg-emerald-950/70 border-emerald-500/50 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.25)]"
+                  }`}
+                >
+                  {galleryNsfwBlur ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                      <span>Blur: ON</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Blur: OFF</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("studio")}
+                  className="px-4 py-2 bg-slate-900 hover:bg-cyan-950/60 border border-cyan-500/40 rounded-xl text-xs font-bold text-cyan-300 flex items-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.2)] transition active:scale-95"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Back to Editor</span>
+                </button>
+              </div>
             </div>
 
             {gallery.length === 0 ? (
@@ -1565,99 +1632,170 @@ export default function ImageEditorStudio() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {gallery.map((img, idx) => (
-                  <div
-                    key={idx}
-                    className="group bg-slate-950/90 border border-cyan-500/35 hover:border-cyan-400 rounded-2xl overflow-hidden flex flex-col hover:shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all duration-300"
-                  >
+                {gallery.map((img, idx) => {
+                  const cardBlurred = isGalleryCardBlurred(idx);
+                  return (
                     <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() =>
-                        setGalleryPreviewMedia({
-                          src: img,
-                          title: `Creation #${gallery.length - idx}`,
-                          subtitle: "Studio Generated Output",
-                          downloadFileName: `qwen_creation_${gallery.length - idx}.png`,
-                          actionButton: {
-                            label: "Refine in Studio",
-                            onClick: () => {
-                              setOriginalImage(img);
-                              setEditedImage(null);
-                              setActiveTab("studio");
-                            },
-                          },
-                        })
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
+                      key={idx}
+                      className="group bg-slate-950/90 border border-cyan-500/35 hover:border-cyan-400 rounded-2xl overflow-hidden flex flex-col hover:shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all duration-300 relative"
+                    >
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() =>
                           setGalleryPreviewMedia({
                             src: img,
                             title: `Creation #${gallery.length - idx}`,
                             subtitle: "Studio Generated Output",
                             downloadFileName: `qwen_creation_${gallery.length - idx}.png`,
+                            isNsfw: true,
+                            blurOverlay: cardBlurred,
                             actionButton: {
                               label: "Refine in Studio",
                               onClick: () => {
                                 setOriginalImage(img);
                                 setEditedImage(null);
-                              setActiveTab("studio");
+                                setActiveTab("studio");
+                              },
                             },
-                          },
-                        });
-                      }
-                    }}
-                      className="aspect-square bg-slate-950 relative overflow-hidden cursor-pointer group/thumb focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                      title="Click to view full uncropped preview"
-                    >
-                      {/* Ambient Blurred Background (Ensures zero black void while keeping uncropped foreground) */}
-                      <img
-                        src={img}
-                        alt=""
-                        aria-hidden="true"
-                        className="absolute inset-0 w-full h-full object-cover filter blur-xl opacity-35 scale-125 pointer-events-none"
-                      />
-                      {/* Foreground 100% Uncropped Media */}
-                      <img
-                        src={img}
-                        alt={`Output ${idx + 1}`}
-                        className="relative z-10 w-full h-full object-contain group-hover/thumb:scale-105 transition duration-300"
-                      />
-                      {/* Hover / Tap Hint Indicator */}
-                      <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
-                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/90 text-black font-extrabold text-xs shadow-[0_0_15px_rgba(6,182,212,0.6)]">
-                          <Maximize2 className="w-3.5 h-3.5" />
-                          Tap to Expand
-                        </span>
+                          })
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setGalleryPreviewMedia({
+                              src: img,
+                              title: `Creation #${gallery.length - idx}`,
+                              subtitle: "Studio Generated Output",
+                              downloadFileName: `qwen_creation_${gallery.length - idx}.png`,
+                              isNsfw: true,
+                              blurOverlay: cardBlurred,
+                              actionButton: {
+                                label: "Refine in Studio",
+                                onClick: () => {
+                                  setOriginalImage(img);
+                                  setEditedImage(null);
+                                  setActiveTab("studio");
+                                },
+                              },
+                            });
+                          }
+                        }}
+                        className="aspect-square bg-slate-950 relative overflow-hidden cursor-pointer group/thumb focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                        title="Click to view full uncropped preview"
+                      >
+                        {/* Ambient Blurred Background (Ensures zero black void while keeping uncropped foreground) */}
+                        <img
+                          src={img}
+                          alt=""
+                          aria-hidden="true"
+                          className={`absolute inset-0 w-full h-full object-cover filter blur-xl opacity-35 scale-125 pointer-events-none transition-all duration-300 ${
+                            cardBlurred ? "blur-3xl saturate-200" : ""
+                          }`}
+                        />
+                        {/* Foreground 100% Uncropped Media */}
+                        <img
+                          src={img}
+                          alt={`Output ${idx + 1}`}
+                          className={`relative z-10 w-full h-full object-contain group-hover/thumb:scale-105 transition-all duration-300 ${
+                            cardBlurred ? "filter blur-2xl scale-110 saturate-150" : "filter blur-none scale-100"
+                          }`}
+                        />
+
+                        {/* Smart Blur Frosted Glass Overlay for Gallery Visuals */}
+                        {cardBlurred && (
+                          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-3 bg-slate-950/60 backdrop-blur-xl border border-rose-500/25 transition-all duration-300">
+                            <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-2xl bg-black/80 border border-rose-500/35 backdrop-blur-md shadow-2xl max-w-[90%]">
+                              <div className="w-8 h-8 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.4)]">
+                                <ShieldAlert className="w-4 h-4" />
+                              </div>
+                              <span className="text-[10px] font-black tracking-wider text-rose-300 uppercase">
+                                Sensitive Visual
+                              </span>
+                              <p className="text-[9px] text-slate-300 leading-tight">
+                                Smart Blur Overlay Active
+                              </p>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  toggleGalleryCardBlur(idx);
+                                }}
+                                className="mt-1 px-3 py-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-md shadow-rose-500/30 transition-transform active:scale-95 cursor-pointer"
+                              >
+                                <Eye className="w-3 h-3" />
+                                <span>Reveal Visual</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Hover / Tap Hint Indicator */}
+                        <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
+                          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/90 text-black font-extrabold text-xs shadow-[0_0_15px_rgba(6,182,212,0.6)]">
+                            <Maximize2 className="w-3.5 h-3.5" />
+                            Tap to Expand
+                          </span>
+                        </div>
+
+                        {/* Tiny Watermark Type Blur Toggle Badge (Top Right) */}
+                        <div className="absolute top-2.5 right-2.5 z-25">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              toggleGalleryCardBlur(idx);
+                            }}
+                            title={cardBlurred ? "Click watermark to disable Blur overlay" : "Click watermark to enable Blur overlay"}
+                            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-lg backdrop-blur-md transition-all active:scale-90 border cursor-pointer select-none ${
+                              cardBlurred
+                                ? "bg-rose-950/90 hover:bg-rose-900 border-rose-500/60 text-rose-300 shadow-rose-950/60 hover:shadow-[0_0_12px_rgba(244,63,94,0.5)]"
+                                : "bg-black/85 hover:bg-black/95 border-emerald-500/50 text-emerald-300 hover:shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                            }`}
+                          >
+                            {cardBlurred ? (
+                              <>
+                                <EyeOff className="w-2.5 h-2.5 text-rose-400 animate-pulse" />
+                                <span>Unblur</span>
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="w-2.5 h-2.5 text-emerald-400" />
+                                <span>Blur</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-slate-950 flex items-center justify-between gap-2 border-t border-slate-800">
+                        <span className="text-[11px] font-mono text-cyan-300/80">Creation #{gallery.length - idx}</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => {
+                              setOriginalImage(img);
+                              setEditedImage(null);
+                              setActiveTab("studio");
+                            }}
+                            className="px-2.5 py-1 bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-500/50 text-[11px] font-semibold text-slate-200 hover:text-cyan-200 rounded-lg transition"
+                            title="Send back to editor for iterative refinement"
+                          >
+                            Refine
+                          </button>
+                          <a
+                            href={img}
+                            download={`qwen_creation_${idx + 1}.png`}
+                            className="p-1.5 bg-cyan-400 hover:bg-cyan-300 text-black rounded-lg shadow-[0_0_10px_rgba(6,182,212,0.4)] transition"
+                            title="Download full quality PNG"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
                       </div>
                     </div>
-                    <div className="p-3 bg-slate-950 flex items-center justify-between gap-2 border-t border-slate-800">
-                      <span className="text-[11px] font-mono text-cyan-300/80">Creation #{gallery.length - idx}</span>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => {
-                            setOriginalImage(img);
-                            setEditedImage(null);
-                            setActiveTab("studio");
-                          }}
-                          className="px-2.5 py-1 bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-500/50 text-[11px] font-semibold text-slate-200 hover:text-cyan-200 rounded-lg transition"
-                          title="Send back to editor for iterative refinement"
-                        >
-                          Refine
-                        </button>
-                        <a
-                          href={img}
-                          download={`qwen_creation_${idx + 1}.png`}
-                          className="p-1.5 bg-cyan-400 hover:bg-cyan-300 text-black rounded-lg shadow-[0_0_10px_rgba(6,182,212,0.4)] transition"
-                          title="Download full quality PNG"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

@@ -22,6 +22,10 @@ import {
   ChevronDown,
   FolderOpen,
   Maximize2,
+  Eye,
+  EyeOff,
+  ShieldAlert,
+  Shield,
 } from "lucide-react";
 import ImagePreviewModal, { PreviewMediaData } from "./ImagePreviewModal";
 
@@ -29,6 +33,8 @@ export interface CivitaiModelItem {
   id: number;
   name: string;
   description: string;
+  nsfw?: boolean;
+  nsfwLevel?: number;
   creator: {
     username: string;
     image: string | null;
@@ -64,8 +70,31 @@ export interface CivitaiModelItem {
     height: number;
     type?: string;
     nsfwLevel?: number;
+    nsfw?: boolean;
   }>;
 }
+
+export const isModelNsfw = (model: CivitaiModelItem, primaryItem?: any): boolean => {
+  if (model.nsfw) return true;
+  if (typeof model.nsfwLevel === "number" && model.nsfwLevel > 1) return true;
+  if (primaryItem) {
+    if (primaryItem.nsfw) return true;
+    if (typeof primaryItem.nsfwLevel === "number" && primaryItem.nsfwLevel > 1) return true;
+  }
+  if (Array.isArray(model.images)) {
+    if (model.images.some((img) => img.nsfw || (typeof img.nsfwLevel === "number" && img.nsfwLevel > 1))) return true;
+  }
+  const nsfwKeywords = [
+    "nsfw", "nude", "nudity", "erotic", "hentai", "ecchi", "adult",
+    "explicit", "bikini", "lewd", "underwear", "lingerie", "sexy",
+    "cleavage", "sensual", "naked", "uncensored", "pussy", "penis",
+    "boobs", "breasts", "bdsm", "fetish", "porn"
+  ];
+  const lowerName = (model.name || "").toLowerCase();
+  if (nsfwKeywords.some((kw) => lowerName.includes(kw))) return true;
+  if (Array.isArray(model.tags) && model.tags.some((tag) => nsfwKeywords.includes(tag.toLowerCase().trim()))) return true;
+  return false;
+};
 
 interface CivitaiLoraHubProps {
   backendUrl: string;
@@ -118,6 +147,45 @@ export default function CivitaiLoraHub({
   const [downloadStates, setDownloadStates] = useState<Record<string, { status: string; message?: string }>>({});
   const [copiedTrigger, setCopiedTrigger] = useState<string | null>(null);
   const [previewModalMedia, setPreviewModalMedia] = useState<PreviewMediaData | null>(null);
+
+  // Smart NSFW Blur Overlay state (enabled by default; persisted in localStorage)
+  const [globalNsfwBlur, setGlobalNsfwBlur] = useState<boolean>(true);
+  const [cardBlurOverrides, setCardBlurOverrides] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("qwen_nsfw_blur_overlay");
+      if (saved !== null) {
+        setGlobalNsfwBlur(saved === "true");
+      }
+    } catch {}
+  }, []);
+
+  const handleToggleGlobalBlur = () => {
+    setGlobalNsfwBlur((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("qwen_nsfw_blur_overlay", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const getCardIsBlurred = (modelId: number, isNsfw: boolean): boolean => {
+    if (!isNsfw) return false;
+    if (modelId in cardBlurOverrides) {
+      return cardBlurOverrides[modelId];
+    }
+    return globalNsfwBlur;
+  };
+
+  const toggleCardBlur = (modelId: number, isNsfw: boolean) => {
+    const currentlyBlurred = getCardIsBlurred(modelId, isNsfw);
+    setCardBlurOverrides((prev) => ({
+      ...prev,
+      [modelId]: !currentlyBlurred,
+    }));
+  };
 
   // Direct URL paste
   const [directUrl, setDirectUrl] = useState<string>("");
@@ -580,6 +648,30 @@ export default function CivitaiLoraHub({
             </select>
           </div>
 
+          {/* Smartest NSFW Blur Overlay Watermark Toggle Button */}
+          <button
+            type="button"
+            onClick={handleToggleGlobalBlur}
+            title={globalNsfwBlur ? "Click to Disable Blur overlay across all Civitai visuals" : "Click to Enable Blur overlay for all NSFW visuals"}
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-2xl text-xs font-bold border transition-all duration-200 active:scale-95 shadow-sm cursor-pointer select-none ${
+              globalNsfwBlur
+                ? "bg-rose-950/60 hover:bg-rose-950/80 border-rose-500/60 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.3)]"
+                : "bg-emerald-950/50 hover:bg-emerald-950/70 border-emerald-500/50 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.25)]"
+            }`}
+          >
+            {globalNsfwBlur ? (
+              <>
+                <EyeOff className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                <span>NSFW Blur: ON</span>
+              </>
+            ) : (
+              <>
+                <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                <span>NSFW Blur: OFF</span>
+              </>
+            )}
+          </button>
+
           <button
             type="submit"
             disabled={isLoading}
@@ -678,6 +770,9 @@ export default function CivitaiLoraHub({
               primaryItem?.type === "video" ||
               Boolean(primaryImage.match(/\.(mp4|webm)$/i));
 
+            const itemIsNsfw = isModelNsfw(model, primaryItem);
+            const cardIsBlurred = getCardIsBlurred(model.id, itemIsNsfw);
+
             const downloadKey = `${model.id}_${currentVersion.id}`;
             const downloadState = downloadStates[downloadKey];
             const alreadyInVault = isDownloaded(currentVersion.fileName, model.name);
@@ -701,6 +796,8 @@ export default function CivitaiLoraHub({
                       sizeMB: currentVersion.sizeMB,
                       triggerWords: currentVersion.trainedWords,
                       downloadFileName: currentVersion.fileName,
+                      isNsfw: itemIsNsfw,
+                      blurOverlay: cardIsBlurred,
                       actionButton: {
                         label: "Select for Studio",
                         onClick: () => onSelectForStudio(currentVersion.fileName, currentVersion.trainedWords),
@@ -719,6 +816,8 @@ export default function CivitaiLoraHub({
                         sizeMB: currentVersion.sizeMB,
                         triggerWords: currentVersion.trainedWords,
                         downloadFileName: currentVersion.fileName,
+                        isNsfw: itemIsNsfw,
+                        blurOverlay: cardIsBlurred,
                         actionButton: {
                           label: "Select for Studio",
                           onClick: () => onSelectForStudio(currentVersion.fileName, currentVersion.trainedWords),
@@ -738,7 +837,9 @@ export default function CivitaiLoraHub({
                       playsInline
                       aria-hidden="true"
                       {...({ referrerPolicy: "no-referrer" } as any)}
-                      className="absolute inset-0 w-full h-full object-cover filter blur-xl opacity-35 scale-125 pointer-events-none"
+                      className={`absolute inset-0 w-full h-full object-cover filter blur-xl opacity-35 scale-125 pointer-events-none transition-all duration-300 ${
+                        itemIsNsfw && cardIsBlurred ? "blur-3xl saturate-200" : ""
+                      }`}
                     />
                   ) : (
                     <img
@@ -747,7 +848,9 @@ export default function CivitaiLoraHub({
                       aria-hidden="true"
                       loading="lazy"
                       referrerPolicy="no-referrer"
-                      className="absolute inset-0 w-full h-full object-cover filter blur-xl opacity-35 scale-125 pointer-events-none"
+                      className={`absolute inset-0 w-full h-full object-cover filter blur-xl opacity-35 scale-125 pointer-events-none transition-all duration-300 ${
+                        itemIsNsfw && cardIsBlurred ? "blur-3xl saturate-200" : ""
+                      }`}
                     />
                   )}
 
@@ -760,7 +863,9 @@ export default function CivitaiLoraHub({
                       loop
                       playsInline
                       {...({ referrerPolicy: "no-referrer" } as any)}
-                      className="relative z-10 w-full h-full object-contain group-hover/thumb:scale-105 transition-transform duration-300 ease-out"
+                      className={`relative z-10 w-full h-full object-contain group-hover/thumb:scale-105 transition-all duration-300 ease-out ${
+                        itemIsNsfw && cardIsBlurred ? "filter blur-2xl scale-110 saturate-150" : "filter blur-none scale-100"
+                      }`}
                     />
                   ) : (
                     <img
@@ -768,10 +873,41 @@ export default function CivitaiLoraHub({
                       alt={model.name}
                       loading="lazy"
                       referrerPolicy="no-referrer"
-                      className="relative z-10 w-full h-full object-contain group-hover/thumb:scale-105 transition-transform duration-300 ease-out"
+                      className={`relative z-10 w-full h-full object-contain group-hover/thumb:scale-105 transition-all duration-300 ease-out ${
+                        itemIsNsfw && cardIsBlurred ? "filter blur-2xl scale-110 saturate-150" : "filter blur-none scale-100"
+                      }`}
                     />
                   )}
                   <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950 via-transparent to-black/40 pointer-events-none" />
+
+                  {/* Smart Blur Frosted Glass Overlay for NSFW Visuals */}
+                  {itemIsNsfw && cardIsBlurred && (
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-3 bg-slate-950/60 backdrop-blur-xl border border-rose-500/25 transition-all duration-300">
+                      <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-2xl bg-black/80 border border-rose-500/35 backdrop-blur-md shadow-2xl max-w-[90%]">
+                        <div className="w-9 h-9 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.4)]">
+                          <ShieldAlert className="w-4 h-4" />
+                        </div>
+                        <span className="text-[11px] font-black tracking-wider text-rose-300 uppercase">
+                          18+ NSFW Visual
+                        </span>
+                        <p className="text-[9px] text-slate-300 leading-tight">
+                          Smart Blur Overlay Active
+                        </p>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            toggleCardBlur(model.id, true);
+                          }}
+                          className="mt-1 px-3 py-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-md shadow-rose-500/30 transition-transform active:scale-95 cursor-pointer"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>Reveal Visual</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Hover / Tap Hint Indicator */}
                   <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
@@ -782,13 +918,51 @@ export default function CivitaiLoraHub({
                   </div>
 
                   {/* Top Badges */}
-                  <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between gap-2 pointer-events-none">
-                    <span className="px-2.5 py-1 bg-black/75 backdrop-blur-md border border-white/10 rounded-full text-[10px] font-semibold text-cyan-300">
-                      {currentVersion.baseModel}
-                    </span>
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-black/75 backdrop-blur-md rounded-full text-[10px] text-slate-300 font-medium">
-                      <Download className="w-3 h-3 text-cyan-400" />
-                      <span>{model.stats.downloadCount.toLocaleString()}</span>
+                  <div className="absolute top-3 left-3 right-3 z-25 flex items-center justify-between gap-2 pointer-events-none">
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2.5 py-1 bg-black/75 backdrop-blur-md border border-white/10 rounded-full text-[10px] font-semibold text-cyan-300">
+                        {currentVersion.baseModel}
+                      </span>
+                      {itemIsNsfw && (
+                        <span className="px-2 py-0.5 bg-rose-950/80 border border-rose-500/40 text-rose-300 rounded-full text-[9px] font-black tracking-wide">
+                          18+
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 bg-black/75 backdrop-blur-md rounded-full text-[10px] text-slate-300 font-medium">
+                        <Download className="w-3 h-3 text-cyan-400" />
+                        <span>{model.stats.downloadCount.toLocaleString()}</span>
+                      </div>
+                      {/* Tiny Watermark Type Blur Toggle Badge */}
+                      {itemIsNsfw && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            toggleCardBlur(model.id, itemIsNsfw);
+                          }}
+                          title={cardIsBlurred ? "Click watermark to disable Blur overlay" : "Click watermark to enable Blur overlay"}
+                          className={`pointer-events-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-lg backdrop-blur-md transition-all active:scale-90 border cursor-pointer select-none ${
+                            cardIsBlurred
+                              ? "bg-rose-950/90 hover:bg-rose-900 border-rose-500/60 text-rose-300 shadow-rose-950/60 hover:shadow-[0_0_12px_rgba(244,63,94,0.5)]"
+                              : "bg-black/85 hover:bg-black/95 border-emerald-500/50 text-emerald-300 hover:shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                          }`}
+                        >
+                          {cardIsBlurred ? (
+                            <>
+                              <EyeOff className="w-2.5 h-2.5 text-rose-400 animate-pulse" />
+                              <span>Unblur</span>
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="w-2.5 h-2.5 text-emerald-400" />
+                              <span>Blur</span>
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
 

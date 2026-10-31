@@ -116,4 +116,35 @@ describe("ImagePreviewModal Fullscreen Lightbox & Uncropped Media Suite", () => 
     expect(onAction).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("handles NSFW blur overlay and watermark toggle button properly", () => {
+    const media: PreviewMediaData = {
+      src: "https://example.com/nsfw_image.png",
+      title: "Sensitive Art",
+      isNsfw: true,
+      blurOverlay: true,
+    };
+
+    render(<ImagePreviewModal isOpen={true} onClose={vi.fn()} media={media} />);
+
+    // Should render NSFW badge and frosted glass overlay
+    expect(screen.getByText("18+ NSFW Visual")).toBeDefined();
+    expect(screen.getByText("Reveal Full Visual")).toBeDefined();
+
+    // The image should have blur styling
+    const img = screen.getByAltText("Sensitive Art");
+    expect(img.className).toContain("blur-3xl");
+
+    // Click "Reveal Full Visual" to unblur
+    const revealBtn = screen.getByRole("button", { name: /reveal full visual/i });
+    fireEvent.click(revealBtn);
+
+    // After unblur, the blur styling should be removed
+    expect(img.className).toContain("blur-none");
+
+    // Can toggle back to blur using the watermark button in header
+    const blurToggleBtn = screen.getByRole("button", { name: /blur: off/i });
+    fireEvent.click(blurToggleBtn);
+    expect(img.className).toContain("blur-3xl");
+  });
 });

@@ -98,15 +98,31 @@ export async function GET(request: NextRequest) {
     const primaryVersion = versions[0] || {};
     const primaryFile = (primaryVersion.files || []).find((f: any) => f.primary) || (primaryVersion.files || [])[0] || {};
     
+    const nsfwKeywords = ["nsfw", "nude", "nudity", "erotic", "hentai", "ecchi", "adult", "explicit", "bikini", "lewd", "underwear", "lingerie", "sexy", "cleavage", "sensual", "naked", "uncensored"];
+    const hasNsfwTag = (item.tags || []).some((t: string) => nsfwKeywords.includes(t.toLowerCase().trim())) ||
+      nsfwKeywords.some((kw) => (item.name || "").toLowerCase().includes(kw));
+
     // Extract thumbnail images
-    const images = (primaryVersion.images || []).map((img: any) => ({
-      id: img.id,
-      url: img.url,
-      width: img.width || 512,
-      height: img.height || 768,
-      nsfwLevel: img.nsfwLevel || 1,
-      type: img.type || (img.url?.match(/\.(mp4|webm)$/i) ? "video" : "image"),
-    }));
+    const images = (primaryVersion.images || []).map((img: any) => {
+      const imgNsfwLevel = typeof img.nsfwLevel === "number" ? img.nsfwLevel : (img.nsfw ? 28 : (item.nsfw || hasNsfwTag ? 4 : 1));
+      const isImgNsfw = Boolean(img.nsfw || item.nsfw || hasNsfwTag || imgNsfwLevel > 1);
+      return {
+        id: img.id,
+        url: img.url,
+        width: img.width || 512,
+        height: img.height || 768,
+        nsfwLevel: imgNsfwLevel,
+        nsfw: isImgNsfw,
+        type: img.type || (img.url?.match(/\.(mp4|webm)$/i) ? "video" : "image"),
+      };
+    });
+
+    const isModelNsfw = Boolean(
+      item.nsfw ||
+      (typeof item.nsfwLevel === "number" && item.nsfwLevel > 1) ||
+      hasNsfwTag ||
+      images.some((im: any) => im.nsfw || im.nsfwLevel > 1)
+    );
 
     // Calculate file size in MB
     const sizeKB = primaryFile.sizeKB || 0;
@@ -115,6 +131,8 @@ export async function GET(request: NextRequest) {
     return {
       id: item.id,
       name: item.name,
+      nsfw: isModelNsfw,
+      nsfwLevel: item.nsfwLevel || (isModelNsfw ? 4 : 1),
       description: item.description ? item.description.replace(/<[^>]*>?/gm, "").slice(0, 160) : "",
       creator: {
         username: item.creator?.username || "Community Creator",
