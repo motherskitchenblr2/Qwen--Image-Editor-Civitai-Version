@@ -399,8 +399,9 @@ export async function POST(req: NextRequest) {
     // 4. CLOUDFLARE WORKERS AI (WITH AUTO-FALLBACK)
     // ─────────────────────────────────────────────────────────────
     const activeCfToken = (apiKey && !apiKey.includes("*") ? apiKey : null) || CLOUDFLARE_API_TOKEN;
+    const isCfModel = model.startsWith("@cf/") || model.startsWith("cf-");
 
-    if (activeCfToken && CLOUDFLARE_ACCOUNT_ID) {
+    if (isCfModel && activeCfToken && CLOUDFLARE_ACCOUNT_ID) {
       try {
         let cfModelName = "@cf/black-forest-labs/flux-1-schnell";
         if (mode === "edit" && image_base64) {

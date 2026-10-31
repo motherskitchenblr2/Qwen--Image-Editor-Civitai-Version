@@ -25,6 +25,8 @@ interface ControlPanelProps {
   setStudioMode: (mode: "edit" | "generate") => void;
   selectedStudioModel: string;
   setSelectedStudioModel: (id: string) => void;
+  selectedStudioProvider?: string;
+  setSelectedStudioProvider?: (id: string) => void;
   prompt: string;
   setPrompt: (v: string | ((prev: string) => string)) => void;
   negativePrompt: string;
@@ -65,6 +67,8 @@ export default function ControlPanel({
   setStudioMode,
   selectedStudioModel,
   setSelectedStudioModel,
+  selectedStudioProvider,
+  setSelectedStudioProvider,
   prompt,
   setPrompt,
   negativePrompt,
@@ -131,6 +135,9 @@ export default function ControlPanel({
 
   const handleModelChange = (model: LiveAiModel) => {
     setSelectedStudioModel(model.id);
+    if (setSelectedStudioProvider && model.providerId) {
+      setSelectedStudioProvider(model.providerId);
+    }
     applyModelCalibratedDefaults(model.id);
   };
 

@@ -71,7 +71,8 @@ export default function ImageEditorStudio() {
   // Navigation Tabs: Studio & Editor | AI Generator Hub | Civitai.red LoRA Hub | Outputs Gallery | Sentinel Gateway
   const [activeTab, setActiveTab] = useState<"studio" | "generators" | "loras" | "gallery" | "sentinel">("studio");
   const [studioMode, setStudioMode] = useState<"edit" | "generate">("edit");
-  const [selectedStudioModel, setSelectedStudioModel] = useState<string>("kaggle-gpu");
+  const [selectedStudioModel, setSelectedStudioModel] = useState<string>("nano-banana");
+  const [selectedStudioProvider, setSelectedStudioProvider] = useState<string>("nanobanana");
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState<boolean>(false);
 
   // Floating Toast Notification
@@ -996,8 +997,23 @@ export default function ImageEditorStudio() {
 
   // ── Unified Inference Engine (Kaggle GPU + Cloud AI Models) ─────
   const handleGenerate = async () => {
+    // Determine provider & engine routing
+    const isPollinations =
+      selectedStudioProvider === "nanobanana" ||
+      selectedStudioProvider === "pollinations" ||
+      selectedStudioProvider?.toLowerCase().includes("pollinations") ||
+      selectedStudioProvider?.toLowerCase().includes("banana") ||
+      selectedStudioModel === "nano-banana" ||
+      selectedStudioModel.startsWith("pollinations/");
+
+    const isKaggle =
+      !isPollinations &&
+      (selectedStudioProvider === "kaggle" ||
+       selectedStudioProvider?.toLowerCase().includes("kaggle") ||
+       selectedStudioModel === "kaggle-gpu");
+
     // Validation based on mode & model
-    if (selectedStudioModel === "kaggle-gpu") {
+    if (isKaggle) {
       if (studioMode === "edit" && !originalImage) {
         alert("Please upload a source image for Image-to-Image editing on Kaggle GPU.");
         return;
@@ -1033,7 +1049,7 @@ export default function ImageEditorStudio() {
     }, 1000);
 
     try {
-      if (selectedStudioModel === "kaggle-gpu") {
+      if (isKaggle) {
         setTotalGenerationSteps(Number(steps));
         setGenerationStatusText(
           Number(steps) <= 4
@@ -1140,11 +1156,18 @@ export default function ImageEditorStudio() {
           setViewMode("result");
         }
       } else {
-        // Cloud API Engine: Nano Banana Turbo, Alibaba Qwen Cloud, Google Imagen 3, Hugging Face Hub, Cloudflare Workers AI
-        const isHf = selectedStudioModel.startsWith("huggingface/") || selectedStudioModel.startsWith("hf/") || (selectedStudioModel.includes("/") && !selectedStudioModel.includes("@cf/"));
-        setGenerationStatusText(
+        // Cloud API Engine: Pollinations (Nano Banana Turbo), Alibaba Qwen Cloud, Google Imagen 3, Hugging Face Hub, Cloudflare Workers AI
+        const isHf = !isPollinations && (selectedStudioModel.startsWith("huggingface/") || selectedStudioModel.startsWith("hf/") || (selectedStudioModel.includes("/") && !selectedStudioModel.includes("@cf/")));
+        const modelLabel =
           selectedStudioModel === "nano-banana"
-            ? "⚡ Synthesizing with Nano Banana Turbo (~1.5s)..."
+            ? "Nano Banana Turbo"
+            : selectedStudioModel.startsWith("pollinations/")
+            ? selectedStudioModel.replace("pollinations/", "")
+            : selectedStudioModel;
+
+        setGenerationStatusText(
+          isPollinations
+            ? `⚡ Synthesizing with Pollinations AI (${modelLabel})...`
             : selectedStudioModel === "google-imagen"
             ? "Synthesizing with Google Gemini Vision Engine..."
             : isHf
@@ -1211,7 +1234,7 @@ export default function ImageEditorStudio() {
     } finally {
       clearInterval(timer);
       setIsGenerating(false);
-      if (selectedStudioModel === "kaggle-gpu" && isConnected) {
+      if (isKaggle && isConnected) {
         checkBackend();
       }
     }
@@ -1844,6 +1867,8 @@ export default function ImageEditorStudio() {
                 setStudioMode={setStudioMode}
                 selectedStudioModel={selectedStudioModel}
                 setSelectedStudioModel={setSelectedStudioModel}
+                selectedStudioProvider={selectedStudioProvider}
+                setSelectedStudioProvider={setSelectedStudioProvider}
                 prompt={prompt}
                 setPrompt={setPrompt}
                 negativePrompt={negativePrompt}

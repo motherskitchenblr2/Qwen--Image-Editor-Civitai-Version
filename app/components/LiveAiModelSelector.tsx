@@ -51,7 +51,16 @@ export default function LiveAiModelSelector({
   const [showEarningConfirm, setShowEarningConfirm] = useState<boolean>(false);
 
   // Selected filters
-  const [selectedProviderId, setSelectedProviderId] = useState<string>("nanobanana");
+  const initialProviderId = useMemo(() => {
+    if (activeModelId) {
+      for (const p of BASE_PROVIDERS) {
+        if (p.models.some((m) => m.id === activeModelId)) return p.id;
+      }
+    }
+    return "nanobanana";
+  }, [activeModelId]);
+
+  const [selectedProviderId, setSelectedProviderId] = useState<string>(initialProviderId);
   const [selectedModelId, setSelectedModelId] = useState<string>(activeModelId || "nano-banana");
   const [modalityFilter, setModalityFilter] = useState<"all" | "text2img" | "img2img" | "text">("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -88,7 +97,7 @@ export default function LiveAiModelSelector({
   }, [isSafeMode]);
 
   useEffect(() => {
-    if (activeModelId && activeModelId !== selectedModelId) {
+    if (activeModelId) {
       setSelectedModelId(activeModelId);
       // Auto-detect provider if possible
       for (const p of providers) {
@@ -136,6 +145,20 @@ export default function LiveAiModelSelector({
     }
     return currentProvider?.models[0] || BASE_PROVIDERS[0].models[0];
   }, [providers, selectedModelId, currentProvider]);
+
+  // Keep selectedModelId synchronized with currentProvider
+  useEffect(() => {
+    if (currentProvider && currentProvider.models.length > 0) {
+      const existsInCurrent = currentProvider.models.some((m) => m.id === selectedModelId);
+      if (!existsInCurrent) {
+        const defaultModel =
+          currentProvider.models.find((m) => m.id === currentProvider.defaultFreeModelId) ||
+          currentProvider.models[0];
+        setSelectedModelId(defaultModel.id);
+        onSelectModel(defaultModel);
+      }
+    }
+  }, [currentProvider, selectedModelId, onSelectModel]);
 
   const handleApplyModel = (model: LiveAiModel) => {
     setSelectedModelId(model.id);
