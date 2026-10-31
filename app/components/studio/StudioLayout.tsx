@@ -16,11 +16,27 @@ export default function StudioLayout({
   // Mobile Studio View Switcher: default "canvas" on mobile to prevent unwieldy vertical stack
   const [mobileView, setMobileView] = useState<"canvas" | "controls" | "both">("canvas");
 
-  // Allow child components to programmatically switch mobile view
+  // Guard active view state: if window width < 768px (md) and state is 'both', auto-fallback to 'canvas'
+  React.useEffect(() => {
+    const guardMobileView = () => {
+      if (typeof window !== "undefined" && window.innerWidth < 768) {
+        setMobileView((prev) => (prev === "both" ? "canvas" : prev));
+      }
+    };
+    guardMobileView();
+    window.addEventListener("resize", guardMobileView);
+    return () => window.removeEventListener("resize", guardMobileView);
+  }, []);
+
+  // Allow child components to programmatically switch mobile view with mobile guard
   React.useEffect(() => {
     const handleSwitchView = (e: CustomEvent<"canvas" | "controls" | "both">) => {
       if (e.detail) {
-        setMobileView(e.detail);
+        if (typeof window !== "undefined" && window.innerWidth < 768 && e.detail === "both") {
+          setMobileView("canvas");
+        } else {
+          setMobileView(e.detail);
+        }
       }
     };
     window.addEventListener("switch-studio-mobile-view" as any, handleSwitchView);
@@ -63,7 +79,7 @@ export default function StudioLayout({
           <button
             type="button"
             onClick={() => setMobileView("both")}
-            className={`px-2 py-1 rounded-md text-[11px] font-bold transition ${
+            className={`hidden md:inline-flex items-center px-2 py-1 rounded-md text-[11px] font-bold transition ${
               mobileView === "both"
                 ? "bg-cyan-500/25 border border-cyan-400/80 text-cyan-200 shadow-sm"
                 : "text-slate-400 hover:text-white"
@@ -85,7 +101,7 @@ export default function StudioLayout({
 
       {/* Right Canvas / Mobile Canvas: CanvasWorkspace */}
       <main
-        className={`order-1 lg:order-2 shrink-0 flex flex-col justify-between overflow-hidden bg-[#050811] ${
+        className={`order-1 lg:order-2 shrink-0 flex flex-col justify-between overflow-hidden bg-[#050811] pb-safe mb-8 lg:mb-0 ${
           mobileView === "controls"
             ? "hidden lg:flex lg:h-full"
             : mobileView === "canvas"
