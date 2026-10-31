@@ -149,7 +149,8 @@ export default function ControlPanel({
         { s: 30, label: "30 Steps", sub: "Ultra Detail" },
       ];
 
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState<boolean>(true);
+  // Collapsed by default on mobile so prompt and primary model selectors remain immediately accessible
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState<boolean>(false);
 
   const isGenerateDisabled =
     isGenerating ||
@@ -597,29 +598,10 @@ export default function ControlPanel({
       </div>
     </div>
 
-    {/* ── Mobile Sticky Bottom Action Bar with Docked Status Badge ── */}
-    <div className="fixed bottom-0 left-0 right-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-slate-950/95 backdrop-blur-md border-t border-slate-800 z-40 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.85)]">
-      <div className="flex items-center gap-2 max-w-lg mx-auto">
-        <div className="flex-1 min-w-0">
-          {renderActionButton(true)}
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new CustomEvent("open-ai-guardian"));
-            }
-          }}
-          className="h-[52px] px-2.5 flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-300 text-xs font-mono font-bold shrink-0 transition active:scale-95 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
-          title="Open AI Guardian Health Diagnostics (95%)"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-          </span>
-          <span className="text-[11px] font-black text-cyan-300">95%</span>
-          <span className="w-4 h-4 rounded-full text-[9px] font-bold bg-amber-500 text-black flex items-center justify-center">1</span>
-        </button>
+    {/* ── Mobile Sticky Bottom Action Bar (Streamlined, No Duplicate Badge, Safe Area Padding) ── */}
+    <div className="fixed bottom-0 left-0 right-0 p-3 pb-4 pb-safe pb-[max(1rem,env(safe-area-inset-bottom))] bg-slate-950/90 backdrop-blur-xl border-t border-slate-800/90 z-40 lg:hidden shadow-[0_-12px_32px_rgba(0,0,0,0.9)]">
+      <div className="w-full max-w-lg mx-auto">
+        {renderActionButton(true)}
       </div>
     </div>
   </div>

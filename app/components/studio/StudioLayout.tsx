@@ -13,8 +13,21 @@ export default function StudioLayout({
   canvasWorkspace,
   historyRibbon,
 }: StudioLayoutProps) {
-  // Mobile Studio View Switcher: "both" (default continuous scroll), "canvas", "controls"
-  const [mobileView, setMobileView] = useState<"both" | "canvas" | "controls">("both");
+  // Mobile Studio View Switcher: default "canvas" on mobile to prevent unwieldy vertical stack
+  const [mobileView, setMobileView] = useState<"canvas" | "controls" | "both">("canvas");
+
+  // Allow child components to programmatically switch mobile view
+  React.useEffect(() => {
+    const handleSwitchView = (e: CustomEvent<"canvas" | "controls" | "both">) => {
+      if (e.detail) {
+        setMobileView(e.detail);
+      }
+    };
+    window.addEventListener("switch-studio-mobile-view" as any, handleSwitchView);
+    return () => {
+      window.removeEventListener("switch-studio-mobile-view" as any, handleSwitchView);
+    };
+  }, []);
 
   return (
     <div className="h-full w-full flex flex-col lg:grid lg:grid-cols-[440px_1fr] xl:grid-cols-[460px_1fr] overflow-y-auto lg:overflow-hidden bg-[#070b14]">
@@ -25,17 +38,6 @@ export default function StudioLayout({
           Studio Workstation
         </span>
         <div className="flex items-center gap-1 bg-black/80 p-0.5 rounded-lg border border-slate-800">
-          <button
-            type="button"
-            onClick={() => setMobileView("both")}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition ${
-              mobileView === "both"
-                ? "bg-cyan-500/25 border border-cyan-400/80 text-cyan-200 shadow-sm"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            All
-          </button>
           <button
             type="button"
             onClick={() => setMobileView("canvas")}
@@ -57,6 +59,17 @@ export default function StudioLayout({
             }`}
           >
             ⚙️ Controls
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileView("both")}
+            className={`px-2 py-1 rounded-md text-[11px] font-bold transition ${
+              mobileView === "both"
+                ? "bg-cyan-500/25 border border-cyan-400/80 text-cyan-200 shadow-sm"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            All
           </button>
         </div>
       </div>

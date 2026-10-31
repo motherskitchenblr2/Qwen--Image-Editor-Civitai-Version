@@ -647,30 +647,34 @@ export default function CanvasWorkspace({
             </div>
           </div>
         ) : (
-          /* Empty State: Image-to-Image Edit Mode (Upload Dropzone) */
+          /* Empty State: Image-to-Image Edit Mode (Compact Mobile Dropzone with Ergonomic Copy) */
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="w-full max-w-lg p-8 border-2 border-dashed border-slate-700/80 hover:border-cyan-500/60 rounded-2xl bg-slate-900/40 flex flex-col items-center justify-center text-center transition-all cursor-pointer"
+            className="w-full max-w-lg p-4 sm:p-8 border-2 border-dashed border-slate-700/80 hover:border-cyan-500/60 rounded-2xl bg-slate-900/40 flex flex-col items-center justify-center text-center transition-all cursor-pointer shadow-lg active:scale-[0.99]"
           >
-            <div className="p-3.5 bg-slate-900/90 border border-cyan-500/30 rounded-2xl text-cyan-400 group-hover:text-white group-hover:border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all mb-3">
-              <Upload className="w-8 h-8 group-hover:scale-110 transition-transform" />
+            <div className="p-2.5 sm:p-3.5 bg-slate-900/90 border border-cyan-500/30 rounded-2xl text-cyan-400 group-hover:text-white group-hover:border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all mb-2 sm:mb-3">
+              <Upload className="w-6 h-6 sm:w-8 sm:h-8 group-hover:scale-110 transition-transform" />
             </div>
             <div className="space-y-1 max-w-sm">
               <p className="text-sm font-black text-white">Upload source image to begin editing</p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-300 font-medium sm:hidden">
+                Tap to take photo or choose image
+              </p>
+              <p className="text-xs text-slate-400 hidden sm:block">
                 Drag and drop your image here, or select from your device
               </p>
               <p className="text-[10px] font-mono text-cyan-300/70 pt-0.5">
                 Supported formats: PNG, JPG, WebP (up to 10MB)
               </p>
             </div>
-            <div className="mt-4">
+            <div className="mt-3 sm:mt-4">
               <button
                 type="button"
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition active:scale-[0.99] flex items-center gap-2 pointer-events-none"
+                className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition active:scale-[0.99] flex items-center gap-2 pointer-events-none"
               >
                 <FolderOpen className="w-4 h-4" />
-                <span>Browse or Drag Image Here</span>
+                <span className="sm:hidden">Tap to Choose Image</span>
+                <span className="hidden sm:inline">Browse or Drag Image Here</span>
               </button>
             </div>
           </div>
