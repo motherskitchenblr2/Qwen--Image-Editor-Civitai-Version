@@ -28,6 +28,7 @@ import {
   Shield,
 } from "lucide-react";
 import ImagePreviewModal, { PreviewMediaData } from "./ImagePreviewModal";
+import NeonGlowEyeIcon from "./NeonGlowEyeIcon";
 
 export interface CivitaiModelItem {
   id: number;
@@ -185,6 +186,14 @@ export default function CivitaiLoraHub({
       ...prev,
       [modelId]: !currentlyBlurred,
     }));
+  };
+
+  const handleRevealAll = () => {
+    setGlobalNsfwBlur(false);
+    try {
+      localStorage.setItem("qwen_nsfw_blur_overlay", "false");
+    } catch {}
+    setCardBlurOverrides({});
   };
 
   // Direct URL paste
@@ -798,6 +807,7 @@ export default function CivitaiLoraHub({
                       downloadFileName: currentVersion.fileName,
                       isNsfw: itemIsNsfw,
                       blurOverlay: cardIsBlurred,
+                      onRevealAll: handleRevealAll,
                       actionButton: {
                         label: "Select for Studio",
                         onClick: () => onSelectForStudio(currentVersion.fileName, currentVersion.trainedWords),
@@ -818,6 +828,7 @@ export default function CivitaiLoraHub({
                         downloadFileName: currentVersion.fileName,
                         isNsfw: itemIsNsfw,
                         blurOverlay: cardIsBlurred,
+                        onRevealAll: handleRevealAll,
                         actionButton: {
                           label: "Select for Studio",
                           onClick: () => onSelectForStudio(currentVersion.fileName, currentVersion.trainedWords),
@@ -883,28 +894,42 @@ export default function CivitaiLoraHub({
                   {/* Smart Blur Frosted Glass Overlay for NSFW Visuals */}
                   {itemIsNsfw && cardIsBlurred && (
                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-3 bg-slate-950/60 backdrop-blur-xl border border-rose-500/25 transition-all duration-300">
-                      <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-2xl bg-black/80 border border-rose-500/35 backdrop-blur-md shadow-2xl max-w-[90%]">
-                        <div className="w-9 h-9 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.4)]">
-                          <ShieldAlert className="w-4 h-4" />
-                        </div>
-                        <span className="text-[11px] font-black tracking-wider text-rose-300 uppercase">
+                      <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-2xl bg-black/85 border border-rose-500/35 backdrop-blur-md shadow-2xl max-w-[92%]">
+                        <NeonGlowEyeIcon color="magenta" className="w-9 h-9" />
+                        <span className="text-[11px] font-black tracking-wider text-rose-300 uppercase drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]">
                           18+ NSFW Visual
                         </span>
                         <p className="text-[9px] text-slate-300 leading-tight">
                           Smart Blur Overlay Active
                         </p>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            toggleCardBlur(model.id, true);
-                          }}
-                          className="mt-1 px-3 py-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-md shadow-rose-500/30 transition-transform active:scale-95 cursor-pointer"
-                        >
-                          <Eye className="w-3 h-3" />
-                          <span>Reveal Visual</span>
-                        </button>
+                        <div className="w-full flex flex-col gap-1.5 mt-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              toggleCardBlur(model.id, true);
+                            }}
+                            className="w-full px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white text-[10.5px] font-black flex items-center justify-center gap-1.5 shadow-md shadow-rose-500/30 transition-transform active:scale-95 cursor-pointer"
+                            title="Reveal this visual only"
+                          >
+                            <Eye className="w-3 h-3 text-white" />
+                            <span>Reveal Visual</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              handleRevealAll();
+                            }}
+                            className="w-full px-3 py-1 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-rose-500/40 hover:border-rose-400 text-rose-200 hover:text-white text-[10px] font-bold flex items-center justify-center gap-1.5 shadow-sm transition-transform active:scale-95 cursor-pointer"
+                            title="Disable blur and reveal all visuals across the explorer"
+                          >
+                            <EyeOff className="w-3 h-3 text-rose-400" />
+                            <span>Reveal All</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

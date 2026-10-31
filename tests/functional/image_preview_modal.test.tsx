@@ -130,6 +130,8 @@ describe("ImagePreviewModal Fullscreen Lightbox & Uncropped Media Suite", () => 
     // Should render NSFW badge and frosted glass overlay
     expect(screen.getByText("18+ NSFW Visual")).toBeDefined();
     expect(screen.getByText("Reveal Full Visual")).toBeDefined();
+    expect(screen.getByText("Reveal All")).toBeDefined();
+    expect(screen.getByLabelText("Pure Glowline Neon Eye Indicator")).toBeDefined();
 
     // The image should have blur styling
     const img = screen.getByAltText("Sensitive Art");
@@ -146,5 +148,25 @@ describe("ImagePreviewModal Fullscreen Lightbox & Uncropped Media Suite", () => 
     const blurToggleBtn = screen.getByRole("button", { name: /blur: off/i });
     fireEvent.click(blurToggleBtn);
     expect(img.className).toContain("blur-3xl");
+  });
+
+  it("triggers onRevealAll callback when Reveal All button is clicked in blur overlay", () => {
+    const onRevealAll = vi.fn();
+    const media: PreviewMediaData = {
+      src: "https://example.com/nsfw_image.png",
+      title: "Sensitive Art",
+      isNsfw: true,
+      blurOverlay: true,
+      onRevealAll,
+    };
+
+    render(<ImagePreviewModal isOpen={true} onClose={vi.fn()} media={media} />);
+
+    const revealAllBtn = screen.getByRole("button", { name: /reveal all/i });
+    fireEvent.click(revealAllBtn);
+
+    expect(onRevealAll).toHaveBeenCalled();
+    const img = screen.getByAltText("Sensitive Art");
+    expect(img.className).toContain("blur-none");
   });
 });

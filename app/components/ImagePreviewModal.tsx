@@ -15,6 +15,7 @@ import {
   EyeOff,
   ShieldAlert,
 } from "lucide-react";
+import NeonGlowEyeIcon from "./NeonGlowEyeIcon";
 
 export interface PreviewMediaData {
   src: string;
@@ -28,6 +29,7 @@ export interface PreviewMediaData {
   downloadFileName?: string;
   isNsfw?: boolean;
   blurOverlay?: boolean;
+  onRevealAll?: () => void;
   actionButton?: {
     label: string;
     onClick: () => void;
@@ -227,23 +229,35 @@ export default function ImagePreviewModal({
           {media.isNsfw && isBlurred && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-4 bg-slate-950/60 backdrop-blur-3xl transition-all duration-300">
               <div className="flex flex-col items-center text-center gap-2 p-5 rounded-3xl bg-black/85 border border-rose-500/40 backdrop-blur-xl shadow-2xl max-w-sm">
-                <div className="w-12 h-12 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.4)]">
-                  <ShieldAlert className="w-6 h-6" />
-                </div>
-                <h3 className="text-sm font-black tracking-wider text-rose-300 uppercase">
+                <NeonGlowEyeIcon color="magenta" className="w-12 h-12" />
+                <h3 className="text-sm font-black tracking-wider text-rose-300 uppercase drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]">
                   18+ NSFW Visual
                 </h3>
                 <p className="text-xs text-slate-300">
                   Smart Blur overlay is active to protect sensitive visual content.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setIsBlurred(false)}
-                  className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-rose-500/30 transition-transform active:scale-95 cursor-pointer"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span>Reveal Full Visual</span>
-                </button>
+                <div className="w-full flex flex-col gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsBlurred(false)}
+                    className="w-full px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-rose-500/30 transition-transform active:scale-95 cursor-pointer"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>Reveal Full Visual</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsBlurred(false);
+                      media.onRevealAll?.();
+                    }}
+                    className="w-full px-4 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-rose-500/40 hover:border-rose-400 text-rose-200 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
+                    title="Disable blur and reveal all visuals across the app"
+                  >
+                    <EyeOff className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Reveal All</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
