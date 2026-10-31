@@ -568,9 +568,10 @@ export default function ImageEditorStudio() {
     setShowAdvancedUrl(false);
   };
 
-  const fetchAvailableLoras = async (baseUrl: string) => {
+  const fetchAvailableLoras = async (baseUrl?: string) => {
     try {
-      const res = await fetch(`${baseUrl}/api/loras`);
+      const url = baseUrl ? `/api/loras?backend_url=${encodeURIComponent(baseUrl)}` : `/api/loras`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         const backendLoras: BackendLoRA[] = data.loras || [];
@@ -812,16 +813,19 @@ export default function ImageEditorStudio() {
     setIsFusingLora(true);
     setFusedStatusMessage("Loading & fusing LoRA weights into GPU DiT layers...");
     try {
-      const cleanUrl = backendUrl.replace(/\/+$/, "");
-      const res = await fetch(`${cleanUrl}/api/loras/load`, {
+      const cleanUrl = backendUrl ? backendUrl.replace(/\/+$/, "") : "";
+      const res = await fetch("/api/loras/load", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ loras: lorasToFuse }),
+        body: JSON.stringify({
+          loras: lorasToFuse,
+          backend_url: cleanUrl || undefined,
+        }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || "Failed to fuse LoRA on GPU");
+        throw new Error(err.detail || err.error || "Failed to fuse LoRA on GPU");
       }
 
       const data = await res.json();

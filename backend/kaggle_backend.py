@@ -87,7 +87,8 @@ def raw_nodes(steps: int):
     if steps == 4:
         return [1.0, 0.75, 0.5, 0.25]
     if steps == 9:
-        return raw_nodes(7) + [1 / 6, 1 / 12]
+        nodes_7 = raw_nodes(7) or [1.0, 0.9583, 0.9167, 0.875, 0.75, 0.5, 0.25]
+        return nodes_7 + [1 / 6, 1 / 12]
     return [1.0 - 0.125 * i / (steps - 4) for i in range(steps - 4)] + [0.875, 0.75, 0.5, 0.25]
 
 # ─── 0. INACTIVITY WATCHDOG & AUTO-SHUTDOWN GUARD ───────────────────────────
@@ -448,14 +449,22 @@ def gdrive_fetch_on_demand(filename: str, subfolder: str, local_dest: pathlib.Pa
     target = local_dest / filename
     if target.exists() and target.stat().st_size > 1000:
         return target
-    if HF_ENABLED:
-        return hf_fetch_on_demand(filename, subfolder, local_dest)
+    if HF_ENABLED and hf_hub_download:
+        try:
+            hf_fetch_on_demand(filename, subfolder, local_dest)
+            if target.exists() and target.stat().st_size > 1000:
+                return target
+        except Exception as hf_e:
+            logger.warning(f"HF on-demand note: {hf_e}")
     if GDRIVE_ENABLED:
         try:
             ensure_rclone_installed()
-            logger.info(f"📥 [On-Demand] Fetching {filename} from Google Drive {subfolder}...")
+            logger.info(f"📥 [Storage Vault] Fetching {filename} from Google Drive {subfolder}...")
             cmd = _get_rclone_cmd(["copy", f"{GDRIVE_REMOTE}:{GDRIVE_ROOT}/{subfolder}/{filename}", str(local_dest)])
             subprocess.run(cmd, check=False)
+            if target.exists() and target.stat().st_size > 1000:
+                logger.info(f"✅ [Storage Vault] Successfully fetched {filename} from Google Drive 5TB Vault.")
+                return target
         except Exception as e:
             logger.warning(f"gdrive_fetch_on_demand failed: {e}")
     return target
@@ -814,8 +823,10 @@ class ModelOrchestrator:
             return
 
         try:
-            self.pipe.unfuse_lora()
-            self.pipe.unload_lora_weights()
+            if hasattr(self.pipe, "unfuse_lora"):
+                self.pipe.unfuse_lora()
+            if hasattr(self.pipe, "unload_lora_weights"):
+                self.pipe.unload_lora_weights()
         except Exception:
             pass
 
@@ -835,11 +846,25 @@ class ModelOrchestrator:
 
             if lora_file.exists() and lora_file.stat().st_size > 1000:
                 logger.info(f"Applying LoRA: {lora_file.name} with scale {scale}")
+                adapter_name = lora_file.stem
                 try:
-                    self.pipe.load_lora_weights(str(lora_file))
-                    self.pipe.fuse_lora(lora_scale=scale)
+                    self.pipe.load_lora_weights(str(lora_file), adapter_name=adapter_name)
+                    fused = False
+                    try:
+                        self.pipe.fuse_lora(lora_scale=scale, adapter_names=[adapter_name])
+                        fused = True
+                        logger.info(f"✅ LoRA {lora_file.stem} weights fused into GPU VRAM (scale: {scale}).")
+                    except Exception as fe:
+                        # 4-bit NF4 quantized models cannot fuse directly into quantized weights.
+                        # Diffusers / PEFT applies dynamic adapter scaling without fusing.
+                        logger.info(f"Quantized pipeline: skipping fuse_lora ({fe}), using PEFT adapter directly.")
+                        if hasattr(self.pipe, "set_adapters"):
+                            try:
+                                self.pipe.set_adapters([adapter_name], adapter_weights=[scale])
+                            except Exception:
+                                pass
                     self.active_loras[lora_file.stem] = scale
-                    logger.info(f"✅ LoRA {lora_file.stem} weights fused into GPU VRAM (scale: {scale}).")
+                    logger.info(f"✅ LoRA {lora_file.stem} active with scale {scale} (fused={fused}).")
                 except Exception as e:
                     logger.warning(f"LoRA loading note: {e}")
 
@@ -882,6 +907,12 @@ class ModelOrchestrator:
             if is_text2img:
                 logger.info(f"⚡ [Text-to-Image] Initializing empty white latent canvas conditioning ({target_w}x{target_h}).")
                 input_image = Image.new("RGB", (target_w, target_h), (255, 255, 255))
+            else:
+                # CRITICAL: Always resize input_image to target dimensions to prevent quadratic attention explosion & 630s CUDA swapping!
+                if input_image.size != (target_w, target_h):
+                    logger.info(f"⚡ Resizing input image from {input_image.size} to inference resolution ({target_w}x{target_h}).")
+                    input_image = input_image.resize((target_w, target_h), Image.Resampling.LANCZOS)
+                input_image = input_image.convert("RGB")
 
             logger.info(f"Executing inference: mode={'t2i' if is_text2img else 'i2i'}, prompt='{prompt[:60]}...', steps={num_inference_steps}, target_res={target_w}x{target_h}")
             torch.cuda.empty_cache()
@@ -895,10 +926,11 @@ class ModelOrchestrator:
                 try:
                     if task_id and task_id in JOBS:
                         curr_step = step_idx + 1
-                        prog = round(12.0 + (curr_step / max(num_inference_steps, 1)) * 78.0, 1)
+                        prog = round(12.0 + (curr_step / max(num_inference_steps, 1)) * 80.0, 1)
                         JOBS[task_id]["stage"] = f"⚡ Denoising Step {curr_step}/{num_inference_steps}"
                         JOBS[task_id]["step"] = curr_step
                         JOBS[task_id]["progress"] = prog
+                        touch_activity()
                         logger.info(f"[{task_id}] Step {curr_step}/{num_inference_steps} ({prog}%)")
                 except Exception as cb_e:
                     logger.warning(f"step_cb warning: {cb_e}")
@@ -906,39 +938,64 @@ class ModelOrchestrator:
 
             try:
                 with torch.inference_mode():
-                    call_kwargs = {
-                        "prompt": prompt,
-                        "guidance_scale": guidance_scale,
-                        "num_inference_steps": num_inference_steps,
-                        "generator": gen,
-                        "height": target_h,
-                        "width": target_w,
-                    }
-                    if hasattr(self.pipe, "__call__"):
-                        import inspect
-                        pipe_params = inspect.signature(self.pipe.__call__).parameters
-                        if "image" in pipe_params and input_image is not None:
-                            call_kwargs["image"] = input_image
-                    else:
-                        call_kwargs["image"] = input_image
+                    pipe_params = inspect.signature(self.pipe.__call__).parameters if hasattr(self.pipe, "__call__") else {}
 
-                    # Viggle Turbo exact 6-step or 9-step sigma schedule
-                    sigmas = raw_nodes(num_inference_steps)
-                    if sigmas is not None:
-                        call_kwargs["sigmas"] = sigmas
-                        # Distilled model must run with true_cfg_scale=1.0 (zero-CFG)
-                        call_kwargs["true_cfg_scale"] = 1.0
-                    else:
-                        call_kwargs["negative_prompt"] = negative_prompt
+                    call_kwargs = {}
+                    if "prompt" in pipe_params:
+                        call_kwargs["prompt"] = prompt
+                    if "guidance_scale" in pipe_params:
+                        call_kwargs["guidance_scale"] = guidance_scale
+                    if "num_inference_steps" in pipe_params:
+                        call_kwargs["num_inference_steps"] = num_inference_steps
+                    if "generator" in pipe_params:
+                        call_kwargs["generator"] = gen
+                    if "height" in pipe_params:
+                        call_kwargs["height"] = target_h
+                    if "width" in pipe_params:
+                        call_kwargs["width"] = target_w
+
+                    if input_image is not None and "image" in pipe_params:
+                        # QwenImageEditPlusPipeline can accept [input_image] or single input_image
+                        call_kwargs["image"] = [input_image] if "Plus" in type(self.pipe).__name__ else input_image
+
+                    if "negative_prompt" in pipe_params:
+                        call_kwargs["negative_prompt"] = negative_prompt if (negative_prompt and negative_prompt.strip()) else " "
+
+                    if "true_cfg_scale" in pipe_params:
                         call_kwargs["true_cfg_scale"] = true_cfg_scale
 
-                    if task_id:
-                        call_kwargs["callback_on_step_end"] = step_cb
-                        call_kwargs["callback_on_step_end_tensor_inputs"] = ["latents"]
+                    # Viggle Turbo exact 6-step or 9-step sigma schedule
+                    if "sigmas" in pipe_params:
+                        sigmas = raw_nodes(num_inference_steps)
+                        if sigmas is not None:
+                            call_kwargs["sigmas"] = sigmas
+                            if "true_cfg_scale" in pipe_params:
+                                call_kwargs["true_cfg_scale"] = 1.0
 
-                    torch.cuda.empty_cache()
-                    gc.collect()
-                    result = self.pipe(**call_kwargs)
+                    if task_id and "callback_on_step_end" in pipe_params:
+                        call_kwargs["callback_on_step_end"] = step_cb
+                        if "callback_on_step_end_tensor_inputs" in pipe_params:
+                            call_kwargs["callback_on_step_end_tensor_inputs"] = ["latents"]
+
+                    # Smooth heartbeat background updater: prevents progress from freezing at 8%
+                    stop_heartbeat = threading.Event()
+                    def heartbeat_worker():
+                        while not stop_heartbeat.wait(1.5):
+                            if task_id and task_id in JOBS:
+                                cur = JOBS[task_id].get("progress", 8.0)
+                                if cur < 92.0 and JOBS[task_id].get("status") == "processing":
+                                    JOBS[task_id]["progress"] = min(92.0, round(cur + 0.5, 1))
+                                    touch_activity()
+
+                    hb_thread = threading.Thread(target=heartbeat_worker, daemon=True)
+                    hb_thread.start()
+
+                    try:
+                        torch.cuda.empty_cache()
+                        gc.collect()
+                        result = self.pipe(**call_kwargs)
+                    finally:
+                        stop_heartbeat.set()
 
                 if task_id and task_id in JOBS:
                     JOBS[task_id]["stage"] = "Decoding high-res output with VAE..."
@@ -1310,8 +1367,8 @@ def download_lora(req: LoRADownloadRequest, background_tasks: BackgroundTasks):
     except Exception as me:
         logger.warning(f"Could not write LoRA metadata: {me}")
 
-    # Upload heavy safetensors to 5 TB Google Drive Vault AND auto-clean local file once verified!
-    background_tasks.add_task(gdrive_upload_and_clean, target_path, "loras", False)
+    # Upload safetensors to 5 TB Google Drive Vault and keep local copy cached for instant GPU fusing
+    background_tasks.add_task(gdrive_upload_and_clean, target_path, "loras", True)
 
     return {
         "status": "success",
@@ -1319,7 +1376,7 @@ def download_lora(req: LoRADownloadRequest, background_tasks: BackgroundTasks):
         "filename": target_path.name,
         "size_mb": size_mb,
         "trigger_words": req.trigger_words or "",
-        "storage": "Google Drive Vault (AutoCleaned locally)"
+        "storage": "5 TB Google Drive Vault (Cached on GPU for immediate fusing)"
     }
 
 
