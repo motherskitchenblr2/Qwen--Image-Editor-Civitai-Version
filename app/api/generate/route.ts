@@ -33,9 +33,9 @@ async function generateWithTurboNeural(
       ? Number(seed)
       : Math.floor(Math.random() * 900000) + 100000;
 
-  let cleanModel = (modelName || "turbo").replace(/^pollinations\//, "").trim();
+  let cleanModel = (modelName || "flux").replace(/^pollinations\//, "").trim();
   if (!cleanModel || cleanModel === "nano-banana" || cleanModel === "turbo") {
-    cleanModel = "turbo";
+    cleanModel = "flux"; // FLUX.1 Schnell (12B Rectified Flow) delivers high quality, avoiding 1-step turbo distortion
   } else if (cleanModel === "midjourney-v6" || cleanModel === "midjourney") {
     cleanModel = "midjourney";
   } else if (cleanModel === "cf-flux" || cleanModel === "flux" || cleanModel.includes("schnell")) {
@@ -460,15 +460,15 @@ export async function POST(req: NextRequest) {
       }
 
       const fallbackImageBase64 = await generateWithTurboNeural(finalPrompt, size, seed, model);
-      let resolvedModelName = `Nano Banana Engine (${model})`;
-      if (model === "nano-banana") {
+      let resolvedModelName = `Pollinations AI (${model})`;
+      if (model === "nano-banana" || model === "flux" || model.includes("flux")) {
         resolvedModelName = mode === "edit"
-          ? "Nano Banana Turbo Edit (Neural Edge)"
-          : "Nano Banana Turbo (Neural Edge)";
+          ? "Pollinations FLUX.1 Schnell Edit"
+          : "Pollinations FLUX.1 Schnell (12B Rectified Flow)";
       } else if (model.includes("Qwen2-VL") || model.includes("mradermacher")) {
         resolvedModelName = "Qwen2-VL 2B Junior Copilot (mradermacher/Qwen2-VL-2B-Instruct-abliterated-GGUF)";
       } else if (model.includes("/")) {
-        resolvedModelName = `${model} (via Neural Edge)`;
+        resolvedModelName = `${model} (via Pollinations)`;
       }
 
       return NextResponse.json({

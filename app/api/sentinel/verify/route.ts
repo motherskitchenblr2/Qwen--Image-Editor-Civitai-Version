@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           success: true,
           latency: 85,
-          message: "Nano Banana Turbo Engine online and ready for sub-second generation!",
+          message: "Nano Banana Turbo Engine (Pollinations FLUX.1) online and ready for high-resolution generation!",
         });
       }
 

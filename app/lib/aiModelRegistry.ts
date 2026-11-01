@@ -54,10 +54,10 @@ export interface AiProviderPlatform {
 export const BASE_PROVIDERS: AiProviderPlatform[] = [
   {
     id: "nanobanana",
-    name: "Nano Banana / Pollinations",
+    name: "Pollinations.ai (Free Tier)",
     badge: "🟢 100% FREE • Zero-Key",
     category: "Zero-Key Free",
-    description: "Unlimited keyless neural synthesis. Powered by high-speed cluster running FLUX.1, SDXL Turbo, and specialized DiT checkpoints.",
+    description: "Keyless public neural synthesis running FLUX.1 Schnell 12B and community diffusion checkpoints.",
     hasFreeModels: true,
     defaultFreeModelId: "nano-banana",
     docsUrl: "https://pollinations.ai",
@@ -70,13 +70,13 @@ export const BASE_PROVIDERS: AiProviderPlatform[] = [
     models: [
       {
         id: "nano-banana",
-        name: "Nano Banana Turbo",
+        name: "FLUX.1 Schnell (12B Rectified Flow)",
         providerId: "nanobanana",
-        providerName: "Nano Banana / Pollinations",
+        providerName: "Pollinations.ai",
         type: "both",
-        badge: "⚡ Sub-1.5s Ultra-Fast",
-        latency: "~1.2s",
-        description: "Compact ultra-fast neural generator optimized for rapid concepting and real-time generation.",
+        badge: "⚡ 12B Rectified Flow",
+        latency: "~1.5s",
+        description: "High-adherence 12B rectified flow transformer via Pollinations.ai for detailed text-to-image and editing.",
         accentColor: "from-amber-400 to-yellow-500",
         isFree: true,
         isFreeTier: true,
