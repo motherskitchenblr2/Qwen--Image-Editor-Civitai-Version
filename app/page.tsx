@@ -1856,7 +1856,14 @@ export default function ImageEditorStudio() {
           </div>
         ) : activeTab === "sentinel" ? (
           <div className="w-full pb-28 lg:pb-8">
-            <SentinelAiGateway />
+            <SentinelAiGateway
+              canvasImage={originalImage || editedImage}
+              onUsePrompt={(refinedPrompt: string) => {
+                setPrompt(refinedPrompt);
+                setActiveTab("studio");
+                showToast("✨ Applied refined prompt to Studio!", "success");
+              }}
+            />
           </div>
         ) : (
           /* ── TWO-COLUMN STUDIO & LIVE CANVAS WORKSPACE ─────────────── */

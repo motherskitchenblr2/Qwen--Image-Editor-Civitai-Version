@@ -240,6 +240,35 @@ export default function CanvasWorkspace({
     exportMask();
   };
 
+  // Listen to Studio Workflow Palette commands from ControlPanel
+  useEffect(() => {
+    const handleToggleInpaint = (e: any) => {
+      if (e.detail && typeof e.detail.active === "boolean") {
+        setIsInpaintingActive(e.detail.active);
+      } else {
+        setIsInpaintingActive((prev) => !prev);
+      }
+    };
+    const handleSetBrushRadius = (e: any) => {
+      if (e.detail && typeof e.detail.radius === "number") {
+        setBrushRadius(e.detail.radius);
+      }
+    };
+    const handleClearInpaint = () => {
+      handleClearMask();
+    };
+
+    window.addEventListener("studio-inpaint-toggle" as any, handleToggleInpaint);
+    window.addEventListener("studio-brush-radius" as any, handleSetBrushRadius);
+    window.addEventListener("studio-clear-mask" as any, handleClearInpaint);
+
+    return () => {
+      window.removeEventListener("studio-inpaint-toggle" as any, handleToggleInpaint);
+      window.removeEventListener("studio-brush-radius" as any, handleSetBrushRadius);
+      window.removeEventListener("studio-clear-mask" as any, handleClearInpaint);
+    };
+  }, []);
+
   const exportMask = () => {
     const canvas = maskCanvasRef.current;
     if (!canvas || !onMaskChange) return;

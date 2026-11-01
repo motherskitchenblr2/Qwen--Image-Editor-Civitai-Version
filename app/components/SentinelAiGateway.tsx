@@ -24,8 +24,11 @@ import {
   Flame,
   Globe,
   Sliders,
+  Bot,
+  MessageSquare,
 } from "lucide-react";
 import { LiveAiModel, BASE_PROVIDERS } from "@/app/lib/aiModelRegistry";
+import SentinelChatCopilot from "./SentinelChatCopilot";
 
 export interface ProviderConfig {
   id: string;
@@ -211,9 +214,18 @@ const PROVIDERS: ProviderConfig[] = [
 
 interface SentinelProps {
   onCopilotProviderChange?: (providerId: string) => void;
+  canvasImage?: string | null;
+  onUsePrompt?: (prompt: string) => void;
+  defaultTab?: "copilot" | "vault";
 }
 
-export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelProps) {
+export default function SentinelAiGateway({
+  onCopilotProviderChange,
+  canvasImage,
+  onUsePrompt,
+  defaultTab = "copilot",
+}: SentinelProps) {
+  const [activeSubTab, setActiveSubTab] = useState<"copilot" | "vault">(defaultTab);
   // Vault state populated directly from Vercel Project Environment variables
   const [vaultInfo, setVaultInfo] = useState<Record<string, { configured: boolean; masked: string; envKey: string; endpoint?: string }>>({});
   const [typedKeys, setTypedKeys] = useState<Record<string, string>>({});
@@ -541,7 +553,43 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
         </div>
       </div>
 
-      {/* Cloudflare MCP & R2 Status Card */}
+      {/* ── Sub-Tab Navigation Switcher ── */}
+      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-900/90 border border-cyan-500/30 backdrop-blur-xl">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("copilot")}
+          className={`flex-1 min-h-[44px] px-4 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all ${
+            activeSubTab === "copilot"
+              ? "bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+              : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+          }`}
+        >
+          <Bot className="w-4 h-4 text-cyan-300" />
+          <span>🤖 Sentinel AI Copilot (Live Chat)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("vault")}
+          className={`flex-1 min-h-[44px] px-4 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all ${
+            activeSubTab === "vault"
+              ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+              : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+          }`}
+        >
+          <Lock className="w-4 h-4 text-emerald-400" />
+          <span>🔐 API Key Vault &amp; Telemetry ({configuredCount}/{PROVIDERS.length})</span>
+        </button>
+      </div>
+
+      {activeSubTab === "copilot" ? (
+        <SentinelChatCopilot
+          canvasImage={canvasImage}
+          onUsePrompt={onUsePrompt}
+          showToast={showToast}
+        />
+      ) : (
+        <>
+          {/* Cloudflare MCP & R2 Status Card */}
       <div className="rounded-2xl border border-amber-500/40 bg-black/80 shadow-[0_0_20px_rgba(245,158,11,0.15)] p-5 backdrop-blur-xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
@@ -975,6 +1023,8 @@ export default function SentinelAiGateway({ onCopilotProviderChange }: SentinelP
           );
         })}
       </div>
-    </div>
+    </>
+  )}
+</div>
   );
 }
