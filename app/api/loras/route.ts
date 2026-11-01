@@ -41,6 +41,10 @@ export async function GET(req: NextRequest) {
     for (const vl of vaultLoras) {
       map.set(vl.filename, {
         ...vl,
+        googleDriveId: vl.gdrive_id || vl.googleDriveId,
+        google_drive_id: vl.gdrive_id || vl.googleDriveId,
+        downloadUrl: vl.downloadUrl || vl.download_url,
+        download_url: vl.downloadUrl || vl.download_url,
         storage: vl.storage || "Google Drive Vault",
       });
     }

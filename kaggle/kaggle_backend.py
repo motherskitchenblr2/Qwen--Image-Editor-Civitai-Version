@@ -488,6 +488,72 @@ def download_file_authenticated(url: str, dest: pathlib.Path, max_retries: int =
         raise RuntimeError(f"Download failed for {dest.name}")
 
 
+def download_from_gdrive(file_id: str, dest: pathlib.Path, max_retries: int = 3) -> bool:
+    """Download public or shared file from Google Drive via direct export / confirmation curl / rclone."""
+    clean_id = str(file_id).strip()
+    if not clean_id:
+        return False
+    logger.info(f"📥 [Google Drive Fetch] Downloading file ID {clean_id} -> {dest}...")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    # 1. Try requests with session to handle virus scan confirmation token
+    try:
+        import requests
+        session = requests.Session()
+        url = "https://docs.google.com/uc?export=download"
+        res = session.get(url, params={'id': clean_id, 'confirm': 't'}, stream=True, timeout=20)
+        token = None
+        for k, v in res.cookies.items():
+            if k.startswith('download_warning'):
+                token = v
+                break
+        if token:
+            res = session.get(url, params={'id': clean_id, 'confirm': token}, stream=True, timeout=20)
+
+        if res.status_code == 200:
+            with open(dest, "wb") as f:
+                for chunk in res.iter_content(chunk_size=65536):
+                    if chunk:
+                        f.write(chunk)
+            if dest.exists() and dest.stat().st_size > 50000:
+                logger.info(f"✅ Successfully downloaded from Google Drive: {dest.name} ({round(dest.stat().st_size / (1024*1024), 2)} MB)")
+                return True
+    except Exception as re_err:
+        logger.warning(f"requests download for Google Drive ID {clean_id} note: {re_err}")
+
+    # 2. Direct curl fallback
+    confirm_urls = [
+        f"https://drive.usercontent.google.com/download?id={clean_id}&export=download&confirm=t",
+        f"https://drive.google.com/uc?export=download&id={clean_id}&confirm=t",
+    ]
+    for c_url in confirm_urls:
+        for attempt in range(1, max_retries + 1):
+            cmd = f'curl -fL -C - --retry 3 --progress-bar -o "{dest}" --user-agent "Mozilla/5.0" "{c_url}"'
+            ret = os.system(cmd)
+            if ret == 0 and dest.exists() and dest.stat().st_size > 50000:
+                logger.info(f"✅ Successfully downloaded {dest.name} via curl ({round(dest.stat().st_size / (1024 * 1024), 2)} MB)")
+                return True
+            time.sleep(1)
+
+    # 3. Check rclone backend copyid if rclone is configured
+    if GDRIVE_ENABLED:
+        try:
+            cmd = _get_rclone_cmd(["backend", "copyid", f"{GDRIVE_REMOTE}:", clean_id, str(dest.parent)])
+            subprocess.run(cmd, check=False)
+            if dest.exists() and dest.stat().st_size > 50000:
+                logger.info(f"✅ Downloaded via rclone backend copyid: {dest.name}")
+                return True
+        except Exception as r_err:
+            logger.warning(f"rclone copyid note: {r_err}")
+
+    return dest.exists() and dest.stat().st_size > 50000
+
+
+def download_file_direct(url: str, dest: pathlib.Path, max_retries: int = 5):
+    """Direct alias to download_file_authenticated for Civitai, HuggingFace, or direct HTTP links."""
+    return download_file_authenticated(url, dest, max_retries=max_retries)
+
+
 # ─── 2. DIFFUSERS / QWEN PIPELINE ORCHESTRATION ─────────────────────────────
 
 class ModelOrchestrator:
@@ -809,7 +875,7 @@ class ModelOrchestrator:
             self.is_ready = False
 
     def apply_loras(self, requested_loras: List[Dict[str, Any]]):
-        """Dynamically load and scale LoRAs into the model pipeline."""
+        """Dynamically load and scale LoRAs into the model pipeline with auto-download fallback."""
         if not self.pipe:
             return
 
@@ -820,26 +886,99 @@ class ModelOrchestrator:
             pass
 
         self.active_loras = {}
+        LORAS_DIR.mkdir(parents=True, exist_ok=True)
 
         for item in requested_loras:
-            name = item.get("name")
-            scale = float(item.get("scale", 0.8))
-            filename = f"{name}.safetensors" if not name.endswith(".safetensors") else name
+            name = item.get("name") or "lora"
+            scale = float(item.get("scale", item.get("weight", 0.8)))
+            download_url = item.get("downloadUrl") or item.get("download_url")
+            gdrive_id = item.get("googleDriveId") or item.get("google_drive_id") or item.get("gdrive_id")
+            lora_id = item.get("id")
+            raw_filename = item.get("filename")
+
+            # Determine preferred filename
+            if raw_filename and str(raw_filename).strip():
+                fname = str(raw_filename).strip()
+                filename = fname if fname.endswith(".safetensors") else f"{fname}.safetensors"
+            else:
+                clean_name = re.sub(r'[\/:*?"<>|]', '_', str(name).strip())
+                filename = clean_name if clean_name.endswith(".safetensors") else f"{clean_name}.safetensors"
+
             lora_file = LORAS_DIR / filename
 
-            # On-demand pull from Hugging Face / Google Drive Vault if not in local cache
-            if not lora_file.exists():
-                hf_fetch_on_demand(filename, "loras", LORAS_DIR)
-            if not lora_file.exists():
-                gdrive_fetch_on_demand(filename, "loras", LORAS_DIR)
+            # Check alternative existing files in LORAS_DIR (by ID or stem match)
+            if not (lora_file.exists() and lora_file.stat().st_size > 1000):
+                if lora_id and (LORAS_DIR / f"{lora_id}.safetensors").exists() and (LORAS_DIR / f"{lora_id}.safetensors").stat().st_size > 1000:
+                    lora_file = LORAS_DIR / f"{lora_id}.safetensors"
+                else:
+                    stem_name = str(name).replace(".safetensors", "")
+                    for existing in LORAS_DIR.glob("*.safetensors"):
+                        if existing.stem == stem_name or existing.name == filename:
+                            lora_file = existing
+                            break
 
+            # If still missing from local storage, trigger On-Demand Auto-Download directly in GPU container!
+            if not (lora_file.exists() and lora_file.stat().st_size > 1000):
+                logger.info(f"📥 [Auto-Download on Fuse] {name} is not in GPU cache yet. Starting direct cloud fetch...")
+
+                # 1. Direct downloadUrl (Civitai CDN, Hugging Face, or direct link)
+                if download_url:
+                    logger.info(f"Downloading {name} from downloadUrl: {download_url} -> {lora_file.name}...")
+                    try:
+                        download_file_direct(str(download_url), lora_file)
+                    except Exception as de:
+                        logger.warning(f"downloadUrl fetch failed for {name}: {de}")
+
+                # 2. Google Drive ID direct export
+                if not (lora_file.exists() and lora_file.stat().st_size > 1000) and gdrive_id:
+                    logger.info(f"Downloading {name} from Google Drive ID: {gdrive_id} -> {lora_file.name}...")
+                    try:
+                        download_from_gdrive(str(gdrive_id), lora_file)
+                    except Exception as ge:
+                        logger.warning(f"Google Drive ID fetch failed for {name}: {ge}")
+
+                # 3. Vault on-demand pulls (Hugging Face / Google Drive rclone)
+                if not (lora_file.exists() and lora_file.stat().st_size > 1000):
+                    hf_fetch_on_demand(filename, "loras", LORAS_DIR)
+                if not (lora_file.exists() and lora_file.stat().st_size > 1000):
+                    gdrive_fetch_on_demand(filename, "loras", LORAS_DIR)
+
+                # 4. Civitai Model Version ID fallback
+                if not (lora_file.exists() and lora_file.stat().st_size > 1000) and lora_id:
+                    civitai_ver_url = f"https://civitai.com/api/download/models/{lora_id}"
+                    logger.info(f"Attempting Civitai version URL: {civitai_ver_url} -> {lora_file.name}...")
+                    try:
+                        download_file_direct(civitai_ver_url, lora_file)
+                    except Exception as ce:
+                        logger.warning(f"Civitai version download failed for {name}: {ce}")
+
+            # Once file is present in GPU storage, load & fuse into pipeline
             if lora_file.exists() and lora_file.stat().st_size > 1000:
                 logger.info(f"Applying LoRA: {lora_file.name} with scale {scale}")
                 try:
                     self.pipe.load_lora_weights(str(lora_file))
                     self.pipe.fuse_lora(lora_scale=scale)
                     self.active_loras[lora_file.stem] = scale
+                    self.active_loras[name] = scale
                     logger.info(f"✅ LoRA {lora_file.stem} weights fused into GPU VRAM (scale: {scale}).")
+
+                    # Write persistent metadata record if missing
+                    meta_file = LORAS_DIR / f"{lora_file.stem}.meta.json"
+                    if not meta_file.exists():
+                        try:
+                            meta_record = {
+                                "name": name,
+                                "filename": lora_file.name,
+                                "size_mb": round(lora_file.stat().st_size / (1024 * 1024), 2),
+                                "download_url": download_url or "",
+                                "gdrive_id": gdrive_id or "",
+                                "id": lora_id,
+                                "trigger_words": item.get("trigger_words", ""),
+                                "updated_at": time.time(),
+                            }
+                            meta_file.write_text(json.dumps(meta_record))
+                        except Exception:
+                            pass
                 except Exception as e:
                     logger.warning(f"LoRA loading note: {e}")
 
@@ -989,10 +1128,29 @@ class LoRADownloadRequest(BaseModel):
 class LoRAItem(BaseModel):
     name: str
     scale: float = 0.8
+    id: Optional[Any] = None
+    downloadUrl: Optional[str] = None
+    download_url: Optional[str] = None
+    googleDriveId: Optional[str] = None
+    google_drive_id: Optional[str] = None
+    filename: Optional[str] = None
+    weight: Optional[float] = None
+    trigger_words: Optional[str] = None
 
 
 class LoRALoadRequest(BaseModel):
-    loras: List[LoRAItem]
+    loras: Optional[List[LoRAItem]] = None
+    # Flat single-item support for /fuse or /api/lora/fuse
+    id: Optional[Any] = None
+    name: Optional[str] = None
+    downloadUrl: Optional[str] = None
+    download_url: Optional[str] = None
+    googleDriveId: Optional[str] = None
+    google_drive_id: Optional[str] = None
+    filename: Optional[str] = None
+    weight: Optional[float] = None
+    scale: Optional[float] = None
+    trigger_words: Optional[str] = None
 
 
 
@@ -1175,9 +1333,14 @@ def list_loras():
                     "name": meta.get("name", stem),
                     "filename": filename,
                     "size_mb": meta.get("size_mb", 0.0),
-                    "is_active": stem in orchestrator.active_loras,
-                    "scale": orchestrator.active_loras.get(stem, 0.8),
+                    "is_active": stem in orchestrator.active_loras or meta.get("name") in orchestrator.active_loras,
+                    "scale": orchestrator.active_loras.get(stem, orchestrator.active_loras.get(meta.get("name", ""), 0.8)),
                     "trigger_words": meta.get("trigger_words", ""),
+                    "download_url": meta.get("download_url") or meta.get("downloadUrl", ""),
+                    "downloadUrl": meta.get("download_url") or meta.get("downloadUrl", ""),
+                    "googleDriveId": meta.get("gdrive_id") or meta.get("googleDriveId") or meta.get("google_drive_id", ""),
+                    "google_drive_id": meta.get("gdrive_id") or meta.get("googleDriveId") or meta.get("google_drive_id", ""),
+                    "id": meta.get("id"),
                     "storage": "Hugging Face Vault" if HF_ENABLED else "Google Drive Vault (AutoCleaned)",
                 }
         except Exception:
@@ -1197,7 +1360,7 @@ def list_loras():
                 "storage": "Local Cache",
             }
         else:
-            loras[f.name]["is_active"] = f.stem in orchestrator.active_loras
+            loras[f.name]["is_active"] = f.stem in orchestrator.active_loras or loras[f.name]["name"] in orchestrator.active_loras
 
     # 3. If local cache empty, discover remote models in Google Drive Vault
     if not loras:
@@ -1212,6 +1375,7 @@ def list_loras():
                     if fname.endswith(".safetensors"):
                         stem = fname.replace(".safetensors", "")
                         size_mb = round(it.get("Size", 0) / (1024 * 1024), 2)
+                        g_id = it.get("ID", "")
                         loras[fname] = {
                             "name": stem,
                             "filename": fname,
@@ -1219,6 +1383,8 @@ def list_loras():
                             "is_active": stem in orchestrator.active_loras,
                             "scale": orchestrator.active_loras.get(stem, 0.8),
                             "trigger_words": "",
+                            "googleDriveId": g_id,
+                            "google_drive_id": g_id,
                             "storage": "Google Drive Vault",
                         }
         except Exception as e:
@@ -1228,19 +1394,39 @@ def list_loras():
 
 
 @app.post("/api/loras/load")
+@app.post("/api/lora/fuse")
+@app.post("/fuse")
 def load_loras_endpoint(req: LoRALoadRequest):
     """Dynamically load and fuse requested LoRAs into the GPU pipeline."""
+    touch_activity()
     if not orchestrator.pipe or not orchestrator.is_ready:
         msg = f"GPU Pipeline is still warming up: {orchestrator.status_message}" if not orchestrator.is_ready else "GPU Pipeline is not ready yet."
         raise HTTPException(status_code=503, detail=msg)
     try:
-        lora_dicts = [l.dict() for l in req.loras]
+        items_to_load = []
+        if req.loras:
+            items_to_load.extend(req.loras)
+        elif req.name or req.id or req.downloadUrl or req.download_url or req.googleDriveId or req.google_drive_id:
+            items_to_load.append(LoRAItem(
+                name=req.name or f"lora_{req.id or int(time.time())}",
+                scale=req.scale if req.scale is not None else (req.weight if req.weight is not None else 0.8),
+                id=req.id,
+                downloadUrl=req.downloadUrl or req.download_url,
+                download_url=req.downloadUrl or req.download_url,
+                googleDriveId=req.googleDriveId or req.google_drive_id,
+                google_drive_id=req.googleDriveId or req.google_drive_id,
+                filename=req.filename,
+                weight=req.weight,
+                trigger_words=req.trigger_words
+            ))
+
+        lora_dicts = [l.dict() for l in items_to_load]
         orchestrator.apply_loras(lora_dicts)
-        if len(req.loras) > 0 and len(orchestrator.active_loras) == 0:
-            missing_names = [l.name for l in req.loras]
+        if len(items_to_load) > 0 and len(orchestrator.active_loras) == 0:
+            missing_names = [l.name for l in items_to_load]
             raise HTTPException(
                 status_code=400,
-                detail=f"None of the requested LoRAs ({', '.join(missing_names)}) are downloaded in GPU storage yet. Please download them first via Civitai Hub or Vault."
+                detail=f"None of the requested LoRAs ({', '.join(missing_names)}) could be downloaded or fused into GPU storage. Please verify downloadUrl, Civitai ID, or Google Drive link."
             )
         return {
             "status": "success",

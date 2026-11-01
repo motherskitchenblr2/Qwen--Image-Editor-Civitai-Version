@@ -21,6 +21,13 @@ import {
 export interface LoRAItem {
   name: string;
   scale: number;
+  id?: string | number;
+  downloadUrl?: string;
+  googleDriveId?: string;
+  gdrive_id?: string;
+  filename?: string;
+  trigger_words?: string;
+  weight?: number;
 }
 
 export interface BackendLoRA {
@@ -32,6 +39,13 @@ export interface BackendLoRA {
   trigger_words?: string;
   base_model?: string;
   category?: string;
+  id?: string | number;
+  downloadUrl?: string;
+  download_url?: string;
+  googleDriveId?: string;
+  google_drive_id?: string;
+  gdrive_id?: string;
+  storage?: string;
 }
 
 interface LoraModalProps {
@@ -372,15 +386,28 @@ export default function LoraModal({
           )}
         </div>
 
+        {/* Advisory Banner: Cloud-to-GPU Direct Streaming */}
+        <div className="px-5 sm:px-6 py-2.5 bg-purple-950/40 border-t border-purple-500/20 flex items-center justify-between gap-3 text-xs text-slate-300">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-cyan-400 shrink-0 animate-pulse" />
+            <span className="text-[11px] sm:text-xs">
+              <strong className="text-cyan-300 font-semibold">Cloud-to-GPU Auto-Download:</strong> Selecting Civitai or Vault LoRAs automatically downloads weights straight into Kaggle GPU storage upon fusing.
+            </span>
+          </div>
+          <span className="hidden md:inline-block text-[10px] font-mono text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/30">
+            Zero Local Bandwidth
+          </span>
+        </div>
+
         {/* Footer: Quick URL Downloader & Local Upload */}
         <div className="px-5 sm:px-6 py-3.5 bg-black/80 border-t border-purple-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={onBrowseLocal}
               disabled={isUploadingLocal || !isConnected}
-              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-xl font-bold flex items-center gap-1.5 transition disabled:opacity-40"
+              className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-xl font-bold flex items-center justify-center gap-2 transition disabled:opacity-40"
             >
-              <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
+              <FolderOpen className="w-4 h-4 text-cyan-400" />
               <span>{isUploadingLocal ? `Uploading (${uploadProgress}%)` : "Browse Local File (.safetensors)"}</span>
             </button>
           </div>
@@ -391,14 +418,14 @@ export default function LoraModal({
               placeholder="Civitai URL or ID"
               value={civitaiUrl}
               onChange={(e) => setCivitaiUrl(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-full sm:w-60"
+              className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 min-h-[44px] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-full sm:w-60"
             />
             <button
               onClick={onQuickDownload}
               disabled={!civitaiUrl || !isConnected || isDownloading}
-              className="px-3.5 py-1.5 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-black font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-sm disabled:opacity-40 shrink-0"
+              className="px-4 py-2 min-h-[44px] bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-black font-extrabold rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-40 shrink-0"
             >
-              {isDownloading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+              {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               <span>Download</span>
             </button>
           </div>

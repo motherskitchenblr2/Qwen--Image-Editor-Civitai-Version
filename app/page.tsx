@@ -728,12 +728,13 @@ export default function ImageEditorStudio() {
     if (!file) return;
 
     if (!file.name.endsWith(".safetensors")) {
-      alert("Please select a valid .safetensors LoRA file.");
+      showToast("Please select a valid .safetensors LoRA file.", "error");
       if (localLoraInputRef.current) localLoraInputRef.current.value = "";
       return;
     }
 
     if (!backendUrl || !isConnected) {
+      showToast("Kaggle GPU backend is offline. Local weights require an active GPU tunnel to stream. Connect GPU or provide a Civitai/Drive link.", "info");
       const safeFilename = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
       const cleanFilename = safeFilename.endsWith(".safetensors") ? safeFilename : `${safeFilename}.safetensors`;
       const loraName = file.name.replace(".safetensors", "");
@@ -767,7 +768,7 @@ export default function ImageEditorStudio() {
       });
 
       setSelectedDropdownLora(cleanFilename);
-      setActiveLoras([{ name: loraName, scale: 0.8 }]);
+      setActiveLoras([{ name: loraName, scale: 0.8, filename: cleanFilename }]);
       setFusedStatusMessage(`✅ LoRA "${loraName}" registered in Studio! Selected & ready.`);
       setTimeout(() => setFusedStatusMessage(""), 6000);
       if (localLoraInputRef.current) localLoraInputRef.current.value = "";
@@ -832,13 +833,14 @@ export default function ImageEditorStudio() {
 
       // Auto-select ONLY this uploaded LoRA as requested
       setSelectedDropdownLora(cleanFilename);
-      setActiveLoras([{ name: loraName, scale: 0.8 }]);
+      setActiveLoras([{ name: loraName, scale: 0.8, filename: cleanFilename }]);
 
       setFusedStatusMessage(`✅ LoRA "${loraName}" uploaded! Selected & ready to fuse into GPU.`);
+      showToast(`✅ LoRA "${loraName}" successfully uploaded to GPU storage!`, "success");
       setTimeout(() => setFusedStatusMessage(""), 6000);
     } catch (err: any) {
       console.error("Upload LoRA error:", err);
-      alert(`Local LoRA upload error: ${err.message || err}`);
+      showToast(`Local LoRA upload error: ${err.message || err}`, "error");
       setFusedStatusMessage("");
     } finally {
       setIsUploadingLocalLora(false);
@@ -849,27 +851,45 @@ export default function ImageEditorStudio() {
 
   const handleFuseLora = async (lorasToFuse = activeLoras) => {
     if (!backendUrl || !isConnected) {
-      alert("Please turn on or connect the Kaggle Dual T4 GPU first.");
+      showToast("Please turn on or connect the Kaggle Dual T4 GPU first.", "info");
       return;
     }
     if (!isModelReady) {
-      alert(`The Dual T4 GPU model pipeline is still warming up (${modelStatusMessage || "loading weights into VRAM"}). Please wait for the green 'Ready' indicator before fusing LoRAs.`);
+      showToast(`The Dual T4 GPU model pipeline is still warming up (${modelStatusMessage || "loading weights into VRAM"}). Please wait for Ready status.`, "info");
       return;
     }
     if (lorasToFuse.length === 0) {
-      alert("Please select at least one LoRA from the dropdown.");
+      showToast("Please select at least one LoRA from the catalog or active stack.", "info");
       return;
     }
 
     setIsFusingLora(true);
-    setFusedStatusMessage("Loading & fusing LoRA weights into GPU DiT layers...");
+    setFusedStatusMessage("Fetching & verifying LoRA weights in GPU storage (1/2)...");
     try {
       const cleanUrl = backendUrl ? backendUrl.replace(/\/+$/, "") : "";
+      
+      // Auto-step message to indicate fusion into VRAM
+      setTimeout(() => {
+        if (isFusingLora) {
+          setFusedStatusMessage("Fusing LoRA weights into GPU DiT layers (2/2)...");
+        }
+      }, 1800);
+
       const res = await fetch("/api/loras/load", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          loras: lorasToFuse,
+          loras: lorasToFuse.map((l) => ({
+            name: l.name,
+            scale: l.scale ?? 0.8,
+            id: l.id,
+            downloadUrl: l.downloadUrl,
+            download_url: l.downloadUrl,
+            googleDriveId: l.googleDriveId || (l as any).gdrive_id,
+            google_drive_id: l.googleDriveId || (l as any).gdrive_id,
+            filename: l.filename,
+            trigger_words: l.trigger_words,
+          })),
           backend_url: cleanUrl || undefined,
         }),
       });
@@ -882,14 +902,16 @@ export default function ImageEditorStudio() {
       const data = await res.json();
       const fusedCount = Object.keys(data.active_loras || {}).length;
       if (fusedCount === 0) {
-        setFusedStatusMessage(`⚠️ LoRA is not downloaded in GPU cache yet. Please download it from Civitai Hub or Quick Downloader first.`);
+        setFusedStatusMessage(`⚠️ LoRA weights could not be verified in GPU storage.`);
+        showToast("⚠️ LoRA weights could not be loaded into GPU VRAM.", "info");
       } else {
         setFusedStatusMessage(`✅ ${fusedCount} LoRA(s) fused into GPU VRAM!`);
+        showToast(`✅ Successfully loaded & fused ${fusedCount} LoRA(s) into GPU DiT layers!`, "success");
       }
       setTimeout(() => setFusedStatusMessage(""), 6000);
       fetchAvailableLoras(cleanUrl);
     } catch (e: any) {
-      alert(`LoRA Fuse error: ${e.message}`);
+      showToast(`LoRA Fuse error: ${e.message}`, "error");
       setFusedStatusMessage("");
     } finally {
       setIsFusingLora(false);
@@ -905,26 +927,39 @@ export default function ImageEditorStudio() {
       await fetch(`${cleanUrl}/api/loras/unload`, { method: "POST" });
       setActiveLoras([]);
       setFusedStatusMessage("✅ All LoRAs unloaded. Base model restored.");
+      showToast("✅ All LoRAs unloaded. Base model restored.", "success");
       setTimeout(() => setFusedStatusMessage(""), 4000);
       fetchAvailableLoras(cleanUrl);
     } catch (e: any) {
-      alert(`Unload error: ${e.message}`);
+      showToast(`Unload error: ${e.message}`, "error");
     } finally {
       setIsFusingLora(false);
     }
   };
 
   // Called from CivitaiLoraHub when user clicks "Use in Studio"
-  const handleSelectForStudio = (loraFilename: string, triggerWords?: string[]) => {
+  const handleSelectForStudio = (loraFilename: string, triggerWords?: string[], downloadUrl?: string, loraId?: string | number) => {
     const lora = availableLoras.find((l) => l.filename === loraFilename || l.name === loraFilename) || {
       name: loraFilename.replace(".safetensors", ""),
       filename: loraFilename,
       size_mb: 0,
       is_active: false,
+      downloadUrl,
+      id: loraId,
     };
 
     if (!activeLoras.some((l) => l.name === lora.name)) {
-      setActiveLoras((prev) => [...prev.slice(-2), { name: lora.name, scale: 0.8 }]);
+      setActiveLoras((prev) => [
+        ...prev.slice(-2),
+        {
+          name: lora.name,
+          scale: 0.8,
+          id: lora.id || loraId,
+          downloadUrl: lora.downloadUrl || (lora as any).download_url || downloadUrl,
+          googleDriveId: lora.googleDriveId || (lora as any).google_drive_id || (lora as any).gdrive_id,
+          filename: lora.filename,
+        },
+      ]);
     }
 
     if (triggerWords && triggerWords.length > 0) {
@@ -934,6 +969,7 @@ export default function ImageEditorStudio() {
       }
     }
 
+    showToast(`LoRA "${lora.name}" added to Studio stack!`, "success");
     setActiveTab("studio");
   };
 
@@ -947,7 +983,18 @@ export default function ImageEditorStudio() {
         showToast("Maximum 3 LoRAs can be stacked simultaneously", "info");
         return prev;
       }
-      return [...prev, { name: lora.name, scale: 0.8 }];
+      return [
+        ...prev,
+        {
+          name: lora.name,
+          scale: 0.8,
+          id: lora.id,
+          downloadUrl: lora.downloadUrl || (lora as any).download_url,
+          googleDriveId: lora.googleDriveId || (lora as any).google_drive_id || (lora as any).gdrive_id,
+          filename: lora.filename,
+          trigger_words: lora.trigger_words,
+        },
+      ];
     });
   };
 
@@ -987,9 +1034,9 @@ export default function ImageEditorStudio() {
       setCivitaiUrl("");
       setLoraCustomName("");
       fetchAvailableLoras(cleanUrl);
-      alert(`✅ LoRA "${data.name}" saved to 5 TB Google Drive Vault and ready for inference!`);
+      showToast(`✅ LoRA "${data.name}" saved to 5 TB Google Drive Vault and ready for inference!`, "success");
     } catch (e: any) {
-      alert(`Download error: ${e.message}`);
+      showToast(`Download error: ${e.message}`, "error");
     } finally {
       setIsDownloadingLora(false);
     }
