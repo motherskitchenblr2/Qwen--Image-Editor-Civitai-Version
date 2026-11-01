@@ -20,7 +20,7 @@ export const NSFW_BLOCKED_MESSAGE = "NSFW Blocked by Admin";
 
 // Comprehensive NSFW pattern matching with word boundaries
 export const NSFW_REGEX =
-  /\b(nsfw|nude|nudity|naked|porn|porno|pornography|xxx|hentai|erotic|erotica|sex|sexy|sexual|explicit|genitals|penis|vagina|boobs|breasts|topless|bottomless|fellatio|blowjob|masturbat\w*|cum|orgasm|bdsm|bondage|fetish|lewd|milf|waifu\s+nude|ecchi|r18|uncensored\s+nudity|uncensored\s+sex|gangbang|hardcore|softcore|anal|penetration|stripper|undressed|unclothed|erotic\s+art|naked\s+body|naked\s+woman|naked\s+man)\b/i;
+  /\b(nsfw|nude|nudity|naked|porn|porno|pornography|xxx|hentai|erotic|erotica|sex|sexy|sexual|explicit|genitals|penis|vagina|boobs|breasts|topless|bottomless|fellatio|blowjob|masturbat\w*|cum|orgasm|bdsm|bondage|fetish|lewd|milf|waifu\s+nude|ecchi|r18|uncensored\s+nudity|uncensored\s+sex|gangbang|hardcore|softcore|anal|penetration|stripper|undressed|unclothed|erotic\s+art|naked\s+body|naked\s+woman|naked\s+man|sensual|boudoir|lingerie|provocative)\b/i;
 
 /**
  * Checks if a given text string contains NSFW content

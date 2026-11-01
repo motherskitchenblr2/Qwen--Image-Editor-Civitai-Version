@@ -6,6 +6,8 @@
  * (e.g. "hyper realistic" -> suppresses "cartoon, anime, clay, silicon, plastic, doll, CGI, deformed").
  */
 
+import { NSFW_REGEX } from "@/app/lib/nsfwFilter";
+
 export interface NegativePromptAnalysis {
   negativePrompt: string;
   detectedAesthetics: string[];
@@ -339,7 +341,6 @@ export function brainstormPrompt(
   const cleanSeed = (seedTopic || "").trim().toLowerCase();
 
   // In SFW mode, strictly refuse and avoid generating NSFW content
-  const NSFW_REGEX = /\b(nsfw|nude|nudity|naked|porn|porno|pornography|xxx|hentai|erotic|erotica|sex|sexy|sexual|explicit|genitals|penis|vagina|boobs|breasts|topless|bottomless|fellatio|blowjob|masturbat\w*|cum|orgasm|bdsm|bondage|fetish|lewd|milf|waifu\s+nude|ecchi|r18|uncensored\s+nudity|uncensored\s+sex|gangbang|hardcore|softcore|anal|penetration|stripper|undressed|unclothed|erotic\s+art|naked\s+body|naked\s+woman|naked\s+man|sensual|boudoir|lingerie|provocative)\b/i;
   if (!isNsfwAllowed && NSFW_REGEX.test(cleanSeed)) {
     return {
       prompt: "NSFW Blocked by Admin",
@@ -412,8 +413,6 @@ export function reformUserPrompt(
   mode: "generate" | "edit" = "generate"
 ): string {
   if (!rawText || !rawText.trim()) return "";
-
-  const NSFW_REGEX = /\b(nsfw|nude|nudity|naked|porn|porno|pornography|xxx|hentai|erotic|erotica|sex|sexy|sexual|explicit|genitals|penis|vagina|boobs|breasts|topless|bottomless|fellatio|blowjob|masturbat\w*|cum|orgasm|bdsm|bondage|fetish|lewd|milf|waifu\s+nude|ecchi|r18|uncensored\s+nudity|uncensored\s+sex|gangbang|hardcore|softcore|anal|penetration|stripper|undressed|unclothed|erotic\s+art|naked\s+body|naked\s+woman|naked\s+man|sensual|boudoir|lingerie|provocative)\b/i;
 
   if (!isNsfwAllowed && NSFW_REGEX.test(rawText)) {
     return "NSFW Blocked by Admin";

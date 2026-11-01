@@ -690,10 +690,10 @@ export default function CanvasWorkspace({
             </div>
             <div className="space-y-1 max-w-xs">
               <p className="text-xs sm:text-sm font-black text-white">Upload source image to begin editing</p>
-              <p className="text-[11px] sm:text-xs text-slate-300 font-medium sm:hidden">
-                Tap to take photo or choose image
+              <p className="text-[11px] sm:text-xs text-slate-300 font-medium md:hidden">
+                Tap to take photo or choose image from device
               </p>
-              <p className="text-[11px] sm:text-xs text-slate-400 hidden sm:block">
+              <p className="text-[11px] sm:text-xs text-slate-400 hidden md:block">
                 Drag and drop your image here, or select from your device
               </p>
               <p className="text-[10px] font-mono text-cyan-300/70 pt-0.5">
@@ -706,8 +706,8 @@ export default function CanvasWorkspace({
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition active:scale-[0.99] flex items-center gap-2 pointer-events-none"
               >
                 <FolderOpen className="w-4 h-4" />
-                <span className="sm:hidden">Tap to Choose Image</span>
-                <span className="hidden sm:inline">Browse or Drag Image Here</span>
+                <span className="md:hidden">Tap to Choose Image</span>
+                <span className="hidden md:inline">Browse or Drag Image Here</span>
               </button>
             </div>
           </div>
