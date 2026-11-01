@@ -4,6 +4,15 @@ import { generateSmartNegativePrompt } from "@/app/lib/promptIntelligence";
 
 export const dynamic = "force-dynamic";
 
+function mergeNegativeTokens(baseline: string, aiGenerated: string): string[] {
+  return Array.from(
+    new Set([
+      ...baseline.split(",").map((s: string) => s.trim().toLowerCase()),
+      ...aiGenerated.split(",").map((s: string) => s.trim().toLowerCase()),
+    ])
+  ).filter(Boolean);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -61,12 +70,7 @@ export async function POST(req: NextRequest) {
             const data = await res.json();
             const aiNegatives = data.choices?.[0]?.message?.content?.trim();
             if (aiNegatives && aiNegatives.length > 5) {
-              const combinedTokens = Array.from(
-                new Set([
-                  ...baselineAnalysis.negativePrompt.split(",").map((s: string) => s.trim().toLowerCase()),
-                  ...aiNegatives.split(",").map((s: string) => s.trim().toLowerCase()),
-                ])
-              ).filter(Boolean);
+              const combinedTokens = mergeNegativeTokens(baselineAnalysis.negativePrompt, aiNegatives);
 
               return NextResponse.json({
                 success: true,
@@ -107,12 +111,7 @@ export async function POST(req: NextRequest) {
             const data = await res.json();
             const aiNegatives = data.choices?.[0]?.message?.content?.trim();
             if (aiNegatives && aiNegatives.length > 5) {
-              const combinedTokens = Array.from(
-                new Set([
-                  ...baselineAnalysis.negativePrompt.split(",").map((s: string) => s.trim().toLowerCase()),
-                  ...aiNegatives.split(",").map((s: string) => s.trim().toLowerCase()),
-                ])
-              ).filter(Boolean);
+              const combinedTokens = mergeNegativeTokens(baselineAnalysis.negativePrompt, aiNegatives);
 
               return NextResponse.json({
                 success: true,
@@ -157,12 +156,7 @@ export async function POST(req: NextRequest) {
             const data = await res.json();
             const aiNegatives = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
             if (aiNegatives && aiNegatives.length > 5) {
-              const combinedTokens = Array.from(
-                new Set([
-                  ...baselineAnalysis.negativePrompt.split(",").map((s: string) => s.trim().toLowerCase()),
-                  ...aiNegatives.split(",").map((s: string) => s.trim().toLowerCase()),
-                ])
-              ).filter(Boolean);
+              const combinedTokens = mergeNegativeTokens(baselineAnalysis.negativePrompt, aiNegatives);
 
               return NextResponse.json({
                 success: true,
@@ -201,12 +195,7 @@ export async function POST(req: NextRequest) {
             const data = await res.json();
             const aiNegatives = data.choices?.[0]?.message?.content?.trim();
             if (aiNegatives && aiNegatives.length > 5) {
-              const combinedTokens = Array.from(
-                new Set([
-                  ...baselineAnalysis.negativePrompt.split(",").map((s: string) => s.trim().toLowerCase()),
-                  ...aiNegatives.split(",").map((s: string) => s.trim().toLowerCase()),
-                ])
-              ).filter(Boolean);
+              const combinedTokens = mergeNegativeTokens(baselineAnalysis.negativePrompt, aiNegatives);
 
               return NextResponse.json({
                 success: true,

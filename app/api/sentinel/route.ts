@@ -15,142 +15,106 @@ interface ResolveClientOptions {
 function getAiClient(options: ResolveClientOptions) {
   const { model, taskType = "general", nsfw_enabled = false, customApiKey, customBaseUrl } = options;
 
+  let cfg: { apiKey: string; baseURL: string; model: string; hasKey: boolean; providerName: string };
+
   if (customApiKey) {
-    return {
-      client: createOpenAI({
-        apiKey: customApiKey,
-        baseURL: customBaseUrl || "https://openrouter.ai/api/v1",
-      }),
+    cfg = {
+      apiKey: customApiKey,
+      baseURL: customBaseUrl || "https://openrouter.ai/api/v1",
       model: model || "google/gemini-2.0-flash-001",
       hasKey: true,
       providerName: "Custom User Key",
     };
-  }
-
-  // 1. Coding Tasks: Primary Gemini 3.8 / 2.5 Pro (Google AI Studio) -> Fallback Nemotron 3 Super (NVIDIA)
-  if (taskType === "coding") {
-    if (process.env.GEMINI_API_KEY) {
-      return {
-        client: createOpenAI({
-          apiKey: process.env.GEMINI_API_KEY,
-          baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-        }),
-        model: "gemini-2.5-pro",
-        hasKey: true,
-        providerName: "Gemini 3.8 Pro (Google AI Studio)",
-      };
-    }
-    if (process.env.NVIDIA_API_KEY) {
-      return {
-        client: createOpenAI({
-          apiKey: process.env.NVIDIA_API_KEY,
-          baseURL: process.env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
-        }),
-        model: "nvidia/llama-3.1-nemotron-70b-instruct",
-        hasKey: true,
-        providerName: "Nemotron 3 Super (NVIDIA NIM)",
-      };
-    }
-  }
-
-  // 2. Reasoning Tasks: Primary DeepSeek v4.1 Flash / R1 (NVIDIA) -> Fallback Groq Llama 3.3 70B
-  if (taskType === "reasoning") {
-    if (process.env.NVIDIA_API_KEY) {
-      return {
-        client: createOpenAI({
-          apiKey: process.env.NVIDIA_API_KEY,
-          baseURL: process.env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
-        }),
-        model: "deepseek-ai/deepseek-r1",
-        hasKey: true,
-        providerName: "DeepSeek v4.1 / R1 (NVIDIA NIM)",
-      };
-    }
-    if (process.env.GROQ_API_KEY) {
-      return {
-        client: createOpenAI({
-          apiKey: process.env.GROQ_API_KEY,
-          baseURL: "https://api.groq.com/openai/v1",
-        }),
-        model: "llama-3.3-70b-versatile",
-        hasKey: true,
-        providerName: "Groq Llama 3.3 70B (Free Tier)",
-      };
-    }
-  }
-
-  // 3. NSFW Mode Active: Primary Mistral AI -> Fallback Dolphin LLM (Uncensored)
-  if (nsfw_enabled) {
-    if (process.env.MISTRAL_API_KEY) {
-      return {
-        client: createOpenAI({
-          apiKey: process.env.MISTRAL_API_KEY,
-          baseURL: "https://api.mistral.ai/v1",
-        }),
-        model: "open-mistral-nemo",
-        hasKey: true,
-        providerName: "Mistral AI (Platform Default)",
-      };
-    }
-    if (process.env.DOLPHIN_API_KEY) {
-      return {
-        client: createOpenAI({
-          apiKey: process.env.DOLPHIN_API_KEY,
-          baseURL: process.env.DOLPHIN_BASE_URL || "https://api.dolphinllm.com/v1",
-        }),
-        model: "uncensored",
-        hasKey: true,
-        providerName: "Dolphin LLM (Uncensored Fallback)",
-      };
-    }
-  }
-
-  // 4. SFW Safe Mode (Default): Primary Gemma 4 31B IT (Google AI Studio) -> Fallback OpenRouter
-  if (process.env.GEMINI_API_KEY) {
-    return {
-      client: createOpenAI({
-        apiKey: process.env.GEMINI_API_KEY,
-        baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-      }),
+  } else if (taskType === "coding" && process.env.GEMINI_API_KEY) {
+    cfg = {
+      apiKey: process.env.GEMINI_API_KEY,
+      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+      model: "gemini-2.5-pro",
+      hasKey: true,
+      providerName: "Gemini 3.8 Pro (Google AI Studio)",
+    };
+  } else if (taskType === "coding" && process.env.NVIDIA_API_KEY) {
+    cfg = {
+      apiKey: process.env.NVIDIA_API_KEY,
+      baseURL: process.env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
+      model: "nvidia/llama-3.1-nemotron-70b-instruct",
+      hasKey: true,
+      providerName: "Nemotron 3 Super (NVIDIA NIM)",
+    };
+  } else if (taskType === "reasoning" && process.env.NVIDIA_API_KEY) {
+    cfg = {
+      apiKey: process.env.NVIDIA_API_KEY,
+      baseURL: process.env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
+      model: "deepseek-ai/deepseek-r1",
+      hasKey: true,
+      providerName: "DeepSeek v4.1 / R1 (NVIDIA NIM)",
+    };
+  } else if (taskType === "reasoning" && process.env.GROQ_API_KEY) {
+    cfg = {
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+      model: "llama-3.3-70b-versatile",
+      hasKey: true,
+      providerName: "Groq Llama 3.3 70B (Free Tier)",
+    };
+  } else if (nsfw_enabled && process.env.MISTRAL_API_KEY) {
+    cfg = {
+      apiKey: process.env.MISTRAL_API_KEY,
+      baseURL: "https://api.mistral.ai/v1",
+      model: "open-mistral-nemo",
+      hasKey: true,
+      providerName: "Mistral AI (Platform Default)",
+    };
+  } else if (nsfw_enabled && process.env.DOLPHIN_API_KEY) {
+    cfg = {
+      apiKey: process.env.DOLPHIN_API_KEY,
+      baseURL: process.env.DOLPHIN_BASE_URL || "https://api.dolphinllm.com/v1",
+      model: "uncensored",
+      hasKey: true,
+      providerName: "Dolphin LLM (Uncensored Fallback)",
+    };
+  } else if (process.env.GEMINI_API_KEY) {
+    cfg = {
+      apiKey: process.env.GEMINI_API_KEY,
+      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
       model: "gemini-2.0-flash",
       hasKey: true,
       providerName: "Gemma 4 31B IT / Gemini (Google AI Studio)",
     };
-  }
-
-  if (process.env.OPENROUTER_API_KEY) {
-    return {
-      client: createOpenAI({
-        apiKey: process.env.OPENROUTER_API_KEY,
-        baseURL: process.env.AI_BASE_URL || "https://openrouter.ai/api/v1",
-      }),
+  } else if (process.env.OPENROUTER_API_KEY) {
+    cfg = {
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: process.env.AI_BASE_URL || "https://openrouter.ai/api/v1",
       model: model || (nsfw_enabled ? "mistralai/mistral-nemo" : "google/gemma-2-27b-it:free"),
       hasKey: true,
       providerName: "OpenRouter (Universal Gateway)",
     };
-  }
-
-  if (process.env.GROQ_API_KEY) {
-    return {
-      client: createOpenAI({
-        apiKey: process.env.GROQ_API_KEY,
-        baseURL: "https://api.groq.com/openai/v1",
-      }),
+  } else if (process.env.GROQ_API_KEY) {
+    cfg = {
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
       model: "llama-3.3-70b-versatile",
       hasKey: true,
       providerName: "Groq LPU (Free Tier)",
     };
-  }
-
-  // Fallback dummy client if no keys in environment
-  return {
-    client: createOpenAI({
+  } else {
+    cfg = {
       apiKey: "dummy-key-fallback",
       baseURL: "https://openrouter.ai/api/v1",
+      model: model || "google/gemini-2.0-flash-001",
+      hasKey: false,
+      providerName: "Offline Fallback Heuristics",
+    };
+  }
+
+  return {
+    client: createOpenAI({
+      apiKey: cfg.apiKey,
+      baseURL: cfg.baseURL,
     }),
-    model: model || "google/gemini-2.0-flash-001",
-    hasKey: false,
-    providerName: "Offline Fallback Heuristics",
+    model: cfg.model,
+    hasKey: cfg.hasKey,
+    providerName: cfg.providerName,
   };
 }
 

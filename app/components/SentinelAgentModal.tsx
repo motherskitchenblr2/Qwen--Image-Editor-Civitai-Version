@@ -24,6 +24,7 @@ import {
   Brain,
   ShieldAlert,
 } from "lucide-react";
+import { AVAILABLE_MODELS } from "@/app/lib/modelShuffler";
 
 export interface SentinelModalProps {
   isOpen: boolean;
@@ -38,18 +39,6 @@ export interface SentinelModalProps {
   showToast?: (text: string, type?: "success" | "error" | "info") => void;
 }
 
-const AVAILABLE_MODELS = [
-  { id: "mistralai/mistral-nemo", name: "Mistral NeMo 12B", badge: "🔞 NSFW Default (Mistral AI)", category: "nsfw" },
-  { id: "dolphinllm/uncensored", name: "Dolphin LLM", badge: "🔞 NSFW Fallback (Uncensored)", category: "nsfw" },
-  { id: "google/gemma-4-31b-it", name: "Gemma 4 31B IT", badge: "🛡️ SFW Default (Google AI Studio)", category: "sfw" },
-  { id: "google/gemini-2.5-pro", name: "Gemini 3.8 / 2.5 Pro", badge: "💻 Coding Specialist (Google)", category: "coding" },
-  { id: "nvidia/nemotron-3-super", name: "Nemotron 3 Super", badge: "💻 Coding Fallback (NVIDIA NIM)", category: "coding" },
-  { id: "deepseek/deepseek-r1", name: "DeepSeek v4.1 / R1", badge: "🧠 Reasoning Specialist (NVIDIA NIM)", category: "reasoning" },
-  { id: "groq/llama-3.3-70b", name: "Groq Llama 3.3 70B", badge: "⚡ Free Reasoning Fallback", category: "reasoning" },
-  { id: "google/gemini-2.0-flash-001", name: "Gemini 2.0 Flash", badge: "Ultra-Fast Studio", category: "general" },
-  { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", badge: "Master Prompting", category: "general" },
-  { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", badge: "Balanced Intelligence", category: "general" },
-];
 
 export function SentinelAgentModal({
   isOpen,

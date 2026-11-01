@@ -5,6 +5,44 @@ import { isNsfwContent } from "@/app/lib/nsfwFilter";
 
 export const dynamic = "force-dynamic";
 
+async function callChatCompletion(options: {
+  url: string;
+  apiKey: string;
+  model: string;
+  systemInstruction: string;
+  userInput: string;
+  maxTokens?: number;
+  temperature?: number;
+  timeoutMs?: number;
+}): Promise<string | null> {
+  try {
+    const res = await fetch(options.url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${options.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: options.model,
+        messages: [
+          { role: "system", content: options.systemInstruction },
+          { role: "user", content: `Input subject/prompt: "${options.userInput}"\n\nResult prompt:` },
+        ],
+        max_tokens: options.maxTokens ?? 240,
+        ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
+      }),
+      signal: AbortSignal.timeout(options.timeoutMs ?? 8000),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const content = data.choices?.[0]?.message?.content?.trim();
+      if (content) return content;
+    }
+  } catch {}
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -47,39 +85,22 @@ export async function POST(req: NextRequest) {
       // Primary: Mistral AI Platform API
       const mistralKey = (provider === "mistral" && effectiveKey) ? effectiveKey : (process.env.MISTRAL_API_KEY || "");
       if (mistralKey) {
-        try {
-          const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${mistralKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "open-mistral-nemo",
-              messages: [
-                { role: "system", content: systemInstruction },
-                { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
-              ],
-              max_tokens: 240,
-              temperature: isBrainstorm || isInspire ? 0.8 : 0.6,
-            }),
-            signal: AbortSignal.timeout(8000),
+        const result = await callChatCompletion({
+          url: "https://api.mistral.ai/v1/chat/completions",
+          apiKey: mistralKey,
+          model: "open-mistral-nemo",
+          systemInstruction,
+          userInput: inputTopic,
+          maxTokens: 240,
+          temperature: isBrainstorm || isInspire ? 0.8 : 0.6,
+        });
+        if (result) {
+          return NextResponse.json({
+            enhancedPrompt: result,
+            provider: "Mistral AI (open-mistral-nemo) [NSFW Primary]",
+            mode,
+            isBrainstormed: isBrainstorm || isInspire,
           });
-
-          if (res.ok) {
-            const data = await res.json();
-            const result = data.choices?.[0]?.message?.content?.trim();
-            if (result) {
-              return NextResponse.json({
-                enhancedPrompt: result,
-                provider: "Mistral AI (open-mistral-nemo) [NSFW Primary]",
-                mode,
-                isBrainstormed: isBrainstorm || isInspire,
-              });
-            }
-          }
-        } catch (mErr) {
-          console.warn("Mistral AI primary failed in NSFW mode, falling back to Dolphin LLM:", mErr);
         }
       }
 
@@ -87,40 +108,23 @@ export async function POST(req: NextRequest) {
       const dolphinKey = (provider === "dolphin" && effectiveKey) ? effectiveKey : (process.env.DOLPHIN_API_KEY || "");
       const dolphinBaseUrl = (process.env.DOLPHIN_BASE_URL || "https://api.dolphinllm.com/v1").replace(/\/+$/, "");
       if (dolphinKey) {
-        try {
-          const res = await fetch(`${dolphinBaseUrl}/chat/completions`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${dolphinKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "uncensored",
-              messages: [
-                { role: "system", content: systemInstruction },
-                { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
-              ],
-              max_tokens: 240,
-              temperature: isBrainstorm || isInspire ? 0.8 : 0.6,
-            }),
-            signal: AbortSignal.timeout(8000),
+        const result = await callChatCompletion({
+          url: `${dolphinBaseUrl}/chat/completions`,
+          apiKey: dolphinKey,
+          model: "uncensored",
+          systemInstruction,
+          userInput: inputTopic,
+          maxTokens: 240,
+          temperature: isBrainstorm || isInspire ? 0.8 : 0.6,
+        });
+        if (result) {
+          return NextResponse.json({
+            enhancedPrompt: result,
+            provider: "Dolphin LLM (uncensored) [NSFW Fallback]",
+            fallbackEngaged: true,
+            mode,
+            isBrainstormed: isBrainstorm || isInspire,
           });
-
-          if (res.ok) {
-            const data = await res.json();
-            const result = data.choices?.[0]?.message?.content?.trim();
-            if (result) {
-              return NextResponse.json({
-                enhancedPrompt: result,
-                provider: "Dolphin LLM (uncensored) [NSFW Fallback]",
-                fallbackEngaged: true,
-                mode,
-                isBrainstormed: isBrainstorm || isInspire,
-              });
-            }
-          }
-        } catch (dErr) {
-          console.warn("Dolphin LLM fallback failed in NSFW mode:", dErr);
         }
       }
     }
@@ -171,39 +175,22 @@ export async function POST(req: NextRequest) {
       // Fallback: OpenRouter / OpenCode Gemma 4 31B IT
       const openRouterKey = (provider === "openrouter" && effectiveKey) ? effectiveKey : (process.env.OPENROUTER_API_KEY || "");
       if (openRouterKey) {
-        try {
-          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${openRouterKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemma-2-27b-it:free",
-              messages: [
-                { role: "system", content: systemInstruction },
-                { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
-              ],
-              max_tokens: 220,
-            }),
-            signal: AbortSignal.timeout(8000),
+        const result = await callChatCompletion({
+          url: "https://openrouter.ai/api/v1/chat/completions",
+          apiKey: openRouterKey,
+          model: "google/gemma-2-27b-it:free",
+          systemInstruction,
+          userInput: inputTopic,
+          maxTokens: 220,
+        });
+        if (result) {
+          return NextResponse.json({
+            enhancedPrompt: result,
+            provider: "Gemma 4 31B IT (OpenCode / OpenRouter) [SFW Fallback]",
+            fallbackEngaged: true,
+            mode,
+            isBrainstormed: isBrainstorm || isInspire,
           });
-
-          if (res.ok) {
-            const data = await res.json();
-            const result = data.choices?.[0]?.message?.content?.trim();
-            if (result) {
-              return NextResponse.json({
-                enhancedPrompt: result,
-                provider: "Gemma 4 31B IT (OpenCode / OpenRouter) [SFW Fallback]",
-                fallbackEngaged: true,
-                mode,
-                isBrainstormed: isBrainstorm || isInspire,
-              });
-            }
-          }
-        } catch (orErr) {
-          console.warn("OpenRouter fallback failed in SFW mode:", orErr);
         }
       }
     }
@@ -212,38 +199,23 @@ export async function POST(req: NextRequest) {
     // 3. AUXILIARY PROVIDERS (GROQ LPU / DIRECT MISTRAL CALLS)
     // =========================================================================
     if (provider === "groq" && effectiveKey) {
-      try {
-        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${effectiveKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [
-              { role: "system", content: systemInstruction },
-              { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
-            ],
-            max_tokens: 200,
-            temperature: isBrainstorm || isInspire ? 0.8 : 0.6,
-          }),
-          signal: AbortSignal.timeout(8000),
+      const result = await callChatCompletion({
+        url: "https://api.groq.com/openai/v1/chat/completions",
+        apiKey: effectiveKey,
+        model: "llama-3.3-70b-versatile",
+        systemInstruction,
+        userInput: inputTopic,
+        maxTokens: 200,
+        temperature: isBrainstorm || isInspire ? 0.8 : 0.6,
+      });
+      if (result) {
+        return NextResponse.json({
+          enhancedPrompt: result,
+          provider: "Groq LPU (llama-3.3-70b)",
+          mode,
+          isBrainstormed: isBrainstorm || isInspire,
         });
-
-        if (res.ok) {
-          const data = await res.json();
-          const result = data.choices?.[0]?.message?.content?.trim();
-          if (result) {
-            return NextResponse.json({
-              enhancedPrompt: result,
-              provider: "Groq LPU (llama-3.3-70b)",
-              mode,
-              isBrainstormed: isBrainstorm || isInspire,
-            });
-          }
-        }
-      } catch {}
+      }
     }
 
     // =========================================================================
