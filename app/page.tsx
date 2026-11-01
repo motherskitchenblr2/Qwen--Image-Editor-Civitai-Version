@@ -206,11 +206,14 @@ export default function ImageEditorStudio() {
   const handleToggleNsfwMode = (enabled: boolean) => {
     setIsNsfwMode(enabled);
     setNsfwModeActive(enabled);
+    try {
+      localStorage.setItem("sentinel_active_copilot", enabled ? "mistral" : "gemini");
+    } catch {}
     if (showToast) {
       showToast(
         enabled
-          ? "⚠️ 18+ Unrestricted NSFW Mode Activated"
-          : "🛡️ SFW Mode Activated (Safe & Filtered)",
+          ? "🔞 18+ Unrestricted NSFW Mode Activated: Defaulting to Mistral AI (Fallback: Dolphin AI)"
+          : "🛡️ SFW Safe Mode Activated: Defaulting to Gemma 4 31B IT (Google AI Studio)",
         enabled ? "info" : "success"
       );
     }
@@ -1956,6 +1959,7 @@ export default function ImageEditorStudio() {
           <div className="w-full pb-28 lg:pb-8">
             <SentinelAiGateway
               canvasImage={originalImage || editedImage}
+              isNsfwMode={isNsfwMode}
               onUsePrompt={handleApplyCopilotPrompt}
               onApplySettings={handleApplyCopilotSettings}
               onApplyPreset={handleApplyCopilotPreset}
@@ -2097,6 +2101,7 @@ export default function ImageEditorStudio() {
         onClose={() => setIsSentinelModalOpen(false)}
         canvasImage={originalImage || editedImage}
         activePrompt={prompt}
+        isNsfwMode={isNsfwMode}
         onApplyPrompt={handleApplyCopilotPrompt}
         onApplySettings={handleApplyCopilotSettings}
         onApplyPreset={handleApplyCopilotPreset}

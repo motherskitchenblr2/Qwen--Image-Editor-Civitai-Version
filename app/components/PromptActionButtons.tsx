@@ -68,9 +68,11 @@ export default function PromptActionButtons({
   const [copied, setCopied] = useState(false);
   const [isBrainstorming, setIsBrainstorming] = useState(false);
   const [isEnhancingLocal, setIsEnhancingLocal] = useState(false);
+  const [isInspiring, setIsInspiring] = useState(false);
   const [isGeneratingNegative, setIsGeneratingNegative] = useState(false);
   const [showArchetypesDropdown, setShowArchetypesDropdown] = useState(false);
   const [negativeInsight, setNegativeInsight] = useState<string | null>(null);
+  const [isNsfw, setIsNsfw] = useState<boolean>(() => isNsfwModeActive());
 
   // Persistent tracking across component instances via sessionStorage & local state
   const [lastBrainstormedPrompt, setLastBrainstormedPrompt] = useState<string>(() =>
@@ -83,7 +85,7 @@ export default function PromptActionButtons({
     safeSessionGet("sentinel_last_neg_pos")
   );
 
-  // Synchronize from session storage on mount
+  // Synchronize from session storage and nsfw events on mount
   useEffect(() => {
     const bs = safeSessionGet("sentinel_last_brainstormed");
     if (bs && bs !== lastBrainstormedPrompt) setLastBrainstormedPrompt(bs);
@@ -91,6 +93,12 @@ export default function PromptActionButtons({
     if (enh && enh !== lastEnhancedPrompt) setLastEnhancedPrompt(enh);
     const neg = safeSessionGet("sentinel_last_neg_pos");
     if (neg && neg !== lastNegativePositivePrompt) setLastNegativePositivePrompt(neg);
+
+    const handleNsfwSync = (e: any) => {
+      setIsNsfw(Boolean(e.detail?.enabled));
+    };
+    window.addEventListener("nsfw-mode-changed", handleNsfwSync);
+    return () => window.removeEventListener("nsfw-mode-changed", handleNsfwSync);
   }, []);
 
   const cleanPrompt = (prompt || "").trim();
@@ -354,10 +362,7 @@ export default function PromptActionButtons({
     setIsGeneratingNegative(true);
     try {
       const localResult = generateSmartNegativePrompt(cleanPrompt);
-      const activeCopilot =
-        typeof window !== "undefined"
-          ? localStorage.getItem("sentinel_active_copilot") || "mistral"
-          : "mistral";
+      const activeCopilot = isNsfw ? "mistral" : "gemini";
 
       const res = await fetch("/api/sentinel/negative-prompt", {
         method: "POST",
@@ -365,6 +370,7 @@ export default function PromptActionButtons({
         body: JSON.stringify({
           prompt: cleanPrompt,
           provider: activeCopilot,
+          nsfw_enabled: isNsfw,
         }),
       });
 
@@ -428,7 +434,45 @@ export default function PromptActionButtons({
     if (showToast) showToast("Cleared", "info");
   };
 
-  const handleRandomInspire = () => {
+  const handleRandomInspire = async () => {
+    setIsInspiring(true);
+    try {
+      const activeCopilot = isNsfw ? "mistral" : "gemini";
+      const res = await fetch("/api/sentinel/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: cleanPrompt || "masterwork vision",
+          provider: activeCopilot,
+          mode: "inspire",
+          nsfw_enabled: isNsfw,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.enhancedPrompt) {
+          const trimmed = data.enhancedPrompt.trim();
+          onUpdatePrompt(trimmed);
+          setLastBrainstormedPrompt(trimmed);
+          safeSessionSet("sentinel_last_brainstormed", trimmed);
+
+          if (onUpdateNegativePrompt && data.suggestedNegative) {
+            onUpdateNegativePrompt(data.suggestedNegative);
+            setLastNegativePositivePrompt(trimmed);
+            safeSessionSet("sentinel_last_neg_pos", trimmed);
+          }
+          if (showToast) {
+            showToast(`🎲 Inspire (${data.provider || (isNsfw ? "Mistral" : "Gemma")}): Composed fresh concept!`, "success");
+          }
+          setIsInspiring(false);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("AI Inspire fetch fallback:", e);
+    }
+
     const item = getRandomPromptArchetype();
     const trimmed = item.prompt.trim();
     onUpdatePrompt(trimmed);
@@ -443,6 +487,7 @@ export default function PromptActionButtons({
     if (showToast) {
       showToast(`✨ Generated: ${item.name}`, "success");
     }
+    setIsInspiring(false);
   };
 
   // Flat grey disabled styling
@@ -528,6 +573,29 @@ export default function PromptActionButtons({
   // ─────────────────────────────────────────────────────────────
   return (
     <div className={`relative flex items-center gap-1.5 flex-wrap ${className}`}>
+      {/* Active Model Shuffling Engine Pill */}
+      <div className="w-full flex items-center justify-between gap-1 pb-1 mb-0.5 border-b border-slate-800/40">
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`text-[9.5px] px-2 py-0.5 rounded-full font-mono font-bold flex items-center gap-1 shadow-sm ${
+              isNsfw
+                ? "bg-rose-950/80 border border-rose-500/50 text-rose-300"
+                : "bg-emerald-950/80 border border-emerald-500/50 text-emerald-300"
+            }`}
+            title={
+              isNsfw
+                ? "NSFW Shuffled Engine: Mistral AI (Primary) with Dolphin LLM (Fallback)"
+                : "SFW Shuffled Engine: Gemma 4 31B IT from Google AI Studio (Fallback: OpenRouter)"
+            }
+          >
+            {isNsfw ? "🔞 Mistral AI (NSFW Default)" : "🛡️ Gemma 4 31B IT (Google AI Studio)"}
+          </span>
+          <span className="text-[9px] text-slate-500 font-mono hidden sm:inline">
+            {isNsfw ? "• Fallback: Dolphin AI" : "• Fallback: OpenRouter"}
+          </span>
+        </div>
+      </div>
+
       {/* 1. Brain-Storm Prompt Writer Button */}
       <button
         type="button"
@@ -598,11 +666,12 @@ export default function PromptActionButtons({
           <button
             type="button"
             onClick={handleRandomInspire}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-purple-300 hover:text-white bg-purple-950/70 hover:bg-purple-900/80 border border-purple-500/50 hover:border-purple-400 rounded-l-lg shadow-[0_0_10px_rgba(168,85,247,0.2)] hover:shadow-[0_0_14px_rgba(168,85,247,0.4)] transition active:scale-95"
+            disabled={isInspiring}
+            className="flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-purple-300 hover:text-white bg-purple-950/70 hover:bg-purple-900/80 border border-purple-500/50 hover:border-purple-400 rounded-l-lg shadow-[0_0_10px_rgba(168,85,247,0.2)] hover:shadow-[0_0_14px_rgba(168,85,247,0.4)] transition active:scale-95 disabled:opacity-50"
             title="Randomly synthesize masterwork prompt + smart negative combo"
           >
-            <Dices className="w-3 h-3 text-purple-400" />
-            <span>🎲 Inspire</span>
+            <Dices className={`w-3 h-3 text-purple-400 ${isInspiring ? "animate-spin" : ""}`} />
+            <span>{isInspiring ? "Inspiring..." : "🎲 Inspire"}</span>
           </button>
           <button
             type="button"

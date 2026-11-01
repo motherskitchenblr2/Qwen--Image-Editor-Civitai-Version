@@ -16,4 +16,5 @@ export const ENDPOINT_ENV_MAP: Record<string, string> = {
   ollama: "OLLAMA_HOST",
   agentrouter: "AGENTROUTER_HOST",
   dolphin: "DOLPHIN_BASE_URL",
+  nvidia: "NVIDIA_BASE_URL",
 };

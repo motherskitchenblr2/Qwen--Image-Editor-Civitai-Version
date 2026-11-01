@@ -6,7 +6,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, provider, apiKey } = await req.json();
+    const body = await req.json();
+    const { prompt, provider, apiKey, nsfw_enabled = false } = body;
 
     if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
       return NextResponse.json({
@@ -31,93 +32,191 @@ export async function POST(req: NextRequest) {
       "For example, if the prompt is hyper-realistic, include 'cartoon, anime, 3d render, clay, silicon, plastic, doll, drawing, cgi'. " +
       "Return ONLY the comma-separated negative keywords without explanations, markdown, or greetings.";
 
-    // Optional AI Enrichment if Copilot is active and responsive within 4s
-    if (provider === "mistral" && effectiveKey) {
-      try {
-        const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${effectiveKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "open-mistral-nemo",
-            messages: [
-              { role: "system", content: systemInstruction },
-              { role: "user", content: `Positive prompt: "${prompt}"\n\nNegative prompts to exclude:` },
-            ],
-            max_tokens: 120,
-            temperature: 0.5,
-          }),
-          signal: AbortSignal.timeout(4000),
-        });
+    // =========================================================================
+    // NSFW MODE: PRIMARY MISTRAL AI -> FALLBACK DOLPHIN LLM
+    // =========================================================================
+    if (nsfw_enabled) {
+      const mistralKey = (provider === "mistral" && effectiveKey) ? effectiveKey : (process.env.MISTRAL_API_KEY || "");
+      if (mistralKey) {
+        try {
+          const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${mistralKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "open-mistral-nemo",
+              messages: [
+                { role: "system", content: systemInstruction },
+                { role: "user", content: `Positive prompt: "${prompt}"\n\nNegative prompts to exclude:` },
+              ],
+              max_tokens: 120,
+              temperature: 0.5,
+            }),
+            signal: AbortSignal.timeout(4000),
+          });
 
-        if (res.ok) {
-          const data = await res.json();
-          const aiNegatives = data.choices?.[0]?.message?.content?.trim();
-          if (aiNegatives && aiNegatives.length > 5) {
-            // Merge AI generated negatives with baseline safeguards
-            const combinedTokens = Array.from(
-              new Set([
-                ...aiNegatives.split(",").map((s: string) => s.trim().toLowerCase()),
-                ...baselineAnalysis.negativePrompt.split(",").map((s: string) => s.trim().toLowerCase()),
-              ])
-            ).filter(Boolean);
+          if (res.ok) {
+            const data = await res.json();
+            const aiNegatives = data.choices?.[0]?.message?.content?.trim();
+            if (aiNegatives && aiNegatives.length > 5) {
+              const combinedTokens = Array.from(
+                new Set([
+                  ...baselineAnalysis.negativePrompt.split(",").map((s: string) => s.trim().toLowerCase()),
+                  ...aiNegatives.split(",").map((s: string) => s.trim().toLowerCase()),
+                ])
+              ).filter(Boolean);
 
-            return NextResponse.json({
-              success: true,
-              negativePrompt: combinedTokens.join(", "),
-              detectedAesthetics: baselineAnalysis.detectedAesthetics,
-              explanation: `AI-Enriched via Mistral NeMo. Suppressed ${combinedTokens.length} contradictory styles.`,
-            });
+              return NextResponse.json({
+                success: true,
+                negativePrompt: combinedTokens.join(", "),
+                detectedAesthetics: baselineAnalysis.detectedAesthetics,
+                explanation: `AI-Enriched via Mistral AI (NSFW Primary). Suppressed ${combinedTokens.length} contradictory styles.`,
+              });
+            }
           }
+        } catch (mErr) {
+          console.warn("Mistral AI negative deduction fallback:", mErr);
         }
-      } catch (e) {
-        // Fall back gracefully to baseline analysis
+      }
+
+      const dolphinKey = (provider === "dolphin" && effectiveKey) ? effectiveKey : (process.env.DOLPHIN_API_KEY || "");
+      const dolphinBaseUrl = (process.env.DOLPHIN_BASE_URL || "https://api.dolphinllm.com/v1").replace(/\/+$/, "");
+      if (dolphinKey) {
+        try {
+          const res = await fetch(`${dolphinBaseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${dolphinKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "uncensored",
+              messages: [
+                { role: "system", content: systemInstruction },
+                { role: "user", content: `Positive prompt: "${prompt}"\n\nNegative prompts to exclude:` },
+              ],
+              max_tokens: 120,
+              temperature: 0.5,
+            }),
+            signal: AbortSignal.timeout(4000),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const aiNegatives = data.choices?.[0]?.message?.content?.trim();
+            if (aiNegatives && aiNegatives.length > 5) {
+              const combinedTokens = Array.from(
+                new Set([
+                  ...baselineAnalysis.negativePrompt.split(",").map((s: string) => s.trim().toLowerCase()),
+                  ...aiNegatives.split(",").map((s: string) => s.trim().toLowerCase()),
+                ])
+              ).filter(Boolean);
+
+              return NextResponse.json({
+                success: true,
+                negativePrompt: combinedTokens.join(", "),
+                detectedAesthetics: baselineAnalysis.detectedAesthetics,
+                explanation: `AI-Enriched via Dolphin LLM (NSFW Fallback). Suppressed ${combinedTokens.length} contradictory styles.`,
+              });
+            }
+          }
+        } catch (dErr) {
+          console.warn("Dolphin LLM negative deduction fallback:", dErr);
+        }
       }
     }
 
-    if (provider === "groq" && effectiveKey) {
-      try {
-        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${effectiveKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [
-              { role: "system", content: systemInstruction },
-              { role: "user", content: `Positive prompt: "${prompt}"\n\nNegative prompts to exclude:` },
-            ],
-            max_tokens: 120,
-            temperature: 0.5,
-          }),
-          signal: AbortSignal.timeout(4000),
-        });
+    // =========================================================================
+    // SFW MODE: PRIMARY GEMMA 4 31B IT (GOOGLE) -> FALLBACK GROQ / OPENROUTER
+    // =========================================================================
+    if (!nsfw_enabled) {
+      const geminiKey = (provider === "gemini" && effectiveKey) ? effectiveKey : (process.env.GEMINI_API_KEY || "");
+      if (geminiKey) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: `${systemInstruction}\n\nPositive prompt: "${prompt}"\n\nNegative prompts to exclude:`,
+                    },
+                  ],
+                },
+              ],
+            }),
+            signal: AbortSignal.timeout(4000),
+          });
 
-        if (res.ok) {
-          const data = await res.json();
-          const aiNegatives = data.choices?.[0]?.message?.content?.trim();
-          if (aiNegatives && aiNegatives.length > 5) {
-            const combinedTokens = Array.from(
-              new Set([
-                ...aiNegatives.split(",").map((s: string) => s.trim().toLowerCase()),
-                ...baselineAnalysis.negativePrompt.split(",").map((s: string) => s.trim().toLowerCase()),
-              ])
-            ).filter(Boolean);
+          if (res.ok) {
+            const data = await res.json();
+            const aiNegatives = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (aiNegatives && aiNegatives.length > 5) {
+              const combinedTokens = Array.from(
+                new Set([
+                  ...baselineAnalysis.negativePrompt.split(",").map((s: string) => s.trim().toLowerCase()),
+                  ...aiNegatives.split(",").map((s: string) => s.trim().toLowerCase()),
+                ])
+              ).filter(Boolean);
 
-            return NextResponse.json({
-              success: true,
-              negativePrompt: combinedTokens.join(", "),
-              detectedAesthetics: baselineAnalysis.detectedAesthetics,
-              explanation: `AI-Enriched via Groq LPU. Suppressed ${combinedTokens.length} contradictory styles.`,
-            });
+              return NextResponse.json({
+                success: true,
+                negativePrompt: combinedTokens.join(", "),
+                detectedAesthetics: baselineAnalysis.detectedAesthetics,
+                explanation: `AI-Enriched via Google AI Studio (SFW Primary). Suppressed ${combinedTokens.length} contradictory styles.`,
+              });
+            }
           }
+        } catch (gErr) {
+          console.warn("Google AI Studio negative deduction fallback:", gErr);
         }
-      } catch (e) {
-        // Fall back gracefully to baseline analysis
+      }
+
+      if (provider === "groq" && effectiveKey) {
+        try {
+          const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${effectiveKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "llama-3.3-70b-versatile",
+              messages: [
+                { role: "system", content: systemInstruction },
+                { role: "user", content: `Positive prompt: "${prompt}"\n\nNegative prompts to exclude:` },
+              ],
+              max_tokens: 120,
+              temperature: 0.5,
+            }),
+            signal: AbortSignal.timeout(4000),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const aiNegatives = data.choices?.[0]?.message?.content?.trim();
+            if (aiNegatives && aiNegatives.length > 5) {
+              const combinedTokens = Array.from(
+                new Set([
+                  ...baselineAnalysis.negativePrompt.split(",").map((s: string) => s.trim().toLowerCase()),
+                  ...aiNegatives.split(",").map((s: string) => s.trim().toLowerCase()),
+                ])
+              ).filter(Boolean);
+
+              return NextResponse.json({
+                success: true,
+                negativePrompt: combinedTokens.join(", "),
+                detectedAesthetics: baselineAnalysis.detectedAesthetics,
+                explanation: `AI-Enriched via Groq LPU (SFW Fallback). Suppressed ${combinedTokens.length} contradictory styles.`,
+              });
+            }
+          }
+        } catch (e) {}
       }
     }
 

@@ -51,13 +51,13 @@ export interface ProviderConfig {
 const PROVIDERS: ProviderConfig[] = [
   {
     id: "openrouter",
-    name: "OpenRouter API",
-    badge: "Unified Multi-Model Gateway",
+    name: "OpenRouter / OpenCode Gateway",
+    badge: "🌐 SFW FALLBACK (Gemma 4 31B IT) & FREE TIER",
     category: "Aggregator",
-    description: "Access Claude 3.5, DeepSeek R1, Qwen 2.5 72B, and 200+ models with universal OpenAI-compatible routing.",
+    description: "Universal gateway for Gemma 4 31B IT SFW fallback, DeepSeek R1 free reasoning, and 200+ models.",
     placeholder: "Paste OpenRouter API key...",
     docsUrl: "https://openrouter.ai/keys",
-    recommendedModels: ["anthropic/claude-3.5-sonnet", "deepseek/deepseek-r1", "qwen/qwen-2.5-72b-instruct"],
+    recommendedModels: ["google/gemma-4-31b-it", "deepseek/deepseek-r1:free", "meta-llama/llama-3.3-70b-instruct:free"],
     color: {
       accent: "from-purple-500 to-indigo-500",
       border: "border-purple-500/30",
@@ -67,13 +67,13 @@ const PROVIDERS: ProviderConfig[] = [
   },
   {
     id: "gemini",
-    name: "Google Gemini API",
-    badge: "Multimodal Vision & Fast Reasoning",
+    name: "Google AI Studio API",
+    badge: "🛡️ SFW PRIMARY (Gemma 4) & CODING (Gemini 3.8)",
     category: "Vision & Frontier",
-    description: "Frontier multimodal understanding for direct image analysis, captioning, and structured prompt engineering.",
-    placeholder: "Paste Google Gemini API key...",
+    description: "Primary default for SFW mode (Gemma 4 31B IT) and premier engine for Coding tasks (Gemini 3.8 / 2.5 Pro).",
+    placeholder: "Paste Google AI Studio / Gemini API key...",
     docsUrl: "https://aistudio.google.com/app/apikey",
-    recommendedModels: ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
+    recommendedModels: ["google/gemma-4-31b-it", "gemini-2.5-pro", "gemini-2.0-flash"],
     color: {
       accent: "from-blue-500 to-cyan-500",
       border: "border-cyan-500/30",
@@ -84,12 +84,12 @@ const PROVIDERS: ProviderConfig[] = [
   {
     id: "groq",
     name: "Groq LPU API",
-    badge: "Ultra-Fast Inference (500+ tok/s)",
+    badge: "⚡ REASONING FALLBACK • Llama 3.3 70B (Free Tier)",
     category: "LPU Inference",
-    description: "Low-latency inference engine powered by Language Processing Units (LPU) for instant prompt expansion.",
+    description: "Ultra-fast 500+ tok/s free-tier fallback for reasoning tasks and instant prompt expansion.",
     placeholder: "Paste Groq LPU API key...",
     docsUrl: "https://console.groq.com/keys",
-    recommendedModels: ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "llama-3.1-8b-instant"],
+    recommendedModels: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
     color: {
       accent: "from-amber-500 to-orange-500",
       border: "border-orange-500/30",
@@ -99,13 +99,14 @@ const PROVIDERS: ProviderConfig[] = [
   },
   {
     id: "nvidia",
-    name: "NVIDIA NIM API",
-    badge: "Enterprise GPU Acceleration",
+    name: "NVIDIA NIM Platform API",
+    badge: "⚡ REASONING (DeepSeek v4.1) & CODING FALLBACK (Nemotron)",
     category: "Enterprise NIM",
-    description: "Microservices accelerated on NVIDIA DGX Cloud for cutting-edge vision, Nemotron, and Llama 3.",
+    description: "Primary reasoning model (DeepSeek v4.1 Flash / R1) and coding fallback (Nemotron 3 Super Free / Ultra) on NVIDIA DGX Cloud.",
     placeholder: "Paste NVIDIA NIM API key...",
+    defaultEndpoint: "https://integrate.api.nvidia.com/v1",
     docsUrl: "https://build.nvidia.com/",
-    recommendedModels: ["meta/llama-3.1-70b-instruct", "nvidia/nemotron-4-340b-instruct"],
+    recommendedModels: ["deepseek-ai/deepseek-r1", "nvidia/llama-3.1-nemotron-70b-instruct", "nvidia/nemotron-4-340b-instruct"],
     color: {
       accent: "from-emerald-500 to-green-500",
       border: "border-emerald-500/30",
@@ -148,13 +149,13 @@ const PROVIDERS: ProviderConfig[] = [
   },
   {
     id: "mistral",
-    name: "Mistral AI API",
-    badge: "Free Tier • NeMo, Pixtral & Codestral",
+    name: "Mistral AI Platform API",
+    badge: "🔞 NSFW PRIMARY DEFAULT • Mistral Platform",
     category: "Vision & Frontier",
-    description: "Advanced reasoning and visual processing with Mistral NeMo, Pixtral 12B Vision, Codestral, and Mistral Tiny.",
+    description: "Primary default AI engine for NSFW mode. Deals with Edit Prompt, Sentinel Copilot, Brain-Storm, Prompt Enhance, Inspire, and Auto-Negative.",
     placeholder: "Paste Mistral API key...",
     docsUrl: "https://console.mistral.ai/api-keys/",
-    recommendedModels: ["open-mistral-nemo", "pixtral-12b-2409", "codestral-latest", "mistral-tiny"],
+    recommendedModels: ["open-mistral-nemo", "mistral-large-latest", "pixtral-12b-2409", "codestral-latest"],
     color: {
       accent: "from-amber-400 to-yellow-500",
       border: "border-yellow-500/30",
@@ -165,9 +166,9 @@ const PROVIDERS: ProviderConfig[] = [
   {
     id: "dolphin",
     name: "Dolphin LLM (Uncensored)",
-    badge: "🐬 Uncensored Vision & Prompt Director",
+    badge: "🐬 NSFW FALLBACK • Dolphin AI Platform",
     category: "Vision & Frontier",
-    description: "OpenAI-compatible uncensored intelligence model for creative prompt expansion and unfiltered artistic phrasing.",
+    description: "Automatic fallback for NSFW mode. Provides uncensored creative prompt expansion and unfiltered scene phrasing.",
     placeholder: "Paste Dolphin LLM API key...",
     defaultEndpoint: "https://api.dolphinllm.com/v1",
     docsUrl: "https://dolphinllm.com/get-api-key/",
@@ -237,6 +238,7 @@ interface SentinelProps {
   onApplyPreset?: (presetName: string, stylePrompt: string, negativePrompt?: string) => void;
   onFuseLoras?: (loraNames: string[]) => void;
   defaultTab?: "copilot" | "vault";
+  isNsfwMode?: boolean;
 }
 
 export default function SentinelAiGateway({
@@ -247,6 +249,7 @@ export default function SentinelAiGateway({
   onApplyPreset,
   onFuseLoras,
   defaultTab = "copilot",
+  isNsfwMode = false,
 }: SentinelProps) {
   const [activeSubTab, setActiveSubTab] = useState<"copilot" | "vault">(defaultTab);
   // Vault state populated directly from Vercel Project Environment variables
@@ -607,6 +610,7 @@ export default function SentinelAiGateway({
       {activeSubTab === "copilot" ? (
         <SentinelChatCopilot
           canvasImage={canvasImage}
+          isNsfwMode={isNsfwMode}
           onUsePrompt={onUsePrompt}
           onApplySettings={onApplySettings}
           onApplyPreset={onApplyPreset}

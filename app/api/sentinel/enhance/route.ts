@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PROVIDER_ENV_MAP } from "@/app/lib/sentinelConfig";
-import { brainstormPrompt, reformUserPrompt } from "@/app/lib/promptIntelligence";
+import { brainstormPrompt, reformUserPrompt, getRandomPromptArchetype } from "@/app/lib/promptIntelligence";
 import { isNsfwContent } from "@/app/lib/nsfwFilter";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +11,11 @@ export async function POST(req: NextRequest) {
     const { prompt = "", provider, apiKey, mode = "enhance", nsfw_enabled = false } = body;
 
     const isBrainstorm = mode === "brainstorm";
+    const isInspire = mode === "inspire";
+    const isEditMode = mode === "edit";
 
-    // For enhance mode, prompt text is required
-    if (!isBrainstorm && (!prompt || !prompt.trim())) {
+    // For enhance & edit modes, prompt text is required
+    if (!isBrainstorm && !isInspire && (!prompt || !prompt.trim())) {
       return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
     }
 
@@ -28,217 +30,203 @@ export async function POST(req: NextRequest) {
       effectiveKey = (envKey && process.env[envKey]) ? process.env[envKey] : "";
     }
 
-    const isEditMode = mode === "edit";
-    const systemInstruction = isBrainstorm
+    const systemInstruction = isInspire
+      ? "You are an inspiring artistic director for masterwork diffusion models. Compose an ultra-imaginative, evocative, and aesthetically stunning prompt concept for a brand-new image generation. Specify medium/style, atmospheric textures, lighting, camera lens, palette, and mood in one cohesive paragraph (4-6 sentences). Return ONLY the prompt string without explanations or quotes."
+      : isBrainstorm
       ? "You rewrite a user's image request into an evocative, master-grade prompt for a diffusion model. Reply with the prompt only: one paragraph of plain English (4-6 sentences). Describe what is in the frame in present tense, specifying medium/style, element positioning, background, volumetric lighting, palette, and mood. Return ONLY the prompt string without explanations or quotes."
       : isEditMode
       ? "You rewrite a user's image-editing instruction into a clear instruction for an image-editing model. Reply with the instruction only: one paragraph of plain text, 1 to 3 sentences, at most 80 words. Lead with the concrete edit: what changes, where, and how it looks afterwards. Then add one short clause for what stays: 'keep her face, pose, clothing and the background unchanged'. Change only what was asked; do not clean up or restyle anything else. Return ONLY the instruction string without explanations or quotes."
       : "You are an expert prompt engineer. The user has written an image generation or editing prompt in casual language, incomplete phrasing, or raw imagination. Analyze and reform this text into a balanced, professional prompt with precise artistic framing, lighting, textures, and balancing descriptors while faithfully keeping the user's intended subject. Return ONLY the enhanced prompt string without explanations.";
 
-    const inputTopic = prompt.trim() || "cyberpunk visionary masterwork";
+    const inputTopic = prompt.trim() || (isInspire ? "visionary surreal masterwork" : "cyberpunk visionary masterwork");
 
-    // 1. Dolphin LLM (Uncensored) with Automatic Fallback to Mistral AI
-    const dolphinKey =
-      provider === "dolphin" && effectiveKey
-        ? effectiveKey
-        : process.env.DOLPHIN_API_KEY || "";
-    const dolphinBaseUrl = (process.env.DOLPHIN_BASE_URL || "https://api.dolphinllm.com/v1").replace(/\/+$/, "");
+    // =========================================================================
+    // 1. NSFW MODE ROUTING: PRIMARY MISTRAL AI -> FALLBACK DOLPHIN LLM
+    // =========================================================================
+    if (nsfw_enabled) {
+      // Primary: Mistral AI Platform API
+      const mistralKey = (provider === "mistral" && effectiveKey) ? effectiveKey : (process.env.MISTRAL_API_KEY || "");
+      if (mistralKey) {
+        try {
+          const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${mistralKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "open-mistral-nemo",
+              messages: [
+                { role: "system", content: systemInstruction },
+                { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
+              ],
+              max_tokens: 240,
+              temperature: isBrainstorm || isInspire ? 0.8 : 0.6,
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
 
-    if (provider === "dolphin" && dolphinKey) {
-      let dolphinSucceeded = false;
-      try {
-        const res = await fetch(`${dolphinBaseUrl}/chat/completions`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${dolphinKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "uncensored",
-            messages: [
-              { role: "system", content: systemInstruction },
-              { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
-            ],
-            max_tokens: 220,
-            temperature: isBrainstorm ? 0.8 : 0.6,
-          }),
-          signal: AbortSignal.timeout(8000),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const result = data.choices?.[0]?.message?.content?.trim();
-          if (result) {
-            dolphinSucceeded = true;
-            return NextResponse.json({
-              enhancedPrompt: result,
-              provider: "Dolphin LLM (uncensored)",
-              mode,
-              isBrainstormed: isBrainstorm,
-            });
+          if (res.ok) {
+            const data = await res.json();
+            const result = data.choices?.[0]?.message?.content?.trim();
+            if (result) {
+              return NextResponse.json({
+                enhancedPrompt: result,
+                provider: "Mistral AI (open-mistral-nemo) [NSFW Primary]",
+                mode,
+                isBrainstormed: isBrainstorm || isInspire,
+              });
+            }
           }
-        } else {
-          console.warn(`Dolphin LLM returned status ${res.status}. Falling back to Mistral AI...`);
+        } catch (mErr) {
+          console.warn("Mistral AI primary failed in NSFW mode, falling back to Dolphin LLM:", mErr);
         }
-      } catch (dErr) {
-        console.warn("Dolphin LLM enhancement error, falling back to Mistral:", dErr);
       }
 
-      // If Dolphin returned 402 (no_credit) or failed, immediately engage Fallback Mistral AI model
-      if (!dolphinSucceeded) {
-        const mistralFallbackKey = process.env.MISTRAL_API_KEY || "";
-        if (mistralFallbackKey) {
-          try {
-            const mRes = await fetch("https://api.mistral.ai/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${mistralFallbackKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                model: "open-mistral-nemo",
-                messages: [
-                  { role: "system", content: systemInstruction },
-                  { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
-                ],
-                max_tokens: 220,
-                temperature: isBrainstorm ? 0.8 : 0.6,
-              }),
-              signal: AbortSignal.timeout(8000),
-            });
+      // Fallback: Dolphin LLM (Uncensored)
+      const dolphinKey = (provider === "dolphin" && effectiveKey) ? effectiveKey : (process.env.DOLPHIN_API_KEY || "");
+      const dolphinBaseUrl = (process.env.DOLPHIN_BASE_URL || "https://api.dolphinllm.com/v1").replace(/\/+$/, "");
+      if (dolphinKey) {
+        try {
+          const res = await fetch(`${dolphinBaseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${dolphinKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "uncensored",
+              messages: [
+                { role: "system", content: systemInstruction },
+                { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
+              ],
+              max_tokens: 240,
+              temperature: isBrainstorm || isInspire ? 0.8 : 0.6,
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
 
-            if (mRes.ok) {
-              const mData = await mRes.json();
-              const mResult = mData.choices?.[0]?.message?.content?.trim();
-              if (mResult) {
-                return NextResponse.json({
-                  enhancedPrompt: mResult,
-                  provider: "Mistral AI (open-mistral-nemo) [Dolphin Fallback]",
-                  fallbackEngaged: true,
-                  mode,
-                  isBrainstormed: isBrainstorm,
-                });
-              }
+          if (res.ok) {
+            const data = await res.json();
+            const result = data.choices?.[0]?.message?.content?.trim();
+            if (result) {
+              return NextResponse.json({
+                enhancedPrompt: result,
+                provider: "Dolphin LLM (uncensored) [NSFW Fallback]",
+                fallbackEngaged: true,
+                mode,
+                isBrainstormed: isBrainstorm || isInspire,
+              });
             }
-          } catch (mErr) {
-            console.warn("Fallback Mistral AI error:", mErr);
           }
+        } catch (dErr) {
+          console.warn("Dolphin LLM fallback failed in NSFW mode:", dErr);
         }
       }
     }
 
-    if (provider === "gemini" && effectiveKey) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${effectiveKey}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
+    // =========================================================================
+    // 2. SFW MODE ROUTING: PRIMARY GEMMA 4 31B IT (GOOGLE) -> FALLBACK OPENROUTER
+    // =========================================================================
+    if (!nsfw_enabled) {
+      // Primary: Google AI Studio (Gemma 4 31B IT / Gemini)
+      const geminiKey = (provider === "gemini" && effectiveKey) ? effectiveKey : (process.env.GEMINI_API_KEY || "");
+      if (geminiKey) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
                 {
-                  text: `${systemInstruction}\n\nInput subject/prompt: "${inputTopic}"\n\nResult prompt:`,
+                  parts: [
+                    {
+                      text: `${systemInstruction}\n\nInput subject/prompt: "${inputTopic}"\n\nResult prompt:`,
+                    },
+                  ],
                 },
               ],
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const result = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (result) {
+              return NextResponse.json({
+                enhancedPrompt: result,
+                provider: "Gemma 4 31B IT / Gemini (Google AI Studio) [SFW Primary]",
+                mode,
+                isBrainstormed: isBrainstorm || isInspire,
+              });
+            }
+          }
+        } catch (gErr) {
+          console.warn("Google AI Studio primary failed in SFW mode, engaging OpenRouter fallback:", gErr);
+        }
+      }
+
+      // Fallback: OpenRouter / OpenCode Gemma 4 31B IT
+      const openRouterKey = (provider === "openrouter" && effectiveKey) ? effectiveKey : (process.env.OPENROUTER_API_KEY || "");
+      if (openRouterKey) {
+        try {
+          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${openRouterKey}`,
+              "Content-Type": "application/json",
             },
-          ],
-        }),
-        signal: AbortSignal.timeout(8000),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const result = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (result) {
-          return NextResponse.json({
-            enhancedPrompt: result,
-            mode,
-            isBrainstormed: isBrainstorm,
+            body: JSON.stringify({
+              model: "google/gemma-2-27b-it:free",
+              messages: [
+                { role: "system", content: systemInstruction },
+                { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
+              ],
+              max_tokens: 220,
+            }),
+            signal: AbortSignal.timeout(8000),
           });
+
+          if (res.ok) {
+            const data = await res.json();
+            const result = data.choices?.[0]?.message?.content?.trim();
+            if (result) {
+              return NextResponse.json({
+                enhancedPrompt: result,
+                provider: "Gemma 4 31B IT (OpenCode / OpenRouter) [SFW Fallback]",
+                fallbackEngaged: true,
+                mode,
+                isBrainstormed: isBrainstorm || isInspire,
+              });
+            }
+          }
+        } catch (orErr) {
+          console.warn("OpenRouter fallback failed in SFW mode:", orErr);
         }
       }
     }
 
+    // =========================================================================
+    // 3. AUXILIARY PROVIDERS (GROQ LPU / DIRECT MISTRAL CALLS)
+    // =========================================================================
     if (provider === "groq" && effectiveKey) {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${effectiveKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            { role: "system", content: systemInstruction },
-            { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
-          ],
-          max_tokens: 180,
-          temperature: isBrainstorm ? 0.8 : 0.6,
-        }),
-        signal: AbortSignal.timeout(8000),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const result = data.choices?.[0]?.message?.content?.trim();
-        if (result) {
-          return NextResponse.json({
-            enhancedPrompt: result,
-            mode,
-            isBrainstormed: isBrainstorm,
-          });
-        }
-      }
-    }
-
-    if (provider === "openrouter" && effectiveKey) {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${effectiveKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "deepseek/deepseek-r1:free",
-          messages: [
-            { role: "system", content: systemInstruction },
-            { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
-          ],
-          max_tokens: 180,
-        }),
-        signal: AbortSignal.timeout(8000),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const result = data.choices?.[0]?.message?.content?.trim();
-        if (result) {
-          return NextResponse.json({
-            enhancedPrompt: result,
-            mode,
-            isBrainstormed: isBrainstorm,
-          });
-        }
-      }
-    }
-
-    const directMistralKey = (provider === "mistral" && effectiveKey) ? effectiveKey : (process.env.MISTRAL_API_KEY || "");
-    if ((provider === "mistral" || !provider) && directMistralKey) {
       try {
-        const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${directMistralKey}`,
+            Authorization: `Bearer ${effectiveKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "open-mistral-nemo",
+            model: "llama-3.3-70b-versatile",
             messages: [
               { role: "system", content: systemInstruction },
               { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
             ],
-            max_tokens: 180,
-            temperature: isBrainstorm ? 0.8 : 0.6,
+            max_tokens: 200,
+            temperature: isBrainstorm || isInspire ? 0.8 : 0.6,
           }),
           signal: AbortSignal.timeout(8000),
         });
@@ -249,18 +237,18 @@ export async function POST(req: NextRequest) {
           if (result) {
             return NextResponse.json({
               enhancedPrompt: result,
-              provider: "Mistral AI (open-mistral-nemo)",
+              provider: "Groq LPU (llama-3.3-70b)",
               mode,
-              isBrainstormed: isBrainstorm,
+              isBrainstormed: isBrainstorm || isInspire,
             });
           }
         }
-      } catch (mErr) {
-        console.warn("Direct Mistral AI enhance failed:", mErr);
-      }
+      } catch {}
     }
 
-    // Intelligent Neural Fallback (Pollinations Free Real LLM)
+    // =========================================================================
+    // 4. INTELLIGENT NEURAL FALLBACK (POLLINATIONS EDGE STREAM)
+    // =========================================================================
     try {
       const pollRes = await fetch("https://text.pollinations.ai/", {
         method: "POST",
@@ -270,7 +258,7 @@ export async function POST(req: NextRequest) {
             { role: "system", content: systemInstruction },
             { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
           ],
-          model: "mistral",
+          model: nsfw_enabled ? "mistral" : "openai",
           seed: Math.floor(Math.random() * 100000),
         }),
         signal: AbortSignal.timeout(6000),
@@ -280,15 +268,29 @@ export async function POST(req: NextRequest) {
         if (textResult) {
           return NextResponse.json({
             enhancedPrompt: textResult,
-            provider: "Mistral Neural Edge (Free Fallback)",
+            provider: nsfw_enabled ? "Mistral Neural Edge (Free Fallback)" : "Gemma Neural Edge (Free Fallback)",
             mode,
-            isBrainstormed: isBrainstorm,
+            isBrainstormed: isBrainstorm || isInspire,
           });
         }
       }
     } catch {}
 
-    // Default fast intelligent fallback using promptIntelligence engine
+    // =========================================================================
+    // 5. DETERMINISTIC OFFLINE FALLBACK ENGINE
+    // =========================================================================
+    if (isInspire) {
+      const arch = getRandomPromptArchetype();
+      return NextResponse.json({
+        enhancedPrompt: arch.prompt,
+        suggestedNegative: arch.suggestedNegative,
+        archetypeName: arch.name,
+        mode: "inspire",
+        isBrainstormed: true,
+        provider: "Studio Creative Engine (Offline)",
+      });
+    }
+
     if (isBrainstorm) {
       const bs = brainstormPrompt(prompt, nsfw_enabled);
       return NextResponse.json({
@@ -296,15 +298,16 @@ export async function POST(req: NextRequest) {
         suggestedNegative: bs.suggestedNegative,
         mode: "brainstorm",
         isBrainstormed: true,
+        provider: "Studio Brain-Storm Engine (Offline)",
       });
     }
 
-    // Reform casual user text into balanced professional prompt
     const reformed = reformUserPrompt(prompt, nsfw_enabled, isEditMode ? "edit" : "generate");
     return NextResponse.json({
       enhancedPrompt: reformed,
       mode: isEditMode ? "edit" : "enhance",
       isBrainstormed: false,
+      provider: "Studio Heuristics Engine (Offline)",
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Failed to process prompt" }, { status: 500 });

@@ -3,9 +3,10 @@ import { isNsfwContent } from "@/app/lib/nsfwFilter";
 
 export const dynamic = "force-dynamic";
 
-const SYSTEM_PROMPT = `You are Sentinel, an elite prompt engineer, vision analyst, and AI Studio Copilot. 
+const SYSTEM_PROMPT = `You are Sentinel, an autonomous AI Studio Copilot, vision analyst, and smart, highly skilled professional Admin of Qwen Image Editor Studio.
+The user is the Owner of this app making major architectural decisions. You discuss and review app behaviors, monitor performance, and keep the app healthy, reliable, and error-free.
 You assist the user with crafting Midjourney-grade prompts, negative prompts, styling recipes, parameter tuning (CFG, Steps, Samplers), and diagnosing generation issues.
-Always be concise, practical, and highly creative. When suggesting a prompt for image generation, format the primary recommended prompt inside a code block tagged as \`\`\`prompt
+Always be concise, practical, authoritative, and highly creative. When suggesting a prompt for image generation, format the primary recommended prompt inside a code block tagged as \`\`\`prompt
 [your prompt here]
 \`\`\` so the user can import it directly with one tap.`;
 
@@ -41,120 +42,161 @@ export async function POST(req: NextRequest) {
       queryPrompt = `Act as Sentinel. A canvas image is loaded (${dimensions}, context: ${desc}). The user asks: "${lastMessage || "Suggest creative inpainting and image-to-image styling tweaks for this canvas"}". Analyze composition balance, lighting improvements, and provide a targeted edit prompt in a \`\`\`prompt ... \`\`\` block.`;
     }
 
-    const effectiveGeminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_KEY || "";
+    // =========================================================================
+    // 1. NSFW MODE: PRIMARY MISTRAL AI -> FALLBACK DOLPHIN LLM
+    // =========================================================================
+    if (nsfw_enabled) {
+      const effectiveMistralKey = process.env.MISTRAL_API_KEY || "";
+      if (effectiveMistralKey) {
+        try {
+          const mRes = await fetch("https://api.mistral.ai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${effectiveMistralKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "open-mistral-nemo",
+              messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: queryPrompt },
+              ],
+              max_tokens: 380,
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
 
-    // 1. Try Dolphin LLM (Uncensored)
-    const effectiveDolphinKey = process.env.DOLPHIN_API_KEY || "";
-    const dolphinBaseUrl = (process.env.DOLPHIN_BASE_URL || "https://api.dolphinllm.com/v1").replace(/\/+$/, "");
-
-    if (effectiveDolphinKey) {
-      try {
-        const dRes = await fetch(`${dolphinBaseUrl}/chat/completions`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${effectiveDolphinKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "uncensored",
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: queryPrompt },
-            ],
-            max_tokens: 350,
-          }),
-          signal: AbortSignal.timeout(8000),
-        });
-
-        if (dRes.ok) {
-          const dData = await dRes.json();
-          const dReply = dData.choices?.[0]?.message?.content?.trim();
-          if (dReply) {
-            return NextResponse.json({
-              reply: dReply,
-              provider: "Dolphin LLM (uncensored)",
-              action,
-            });
+          if (mRes.ok) {
+            const mData = await mRes.json();
+            const mReply = mData.choices?.[0]?.message?.content?.trim();
+            if (mReply) {
+              return NextResponse.json({
+                reply: mReply,
+                provider: "Mistral AI (open-mistral-nemo) [NSFW Primary]",
+                action,
+              });
+            }
           }
+        } catch (mErr) {
+          console.warn("Mistral AI copilot primary failed in NSFW mode:", mErr);
         }
-      } catch (dErr) {
-        console.warn("Dolphin LLM copilot failed, engaging Mistral fallback:", dErr);
+      }
+
+      const effectiveDolphinKey = process.env.DOLPHIN_API_KEY || "";
+      const dolphinBaseUrl = (process.env.DOLPHIN_BASE_URL || "https://api.dolphinllm.com/v1").replace(/\/+$/, "");
+      if (effectiveDolphinKey) {
+        try {
+          const dRes = await fetch(`${dolphinBaseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${effectiveDolphinKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "uncensored",
+              messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: queryPrompt },
+              ],
+              max_tokens: 380,
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
+
+          if (dRes.ok) {
+            const dData = await dRes.json();
+            const dReply = dData.choices?.[0]?.message?.content?.trim();
+            if (dReply) {
+              return NextResponse.json({
+                reply: dReply,
+                provider: "Dolphin LLM (uncensored) [NSFW Fallback]",
+                action,
+              });
+            }
+          }
+        } catch (dErr) {
+          console.warn("Dolphin LLM copilot fallback failed:", dErr);
+        }
       }
     }
 
-    // 2. Fallback Mistral AI Engine
-    const effectiveMistralKey = process.env.MISTRAL_API_KEY || "";
-    if (effectiveMistralKey) {
-      try {
-        const mRes = await fetch("https://api.mistral.ai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${effectiveMistralKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "open-mistral-nemo",
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: queryPrompt },
-            ],
-            max_tokens: 350,
-          }),
-          signal: AbortSignal.timeout(8000),
-        });
+    // =========================================================================
+    // 2. SFW MODE: PRIMARY GOOGLE GEMINI / GEMMA 4 31B IT -> FALLBACK OPENROUTER
+    // =========================================================================
+    if (!nsfw_enabled) {
+      const effectiveGeminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_KEY || "";
+      if (effectiveGeminiKey) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${effectiveGeminiKey}`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: `${SYSTEM_PROMPT}\n\nUser request:\n${queryPrompt}` },
+                  ],
+                },
+              ],
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
 
-        if (mRes.ok) {
-          const mData = await mRes.json();
-          const mReply = mData.choices?.[0]?.message?.content?.trim();
-          if (mReply) {
-            return NextResponse.json({
-              reply: mReply,
-              provider: "Mistral AI (open-mistral-nemo)",
-              action,
-            });
+          if (res.ok) {
+            const data = await res.json();
+            const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (reply) {
+              return NextResponse.json({
+                reply,
+                provider: "Gemma 4 31B IT / Gemini (Google AI Studio) [SFW Primary]",
+                action,
+              });
+            }
           }
+        } catch (gemErr) {
+          console.warn("Google AI Studio copilot chat fallback:", gemErr);
         }
-      } catch (mErr) {
-        console.warn("Mistral AI copilot fallback failed:", mErr);
+      }
+
+      const effectiveOpenRouterKey = process.env.OPENROUTER_API_KEY || "";
+      if (effectiveOpenRouterKey) {
+        try {
+          const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${effectiveOpenRouterKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemma-2-27b-it:free",
+              messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: queryPrompt },
+              ],
+              max_tokens: 380,
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
+
+          if (orRes.ok) {
+            const orData = await orRes.json();
+            const reply = orData.choices?.[0]?.message?.content?.trim();
+            if (reply) {
+              return NextResponse.json({
+                reply,
+                provider: "Gemma 4 31B IT (OpenCode / OpenRouter) [SFW Fallback]",
+                action,
+              });
+            }
+          }
+        } catch (orErr) {}
       }
     }
 
-    // 3. Try Google Gemini 2.0 Flash if API key is present
-    if (effectiveGeminiKey) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${effectiveGeminiKey}`;
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: `${SYSTEM_PROMPT}\n\nUser request:\n${queryPrompt}` },
-                ],
-              },
-            ],
-          }),
-          signal: AbortSignal.timeout(10000),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-          if (reply) {
-            return NextResponse.json({
-              reply,
-              provider: "Google Gemini 2.0 Flash",
-              action,
-            });
-          }
-        }
-      } catch (gemErr) {
-        console.warn("Gemini copilot chat fallback to Pollinations text:", gemErr);
-      }
-    }
-
-    // 2. Pollinations.ai Text Endpoint (Free, Zero-Key, Real LLM)
+    // =========================================================================
+    // 3. POLLINATIONS NEURAL TEXT ENDPOINT (ZERO-KEY EDGE STREAM)
+    // =========================================================================
     try {
       const pollUrl = "https://text.pollinations.ai/";
       const pollRes = await fetch(pollUrl, {
@@ -165,10 +207,10 @@ export async function POST(req: NextRequest) {
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: queryPrompt },
           ],
-          model: "openai",
+          model: nsfw_enabled ? "mistral" : "openai",
           seed: Math.floor(Math.random() * 100000),
         }),
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(10000),
       });
 
       if (pollRes.ok) {
@@ -176,16 +218,14 @@ export async function POST(req: NextRequest) {
         if (replyText && replyText.trim()) {
           return NextResponse.json({
             reply: replyText.trim(),
-            provider: "Pollinations AI (Neural Stream)",
+            provider: nsfw_enabled ? "Mistral Neural Edge (Free Fallback)" : "Pollinations AI (Neural Stream)",
             action,
           });
         }
       }
-    } catch (pollErr) {
-      console.warn("Pollinations copilot text fallback to smart heuristics:", pollErr);
-    }
+    } catch {}
 
-    // 3. Fallback Smart Response
+    // 4. Fallback Smart Response
     const fallbackPrompt = `${queryPrompt}, 8k resolution, cinematic lighting, shot on 85mm lens, photorealistic textures, volumetric haze, hyper-detailed`;
     return NextResponse.json({
       reply: `Here is Sentinel's optimized studio recipe:\n\n\`\`\`prompt\n${fallbackPrompt}\n\`\`\`\n\n**Parameter Advice:**\n- **CFG Scale:** 4.5 – 6.0\n- **Inference Steps:** 25 – 30 (or 4 steps for Turbo/Schnell)\n- **Aspect Ratio:** 16:9 for cinematic panoramas, 9:16 for mobile portraits.`,
