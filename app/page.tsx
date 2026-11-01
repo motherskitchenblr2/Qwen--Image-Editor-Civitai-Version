@@ -43,6 +43,7 @@ import ImagePreviewModal, { PreviewMediaData } from "./components/ImagePreviewMo
 import NeonGlowEyeIcon from "./components/NeonGlowEyeIcon";
 import CivitaiLoraHub from "./components/CivitaiLoraHub";
 import SentinelAiGateway from "./components/SentinelAiGateway";
+import SentinelAgentModal from "./components/SentinelAgentModal";
 import AiGeneratorHub from "./components/AiGeneratorHub";
 import LiveAiModelSelector from "./components/LiveAiModelSelector";
 import PromptActionButtons from "./components/PromptActionButtons";
@@ -108,6 +109,7 @@ export default function ImageEditorStudio() {
   const [isFusingLora, setIsFusingLora] = useState<boolean>(false);
   const [fusedStatusMessage, setFusedStatusMessage] = useState<string>("");
   const [isLoraModalOpen, setIsLoraModalOpen] = useState<boolean>(false);
+  const [isSentinelModalOpen, setIsSentinelModalOpen] = useState<boolean>(false);
   const [inpaintMask, setInpaintMask] = useState<string | null>(null);
 
   // Quick Downloader states
@@ -1011,6 +1013,55 @@ export default function ImageEditorStudio() {
     }
   };
 
+  const handleApplyCopilotPrompt = (refinedPrompt: string, negPrompt?: string) => {
+    setPrompt(refinedPrompt);
+    if (negPrompt) setNegativePrompt(negPrompt);
+    showToast("✨ Applied refined prompt to Studio workstation!", "success");
+  };
+
+  const handleApplyCopilotSettings = (settings: {
+    steps: number;
+    cfgScale: number;
+    aspectRatio: "1:1" | "9:16" | "16:9" | "4:5" | "3:2";
+  }) => {
+    setSteps(settings.steps);
+    setGuidanceScale(settings.cfgScale);
+    setTrueCfgScale(settings.cfgScale);
+    showToast(`⚙️ Tuned Studio parameters (Steps: ${settings.steps}, CFG: ${settings.cfgScale}, Ratio: ${settings.aspectRatio})`, "success");
+  };
+
+  const handleApplyCopilotPreset = (presetName: string, stylePrompt: string, negPrompt?: string) => {
+    setPrompt((prev) => `${prev ? prev + ", " : ""}${stylePrompt}`);
+    if (negPrompt) {
+      setNegativePrompt((prev) => `${prev ? prev + ", " : ""}${negPrompt}`);
+    }
+    showToast(`🎨 Applied visual preset: ${presetName}`, "success");
+  };
+
+  const handleApplyCopilotFuseLoras = (loraNames: string[]) => {
+    const matched = availableLoras.filter((l) =>
+      loraNames.some(
+        (n) =>
+          l.name.toLowerCase().includes(n.toLowerCase()) ||
+          l.filename.toLowerCase().includes(n.toLowerCase())
+      )
+    );
+    if (matched.length > 0) {
+      const selected = matched.slice(0, 3).map((m) => ({
+        name: m.name,
+        scale: 0.8,
+        filename: m.filename,
+        downloadUrl: m.downloadUrl,
+        googleDriveId: m.googleDriveId,
+      }));
+      setActiveLoras(selected);
+      handleFuseLora(selected);
+      showToast(`📦 Staged & fusing ${selected.length} LoRA(s) into GPU storage!`, "success");
+    } else {
+      showToast(`⚠️ No cached LoRAs found matching [${loraNames.join(", ")}]. Check Civitai Hub.`, "info");
+    }
+  };
+
   const handleQuickDownloadLora = async () => {
     if (!civitaiUrl || !backendUrl || !isConnected) return;
     setIsDownloadingLora(true);
@@ -1905,11 +1956,10 @@ export default function ImageEditorStudio() {
           <div className="w-full pb-28 lg:pb-8">
             <SentinelAiGateway
               canvasImage={originalImage || editedImage}
-              onUsePrompt={(refinedPrompt: string) => {
-                setPrompt(refinedPrompt);
-                setActiveTab("studio");
-                showToast("✨ Applied refined prompt to Studio!", "success");
-              }}
+              onUsePrompt={handleApplyCopilotPrompt}
+              onApplySettings={handleApplyCopilotSettings}
+              onApplyPreset={handleApplyCopilotPreset}
+              onFuseLoras={handleApplyCopilotFuseLoras}
             />
           </div>
         ) : (
@@ -1942,6 +1992,7 @@ export default function ImageEditorStudio() {
                 setActiveLoras={setActiveLoras}
                 availableLoras={availableLoras}
                 onOpenLoraModal={() => setIsLoraModalOpen(true)}
+                onOpenSentinelModal={() => setIsSentinelModalOpen(true)}
                 handleFuseLora={handleFuseLora}
                 handleUnloadLoras={handleUnloadLoras}
                 isFusingLora={isFusingLora}
@@ -2038,6 +2089,19 @@ export default function ImageEditorStudio() {
           setIsLoraModalOpen(false);
           setActiveTab("loras");
         }}
+      />
+
+      {/* ── Autonomous Sentinel Agentic Copilot Workspace Modal ── */}
+      <SentinelAgentModal
+        isOpen={isSentinelModalOpen}
+        onClose={() => setIsSentinelModalOpen(false)}
+        canvasImage={originalImage || editedImage}
+        activePrompt={prompt}
+        onApplyPrompt={handleApplyCopilotPrompt}
+        onApplySettings={handleApplyCopilotSettings}
+        onApplyPreset={handleApplyCopilotPreset}
+        onFuseLoras={handleApplyCopilotFuseLoras}
+        showToast={showToast}
       />
 
       {/* ── Agentic AI Health Guardian Floating Modal & Doctor ── */}

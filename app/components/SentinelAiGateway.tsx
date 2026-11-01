@@ -232,7 +232,10 @@ const PROVIDERS: ProviderConfig[] = [
 interface SentinelProps {
   onCopilotProviderChange?: (providerId: string) => void;
   canvasImage?: string | null;
-  onUsePrompt?: (prompt: string) => void;
+  onUsePrompt?: (prompt: string, negativePrompt?: string) => void;
+  onApplySettings?: (settings: { steps: number; cfgScale: number; aspectRatio: "1:1" | "9:16" | "16:9" | "4:5" | "3:2" }) => void;
+  onApplyPreset?: (presetName: string, stylePrompt: string, negativePrompt?: string) => void;
+  onFuseLoras?: (loraNames: string[]) => void;
   defaultTab?: "copilot" | "vault";
 }
 
@@ -240,6 +243,9 @@ export default function SentinelAiGateway({
   onCopilotProviderChange,
   canvasImage,
   onUsePrompt,
+  onApplySettings,
+  onApplyPreset,
+  onFuseLoras,
   defaultTab = "copilot",
 }: SentinelProps) {
   const [activeSubTab, setActiveSubTab] = useState<"copilot" | "vault">(defaultTab);
@@ -602,6 +608,9 @@ export default function SentinelAiGateway({
         <SentinelChatCopilot
           canvasImage={canvasImage}
           onUsePrompt={onUsePrompt}
+          onApplySettings={onApplySettings}
+          onApplyPreset={onApplyPreset}
+          onFuseLoras={onFuseLoras}
           showToast={showToast}
         />
       ) : (
