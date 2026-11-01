@@ -43,7 +43,83 @@ export async function POST(req: NextRequest) {
 
     const effectiveGeminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_KEY || "";
 
-    // 1. Try Google Gemini 2.0 Flash if API key is present
+    // 1. Try Dolphin LLM (Uncensored)
+    const effectiveDolphinKey = process.env.DOLPHIN_API_KEY || "";
+    const dolphinBaseUrl = (process.env.DOLPHIN_BASE_URL || "https://api.dolphinllm.com/v1").replace(/\/+$/, "");
+
+    if (effectiveDolphinKey) {
+      try {
+        const dRes = await fetch(`${dolphinBaseUrl}/chat/completions`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${effectiveDolphinKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "uncensored",
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: queryPrompt },
+            ],
+            max_tokens: 350,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+
+        if (dRes.ok) {
+          const dData = await dRes.json();
+          const dReply = dData.choices?.[0]?.message?.content?.trim();
+          if (dReply) {
+            return NextResponse.json({
+              reply: dReply,
+              provider: "Dolphin LLM (uncensored)",
+              action,
+            });
+          }
+        }
+      } catch (dErr) {
+        console.warn("Dolphin LLM copilot failed, engaging Mistral fallback:", dErr);
+      }
+    }
+
+    // 2. Fallback Mistral AI Engine
+    const effectiveMistralKey = process.env.MISTRAL_API_KEY || "";
+    if (effectiveMistralKey) {
+      try {
+        const mRes = await fetch("https://api.mistral.ai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${effectiveMistralKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "open-mistral-nemo",
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: queryPrompt },
+            ],
+            max_tokens: 350,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+
+        if (mRes.ok) {
+          const mData = await mRes.json();
+          const mReply = mData.choices?.[0]?.message?.content?.trim();
+          if (mReply) {
+            return NextResponse.json({
+              reply: mReply,
+              provider: "Mistral AI (open-mistral-nemo)",
+              action,
+            });
+          }
+        }
+      } catch (mErr) {
+        console.warn("Mistral AI copilot fallback failed:", mErr);
+      }
+    }
+
+    // 3. Try Google Gemini 2.0 Flash if API key is present
     if (effectiveGeminiKey) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${effectiveGeminiKey}`;

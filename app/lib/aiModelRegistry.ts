@@ -695,6 +695,40 @@ export const BASE_PROVIDERS: AiProviderPlatform[] = [
       },
     ],
   },
+  {
+    id: "dolphin",
+    name: "Dolphin LLM",
+    badge: "🐬 UNCENSORED • PROMPT DIRECTOR",
+    category: "Vision & Edge",
+    description: "OpenAI-compatible uncensored intelligence model for creative prompt expansion, visual storytelling, and unfiltered artistic phrasing.",
+    hasFreeModels: true,
+    defaultFreeModelId: "uncensored",
+    docsUrl: "https://dolphinllm.com/get-api-key/",
+    color: {
+      accent: "from-teal-400 to-cyan-500",
+      border: "border-teal-400/40",
+      bg: "bg-teal-950/20",
+      text: "text-teal-400",
+    },
+    models: [
+      {
+        id: "uncensored",
+        name: "Dolphin Uncensored (Prompt Engine)",
+        providerId: "dolphin",
+        providerName: "Dolphin LLM",
+        type: "text",
+        badge: "Uncensored Intelligence",
+        latency: "~1.1s",
+        description: "Unfiltered artistic instruction following for creative diffusion prompts and deep scene composition.",
+        accentColor: "from-teal-400 to-cyan-500",
+        isFree: true,
+        isFreeTier: true,
+        requiresApiKey: true,
+        pricingLabel: "Dolphin API Verified",
+        status: "active",
+      },
+    ],
+  },
 ];
 
 // ─── CACHING LAYER (10-MINUTE TTL) ───

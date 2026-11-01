@@ -163,6 +163,23 @@ const PROVIDERS: ProviderConfig[] = [
     },
   },
   {
+    id: "dolphin",
+    name: "Dolphin LLM (Uncensored)",
+    badge: "🐬 Uncensored Vision & Prompt Director",
+    category: "Vision & Frontier",
+    description: "OpenAI-compatible uncensored intelligence model for creative prompt expansion and unfiltered artistic phrasing.",
+    placeholder: "Paste Dolphin LLM API key...",
+    defaultEndpoint: "https://api.dolphinllm.com/v1",
+    docsUrl: "https://dolphinllm.com/get-api-key/",
+    recommendedModels: ["uncensored"],
+    color: {
+      accent: "from-teal-400 to-cyan-500",
+      border: "border-teal-500/30",
+      bg: "bg-teal-950/20",
+      text: "text-teal-300",
+    },
+  },
+  {
     id: "dashscope",
     name: "Alibaba DashScope (ModelStudio)",
     badge: "Qwen-Image & Qwen-Image-Edit",

@@ -9,9 +9,11 @@ export const PROVIDER_ENV_MAP: Record<string, string> = {
   dashscope: "DASHSCOPE_API_KEY",
   cloudflare_ai: "CLOUDFLARE_API_TOKEN",
   nanobanana: "NANOBANANA_API_KEY",
+  dolphin: "DOLPHIN_API_KEY",
 };
 
 export const ENDPOINT_ENV_MAP: Record<string, string> = {
   ollama: "OLLAMA_HOST",
   agentrouter: "AGENTROUTER_HOST",
+  dolphin: "DOLPHIN_BASE_URL",
 };

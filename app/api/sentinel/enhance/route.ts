@@ -37,6 +37,96 @@ export async function POST(req: NextRequest) {
 
     const inputTopic = prompt.trim() || "cyberpunk visionary masterwork";
 
+    // 1. Dolphin LLM (Uncensored) with Automatic Fallback to Mistral AI
+    const dolphinKey =
+      provider === "dolphin" && effectiveKey
+        ? effectiveKey
+        : process.env.DOLPHIN_API_KEY || "";
+    const dolphinBaseUrl = (process.env.DOLPHIN_BASE_URL || "https://api.dolphinllm.com/v1").replace(/\/+$/, "");
+
+    if (provider === "dolphin" && dolphinKey) {
+      let dolphinSucceeded = false;
+      try {
+        const res = await fetch(`${dolphinBaseUrl}/chat/completions`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${dolphinKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "uncensored",
+            messages: [
+              { role: "system", content: systemInstruction },
+              { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
+            ],
+            max_tokens: 220,
+            temperature: isBrainstorm ? 0.8 : 0.6,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const result = data.choices?.[0]?.message?.content?.trim();
+          if (result) {
+            dolphinSucceeded = true;
+            return NextResponse.json({
+              enhancedPrompt: result,
+              provider: "Dolphin LLM (uncensored)",
+              mode,
+              isBrainstormed: isBrainstorm,
+            });
+          }
+        } else {
+          console.warn(`Dolphin LLM returned status ${res.status}. Falling back to Mistral AI...`);
+        }
+      } catch (dErr) {
+        console.warn("Dolphin LLM enhancement error, falling back to Mistral:", dErr);
+      }
+
+      // If Dolphin returned 402 (no_credit) or failed, immediately engage Fallback Mistral AI model
+      if (!dolphinSucceeded) {
+        const mistralFallbackKey = process.env.MISTRAL_API_KEY || "";
+        if (mistralFallbackKey) {
+          try {
+            const mRes = await fetch("https://api.mistral.ai/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${mistralFallbackKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "open-mistral-nemo",
+                messages: [
+                  { role: "system", content: systemInstruction },
+                  { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
+                ],
+                max_tokens: 220,
+                temperature: isBrainstorm ? 0.8 : 0.6,
+              }),
+              signal: AbortSignal.timeout(8000),
+            });
+
+            if (mRes.ok) {
+              const mData = await mRes.json();
+              const mResult = mData.choices?.[0]?.message?.content?.trim();
+              if (mResult) {
+                return NextResponse.json({
+                  enhancedPrompt: mResult,
+                  provider: "Mistral AI (open-mistral-nemo) [Dolphin Fallback]",
+                  fallbackEngaged: true,
+                  mode,
+                  isBrainstormed: isBrainstorm,
+                });
+              }
+            }
+          } catch (mErr) {
+            console.warn("Fallback Mistral AI error:", mErr);
+          }
+        }
+      }
+    }
+
     if (provider === "gemini" && effectiveKey) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${effectiveKey}`;
       const res = await fetch(url, {
@@ -132,37 +222,71 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (provider === "mistral" && effectiveKey) {
-      const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+    const directMistralKey = (provider === "mistral" && effectiveKey) ? effectiveKey : (process.env.MISTRAL_API_KEY || "");
+    if ((provider === "mistral" || !provider) && directMistralKey) {
+      try {
+        const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${directMistralKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "open-mistral-nemo",
+            messages: [
+              { role: "system", content: systemInstruction },
+              { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
+            ],
+            max_tokens: 180,
+            temperature: isBrainstorm ? 0.8 : 0.6,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const result = data.choices?.[0]?.message?.content?.trim();
+          if (result) {
+            return NextResponse.json({
+              enhancedPrompt: result,
+              provider: "Mistral AI (open-mistral-nemo)",
+              mode,
+              isBrainstormed: isBrainstorm,
+            });
+          }
+        }
+      } catch (mErr) {
+        console.warn("Direct Mistral AI enhance failed:", mErr);
+      }
+    }
+
+    // Intelligent Neural Fallback (Pollinations Free Real LLM)
+    try {
+      const pollRes = await fetch("https://text.pollinations.ai/", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${effectiveKey}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "open-mistral-nemo",
           messages: [
             { role: "system", content: systemInstruction },
             { role: "user", content: `Input subject/prompt: "${inputTopic}"\n\nResult prompt:` },
           ],
-          max_tokens: 180,
-          temperature: isBrainstorm ? 0.8 : 0.6,
+          model: "mistral",
+          seed: Math.floor(Math.random() * 100000),
         }),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(6000),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        const result = data.choices?.[0]?.message?.content?.trim();
-        if (result) {
+      if (pollRes.ok) {
+        const textResult = (await pollRes.text()).trim();
+        if (textResult) {
           return NextResponse.json({
-            enhancedPrompt: result,
+            enhancedPrompt: textResult,
+            provider: "Mistral Neural Edge (Free Fallback)",
             mode,
             isBrainstormed: isBrainstorm,
           });
         }
       }
-    }
+    } catch {}
 
     // Default fast intelligent fallback using promptIntelligence engine
     if (isBrainstorm) {
