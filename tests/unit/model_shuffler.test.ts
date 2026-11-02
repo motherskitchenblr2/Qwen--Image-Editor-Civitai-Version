@@ -51,7 +51,7 @@ describe("Model Shuffler & Task Routing Engine", () => {
         expect(route.primaryEnvKey).toBe("GEMINI_API_KEY");
 
         expect(route.fallbackProvider).toBe("openrouter");
-        expect(route.fallbackModel).toBe("google/gemma-2-27b-it");
+        expect(route.fallbackModel).toBe("google/gemini-2.0-flash-001");
         expect(route.fallbackEnvKey).toBe("OPENROUTER_API_KEY");
       }
     );

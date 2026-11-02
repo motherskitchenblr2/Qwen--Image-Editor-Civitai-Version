@@ -16,6 +16,7 @@
     "gpu:status": "python3 backend/kaggle_guard.py status"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.2.22",
     "@ai-sdk/openai": "^1.3.24",
     "@vercel/analytics": "^2.0.1",
     "ai": "^4.3.19",
