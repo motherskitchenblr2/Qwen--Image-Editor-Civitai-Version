@@ -12,16 +12,12 @@ import {
   Check,
   Wrench,
   Sparkles,
-  Zap,
   MessageSquare,
-  Sliders,
   Maximize2,
   Minimize2,
   X,
-  ExternalLink,
   ChevronRight,
   Send,
-  HelpCircle,
   Info,
 } from "lucide-react";
 import { SubsystemHealth, HealthIssue } from "@/app/api/sentinel/health/route";

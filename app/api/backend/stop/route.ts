@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getActiveTunnelUrl, setMemoryCachedTunnel, edgeConfigUrl, saveTunnelToEdgeConfig } from "../../../lib/tunnelDiscovery";
+import { getActiveTunnelUrl, saveTunnelToEdgeConfig } from "../../../lib/tunnelDiscovery";
 
 const KAGGLE_API_URL = "https://api.kaggle.com/v1/kernels.KernelsApiService/SaveKernel";
 const KERNEL_SLUG = "developerchief/qwen-image-editor-civitai-version";

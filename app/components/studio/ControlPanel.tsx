@@ -12,14 +12,12 @@ import {
   CheckCircle2,
   Dice5,
   ExternalLink,
-  Info,
   ChevronDown,
   Paintbrush,
   UserCheck,
   Scissors,
   Maximize2,
   Eraser,
-  Wand2,
 } from "lucide-react";
 import LiveAiModelSelector from "@/app/components/LiveAiModelSelector";
 import PromptActionButtons from "@/app/components/PromptActionButtons";

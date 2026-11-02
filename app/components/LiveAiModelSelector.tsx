@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   Sparkles,
   Zap,
-  Shield,
   ShieldAlert,
   ShieldCheck,
   RefreshCw,
@@ -15,15 +14,9 @@ import {
   ExternalLink,
   Search,
   Filter,
-  DollarSign,
   Copy,
   Check,
-  Lock,
   Unlock,
-  Sliders,
-  Image as ImageIcon,
-  Flame,
-  ArrowRight,
 } from "lucide-react";
 import { AiProviderPlatform, LiveAiModel, BASE_PROVIDERS } from "@/app/lib/aiModelRegistry";
 

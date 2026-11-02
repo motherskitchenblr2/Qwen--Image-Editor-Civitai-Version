@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Brain,
-  Sparkles,
   Zap,
   ShieldAlert,
   ShieldCheck,

@@ -6,14 +6,10 @@ import {
   Download,
   Copy,
   Check,
-  Maximize2,
   Sparkles,
-  ExternalLink,
-  Layers,
   Zap,
   Eye,
   EyeOff,
-  ShieldAlert,
 } from "lucide-react";
 import NeonGlowEyeIcon from "./NeonGlowEyeIcon";
 

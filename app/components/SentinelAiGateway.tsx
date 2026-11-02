@@ -5,7 +5,6 @@ import {
   Shield,
   Key,
   Lock,
-  Unlock,
   Check,
   CheckCircle2,
   AlertCircle,
@@ -14,18 +13,10 @@ import {
   RefreshCw,
   ExternalLink,
   Cpu,
-  Zap,
   Sparkles,
-  Database,
   Cloud,
-  Layers,
   Save,
-  Activity,
-  Flame,
-  Globe,
-  Sliders,
   Bot,
-  MessageSquare,
 } from "lucide-react";
 import { LiveAiModel, BASE_PROVIDERS } from "@/app/lib/aiModelRegistry";
 import SentinelChatCopilot from "./SentinelChatCopilot";

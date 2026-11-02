@@ -3,23 +3,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useChat, Message } from "ai/react";
 import {
-  Sparkles,
   Send,
   RefreshCw,
   Copy,
   Check,
   Bot,
   User,
-  Sliders,
-  Layers,
-  Search,
-  ArrowRight,
-  ShieldCheck,
   AlertTriangle,
   Zap,
   Wand2,
-  ChevronDown,
-  ChevronRight,
   Paintbrush,
   CheckCircle2,
   Code2,

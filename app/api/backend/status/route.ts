@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getActiveTunnelUrl, saveTunnelToEdgeConfig } from "../../../lib/tunnelDiscovery";
+import { getActiveTunnelUrl } from "../../../lib/tunnelDiscovery";
 
 const STATUS_API_URL = "https://api.kaggle.com/v1/kernels.KernelsApiService/GetKernelSessionStatus";
 const USERNAME = "developerchief";

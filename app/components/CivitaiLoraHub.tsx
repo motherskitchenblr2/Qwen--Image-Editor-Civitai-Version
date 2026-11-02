@@ -13,19 +13,12 @@ import {
   Check,
   RefreshCw,
   Tag,
-  ThumbsUp,
   ArrowRight,
   Filter,
-  Flame,
-  Clock,
-  Star,
-  ChevronDown,
   FolderOpen,
   Maximize2,
   Eye,
   EyeOff,
-  ShieldAlert,
-  Shield,
 } from "lucide-react";
 import ImagePreviewModal, { PreviewMediaData } from "./ImagePreviewModal";
 import NeonGlowEyeIcon from "./NeonGlowEyeIcon";

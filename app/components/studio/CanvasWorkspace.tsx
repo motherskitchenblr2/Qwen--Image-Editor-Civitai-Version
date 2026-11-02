@@ -12,13 +12,10 @@ import {
   Undo2,
   Trash2,
   Sparkles,
-  Sliders,
   Copy,
   Check,
   SplitSquareVertical,
   Layers,
-  Image as ImageIcon,
-  CheckCircle2,
   FolderOpen,
 } from "lucide-react";
 import ImagePreviewModal, { PreviewMediaData } from "../ImagePreviewModal";
