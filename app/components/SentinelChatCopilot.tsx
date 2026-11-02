@@ -35,6 +35,7 @@ interface SentinelChatCopilotProps {
   onApplyPreset?: (presetName: string, stylePrompt: string, negativePrompt?: string) => void;
   onFuseLoras?: (loraNames: string[]) => void;
   showToast?: (text: string, type?: "success" | "error" | "info") => void;
+  className?: string;
 }
 
 const QUICK_ACTIONS = [
@@ -83,6 +84,7 @@ export default function SentinelChatCopilot({
   onApplyPreset,
   onFuseLoras,
   showToast,
+  className = "h-[680px] md:h-[740px]",
 }: SentinelChatCopilotProps) {
   const [taskType, setTaskType] = useState<"general" | "coding" | "reasoning">("general");
   const [selectedModel, setSelectedModel] = useState<string>(() =>
@@ -184,7 +186,7 @@ export default function SentinelChatCopilot({
   };
 
   return (
-    <div className="flex flex-col h-[680px] md:h-[740px] bg-slate-950/90 border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] rounded-3xl overflow-hidden relative">
+    <div className={`flex flex-col bg-slate-950/90 border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] rounded-3xl overflow-hidden relative ${className}`}>
       {/* ── Copilot Subheader ── */}
       <div className="p-3.5 sm:px-5 sm:py-3 border-b border-cyan-500/20 bg-slate-950/95 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-2.5">

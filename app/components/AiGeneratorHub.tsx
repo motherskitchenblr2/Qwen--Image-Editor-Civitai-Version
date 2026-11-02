@@ -16,6 +16,7 @@ import {
   Camera,
   Film,
   Compass,
+  Shuffle,
 } from "lucide-react";
 import PromptActionButtons from "./PromptActionButtons";
 import ImagePreviewModal, { PreviewMediaData } from "./ImagePreviewModal";
@@ -191,6 +192,7 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
   const [lastModelUsed, setLastModelUsed] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState<boolean>(false);
+  const [isShufflingStyle, setIsShufflingStyle] = useState<boolean>(false);
   const [previewModalMedia, setPreviewModalMedia] = useState<PreviewMediaData | null>(null);
 
   const selectedModelObj = ENGINE_MODELS.find((m) => m.id === selectedModel) || ENGINE_MODELS[0];
@@ -205,6 +207,15 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
       }
     }
     setPrompt(cleanPrompt + preset.suffix);
+  };
+
+  const handleShuffleStyle = () => {
+    setIsShufflingStyle(true);
+    setTimeout(() => setIsShufflingStyle(false), 500);
+
+    const availablePresets = STYLE_PRESETS.filter((p) => p.name !== activeStyle);
+    const chosenPreset = availablePresets[Math.floor(Math.random() * availablePresets.length)] || STYLE_PRESETS[0];
+    handleApplyStyle(chosenPreset);
   };
 
   const handleEnhancePrompt = async () => {
@@ -403,10 +414,21 @@ export default function AiGeneratorHub({ onSendToStudio }: AiGeneratorHubProps) 
 
           {/* Style Presets Chips */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <Palette className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Aesthetic Style Presets</span>
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <Palette className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Aesthetic Style Presets</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleShuffleStyle}
+                className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-500/30 transition active:scale-95 min-h-[36px]"
+                title="Shuffle a random style preset"
+              >
+                <Shuffle className={`w-3.5 h-3.5 transition-transform duration-500 ${isShufflingStyle ? "rotate-180 text-cyan-200" : ""}`} />
+                <span>🎲 Shuffle Style</span>
+              </button>
+            </div>
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 touch-pan-x">
               {STYLE_PRESETS.map((p) => {
                 const Icon = p.icon;

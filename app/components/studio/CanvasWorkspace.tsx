@@ -558,9 +558,20 @@ export default function CanvasWorkspace({
             }`}
             style={{ transform: `scale(${zoomLevel / 100})` }}
           >
+            {/* Cinema-Grade Ambient Aura Glow */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 -m-6 sm:-m-10 rounded-3xl opacity-25 blur-3xl saturate-150 pointer-events-none select-none z-0 transform-gpu transition-opacity duration-700"
+              style={{
+                backgroundImage: `url(${activeDisplayImage})`,
+                backgroundPosition: "center",
+                backgroundSize: "cover",
+              }}
+            />
+
             {/* View Mode: Split Curtain Wipe */}
             {viewMode === "split" && originalImage && editedImage ? (
-              <div className="relative max-h-[580px] w-auto overflow-hidden rounded-2xl shadow-2xl select-none">
+              <div className="relative z-10 max-h-[580px] w-auto overflow-hidden rounded-2xl shadow-2xl select-none">
                 {/* Underneath: Result Image */}
                 <img
                   ref={imageRef}
@@ -604,7 +615,7 @@ export default function CanvasWorkspace({
               </div>
             ) : viewMode === "opacity" && originalImage && editedImage ? (
               /* View Mode: Opacity Overlay Blend */
-              <div className="relative max-h-[580px] w-auto overflow-hidden rounded-2xl shadow-2xl">
+              <div className="relative z-10 max-h-[580px] w-auto overflow-hidden rounded-2xl shadow-2xl">
                 <img
                   ref={imageRef}
                   src={originalImage}
@@ -631,7 +642,7 @@ export default function CanvasWorkspace({
                     handleOpenFullscreen();
                   }
                 }}
-                className={`relative max-h-[580px] w-auto overflow-hidden rounded-2xl shadow-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
+                className={`relative z-10 max-h-[580px] w-auto overflow-hidden rounded-2xl shadow-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
                   !isInpaintingActive ? "cursor-zoom-in group/canvasimg" : ""
                 }`}
                 title={!isInpaintingActive ? "Click to open large uncropped popup preview" : undefined}
@@ -661,7 +672,7 @@ export default function CanvasWorkspace({
               onMouseMove={drawPainting}
               onMouseUp={stopPainting}
               onMouseLeave={stopPainting}
-              className={`absolute inset-0 w-full h-full cursor-crosshair z-10 ${
+              className={`absolute inset-0 w-full h-full cursor-crosshair z-20 ${
                 isInpaintingActive ? "pointer-events-auto" : "pointer-events-none"
               }`}
             />
