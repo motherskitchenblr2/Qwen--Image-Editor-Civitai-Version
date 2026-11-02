@@ -43,12 +43,12 @@ const PROVIDERS: ProviderConfig[] = [
   {
     id: "openrouter",
     name: "OpenRouter / OpenCode Gateway",
-    badge: "🌐 SFW FALLBACK (Gemma 4 31B IT) & FREE TIER",
+    badge: "🌐 SFW FALLBACK (Gemma 2 27B IT) & FREE TIER",
     category: "Aggregator",
-    description: "Universal gateway for Gemma 4 31B IT SFW fallback, DeepSeek R1 free reasoning, and 200+ models.",
+    description: "Universal gateway for Gemma 2 27B IT SFW fallback, DeepSeek R1 free reasoning, and 200+ models.",
     placeholder: "Paste OpenRouter API key...",
     docsUrl: "https://openrouter.ai/keys",
-    recommendedModels: ["google/gemma-4-31b-it", "deepseek/deepseek-r1:free", "meta-llama/llama-3.3-70b-instruct:free"],
+    recommendedModels: ["google/gemma-2-27b-it", "deepseek/deepseek-r1:free", "meta-llama/llama-3.3-70b-instruct:free"],
     color: {
       accent: "from-purple-500 to-indigo-500",
       border: "border-purple-500/30",
@@ -59,12 +59,12 @@ const PROVIDERS: ProviderConfig[] = [
   {
     id: "gemini",
     name: "Google AI Studio API",
-    badge: "🛡️ SFW PRIMARY (Gemma 4) & CODING (Gemini 3.8)",
+    badge: "🛡️ SFW PRIMARY (Gemini 2.0 Flash) & CODING (Gemini 2.5 Pro)",
     category: "Vision & Frontier",
-    description: "Primary default for SFW mode (Gemma 4 31B IT) and premier engine for Coding tasks (Gemini 3.8 / 2.5 Pro).",
+    description: "Primary default for SFW mode (Gemini 2.0 Flash) and premier engine for Coding tasks (Gemini 2.5 Pro).",
     placeholder: "Paste Google AI Studio / Gemini API key...",
     docsUrl: "https://aistudio.google.com/app/apikey",
-    recommendedModels: ["google/gemma-4-31b-it", "gemini-2.5-pro", "gemini-2.0-flash"],
+    recommendedModels: ["gemini-2.0-flash", "gemini-2.5-pro"],
     color: {
       accent: "from-blue-500 to-cyan-500",
       border: "border-cyan-500/30",

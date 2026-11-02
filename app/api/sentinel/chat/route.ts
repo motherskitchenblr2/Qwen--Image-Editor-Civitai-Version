@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
     }
 
     // =========================================================================
-    // 2. SFW MODE: PRIMARY GOOGLE GEMINI / GEMMA 4 31B IT -> FALLBACK OPENROUTER
+    // 2. SFW MODE: PRIMARY GOOGLE GEMINI 2.0 FLASH -> FALLBACK OPENROUTER
     // =========================================================================
     if (!nsfw_enabled) {
       const effectiveGeminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_KEY || "";
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
             if (reply) {
               return NextResponse.json({
                 reply,
-                provider: "Gemma 4 31B IT / Gemini (Google AI Studio) [SFW Primary]",
+                provider: "Gemini 2.0 Flash (Google AI Studio) [SFW Primary]",
                 action,
               });
             }
@@ -185,7 +185,7 @@ export async function POST(req: NextRequest) {
             if (reply) {
               return NextResponse.json({
                 reply,
-                provider: "Gemma 4 31B IT (OpenCode / OpenRouter) [SFW Fallback]",
+                provider: "Gemma 2 27B IT (OpenRouter) [SFW Fallback]",
                 action,
               });
             }

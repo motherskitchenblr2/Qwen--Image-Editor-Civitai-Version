@@ -81,7 +81,7 @@ export default function SentinelChatCopilot({
 }: SentinelChatCopilotProps) {
   const [taskType, setTaskType] = useState<"general" | "coding" | "reasoning">("general");
   const [selectedModel, setSelectedModel] = useState<string>(() =>
-    isNsfwMode ? "mistralai/mistral-nemo" : "google/gemma-4-31b-it"
+    isNsfwMode ? "mistralai/mistral-nemo" : "gemini-2.0-flash"
   );
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showReasoning, setShowReasoning] = useState<boolean>(true);
@@ -115,7 +115,7 @@ export default function SentinelChatCopilot({
     } else if (taskType === "reasoning") {
       setSelectedModel("deepseek/deepseek-r1");
     } else {
-      setSelectedModel(isNsfwMode ? "mistralai/mistral-nemo" : "google/gemma-4-31b-it");
+      setSelectedModel(isNsfwMode ? "mistralai/mistral-nemo" : "gemini-2.0-flash");
     }
   }, [taskType, isNsfwMode]);
 
@@ -123,7 +123,7 @@ export default function SentinelChatCopilot({
     if (isNsfwMode) return "dolphinllm/uncensored";
     if (taskType === "coding") return "nvidia/nemotron-3-super";
     if (taskType === "reasoning") return "groq/llama-3.3-70b";
-    if (currentModel === "google/gemma-4-31b-it" || currentModel.includes("gemma") || currentModel.includes("gemini")) {
+    if (currentModel === "gemini-2.0-flash" || currentModel.includes("gemma") || currentModel.includes("gemini")) {
       return "groq/llama-3.3-70b";
     }
     return "groq/llama-3.3-70b";
@@ -384,7 +384,7 @@ export default function SentinelChatCopilot({
             ? "🧠 Primary: DeepSeek v4.1 (NVIDIA) • Fallback: Groq 70B"
             : isNsfwMode
             ? "🔞 NSFW Primary: Mistral AI • Fallback: Dolphin LLM"
-            : "🛡️ SFW Primary: Gemma 4 31B IT (Google AI Studio)"}
+            : "🛡️ SFW Primary: Gemini 2.0 Flash (Google AI Studio)"}
         </span>
       </div>
 
@@ -606,7 +606,7 @@ export default function SentinelChatCopilot({
                 ? "Ask Sentinel for deep compositional analysis or aesthetic logic..."
                 : isNsfwMode
                 ? "Ask Sentinel to refine unrestricted prompts, tune parameters, or fuse LoRAs (Mistral AI)..."
-                : "Ask Sentinel to refine prompts, tune parameters, or apply presets (Gemma 4 31B IT)..."
+                : "Ask Sentinel to refine prompts, tune parameters, or apply presets (Gemini 2.0 Flash)..."
             }
             className="flex-1 min-h-[44px] bg-slate-900 border border-slate-800 focus:border-cyan-400 text-white rounded-2xl px-4 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition"
             disabled={isLoading}

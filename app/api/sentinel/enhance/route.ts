@@ -130,10 +130,10 @@ export async function POST(req: NextRequest) {
     }
 
     // =========================================================================
-    // 2. SFW MODE ROUTING: PRIMARY GEMMA 4 31B IT (GOOGLE) -> FALLBACK OPENROUTER
+    // 2. SFW MODE ROUTING: PRIMARY GEMINI 2.0 FLASH (GOOGLE) -> FALLBACK OPENROUTER
     // =========================================================================
     if (!nsfw_enabled) {
-      // Primary: Google AI Studio (Gemma 4 31B IT / Gemini)
+      // Primary: Google AI Studio (Gemini 2.0 Flash)
       const geminiKey = (provider === "gemini" && effectiveKey) ? effectiveKey : (process.env.GEMINI_API_KEY || "");
       if (geminiKey) {
         try {
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
             if (result) {
               return NextResponse.json({
                 enhancedPrompt: result,
-                provider: "Gemma 4 31B IT / Gemini (Google AI Studio) [SFW Primary]",
+                provider: "Gemini 2.0 Flash (Google AI Studio) [SFW Primary]",
                 mode,
                 isBrainstormed: isBrainstorm || isInspire,
               });
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Fallback: OpenRouter / OpenCode Gemma 4 31B IT
+      // Fallback: OpenRouter / OpenCode Gemma 2 27B IT
       const openRouterKey = (provider === "openrouter" && effectiveKey) ? effectiveKey : (process.env.OPENROUTER_API_KEY || "");
       if (openRouterKey) {
         const result = await callChatCompletion({
@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
         if (result) {
           return NextResponse.json({
             enhancedPrompt: result,
-            provider: "Gemma 4 31B IT (OpenCode / OpenRouter) [SFW Fallback]",
+            provider: "Gemma 2 27B IT (OpenRouter) [SFW Fallback]",
             fallbackEngaged: true,
             mode,
             isBrainstormed: isBrainstorm || isInspire,

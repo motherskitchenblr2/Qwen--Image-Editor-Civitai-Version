@@ -462,7 +462,7 @@ export default function PromptActionButtons({
             safeSessionSet("sentinel_last_neg_pos", trimmed);
           }
           if (showToast) {
-            showToast(`🎲 Inspire (${data.provider || (isNsfw ? "Mistral" : "Gemma")}): Composed fresh concept!`, "success");
+            showToast(`🎲 Inspire (${data.provider || (isNsfw ? "Mistral" : "Gemini")}): Composed fresh concept!`, "success");
           }
           setIsInspiring(false);
           return;
@@ -584,10 +584,10 @@ export default function PromptActionButtons({
             title={
               isNsfw
                 ? "NSFW Shuffled Engine: Mistral AI (Primary) with Dolphin LLM (Fallback)"
-                : "SFW Shuffled Engine: Gemma 4 31B IT from Google AI Studio (Fallback: OpenRouter)"
+                : "SFW Shuffled Engine: Gemini 2.0 Flash from Google AI Studio (Fallback: OpenRouter)"
             }
           >
-            {isNsfw ? "🔞 Mistral AI (NSFW Default)" : "🛡️ Gemma 4 31B IT (Google AI Studio)"}
+            {isNsfw ? "🔞 Mistral AI (NSFW Default)" : "🛡️ Gemini 2.0 Flash (Google AI Studio)"}
           </span>
           <span className="text-[9px] text-slate-500 font-mono hidden sm:inline">
             {isNsfw ? "• Fallback: Dolphin AI" : "• Fallback: OpenRouter"}

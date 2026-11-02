@@ -189,7 +189,7 @@ export default function ImageEditorStudio() {
       showToast(
         enabled
           ? "🔞 18+ Unrestricted NSFW Mode Activated: Defaulting to Mistral AI (Fallback: Dolphin AI)"
-          : "🛡️ SFW Safe Mode Activated: Defaulting to Gemma 4 31B IT (Google AI Studio)",
+          : "🛡️ SFW Safe Mode Activated: Defaulting to Gemini 2.0 Flash (Google AI Studio)",
         enabled ? "info" : "success"
       );
     }

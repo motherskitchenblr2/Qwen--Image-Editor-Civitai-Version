@@ -14,8 +14,8 @@
  *   - Primary AI: Mistral AI (open-mistral-nemo / mistral-large-latest via Mistral Platform API)
  *   - Fallback AI: Dolphin AI (uncensored via Dolphin AI API Platform)
  * - SFW Mode (ON / Default):
- *   - Primary AI: Gemma 4 31B IT from Google AI Studio Platform
- *   - Fallback AI: Gemma 4 31B IT from OpenCode / OpenRouter
+ *   - Primary AI: Gemini 2.0 Flash from Google AI Studio Platform
+ *   - Fallback AI: Gemma 2 27B IT from OpenRouter
  * - Coding Tasks:
  *   - Primary AI: Gemini 3.8 / Gemini 2.5 Pro from Google AI Studio
  *   - Fallback AI: Nemotron 3 Super (Free) / Nemotron 3 Ultra from NVIDIA Platform
@@ -123,13 +123,13 @@ export function getShuffledModelRoute(options: {
     task,
     isNsfw: false,
     primaryProvider: "gemini",
-    primaryModel: "google/gemma-4-31b-it",
-    primaryLabel: "Gemma 4 31B IT (Google AI Studio)",
-    primaryBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    primaryModel: "gemini-2.0-flash",
+    primaryLabel: "Gemini 2.0 Flash (Google AI Studio)",
+    primaryBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/",
     primaryEnvKey: "GEMINI_API_KEY",
     fallbackProvider: "openrouter",
-    fallbackModel: "google/gemma-4-31b-it",
-    fallbackLabel: "Gemma 4 31B IT (OpenCode / OpenRouter)",
+    fallbackModel: "google/gemma-2-27b-it",
+    fallbackLabel: "Gemma 2 27B IT (OpenRouter)",
     fallbackBaseUrl: "https://openrouter.ai/api/v1",
     fallbackEnvKey: "OPENROUTER_API_KEY",
     badge: "🛡️ SFW Safe Mode",
@@ -145,9 +145,10 @@ export interface ModelOption {
 }
 
 export const AVAILABLE_MODELS: ModelOption[] = [
+  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", badge: "🛡️ SFW Default (Google AI Studio)", category: "sfw" },
   { id: "mistralai/mistral-nemo", name: "Mistral NeMo 12B", badge: "🔞 NSFW Default (Mistral AI)", category: "nsfw" },
   { id: "dolphinllm/uncensored", name: "Dolphin LLM", badge: "🔞 NSFW Fallback (Uncensored)", category: "nsfw" },
-  { id: "google/gemma-4-31b-it", name: "Gemma 4 31B IT", badge: "🛡️ SFW Default (Google AI Studio)", category: "sfw" },
+  { id: "google/gemma-2-27b-it", name: "Gemma 2 27B IT", badge: "🛡️ SFW Fallback (OpenRouter)", category: "sfw" },
   { id: "google/gemini-2.5-pro", name: "Gemini 3.8 / 2.5 Pro", badge: "💻 Coding Specialist (Google)", category: "coding" },
   { id: "nvidia/nemotron-3-super", name: "Nemotron 3 Super", badge: "💻 Coding Fallback (NVIDIA NIM)", category: "coding" },
   { id: "deepseek/deepseek-r1", name: "DeepSeek v4.1 / R1", badge: "🧠 Reasoning Specialist (NVIDIA NIM)", category: "reasoning" },

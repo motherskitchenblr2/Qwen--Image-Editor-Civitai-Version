@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
     }
 
     // =========================================================================
-    // SFW MODE: PRIMARY GEMMA 4 31B IT (GOOGLE) -> FALLBACK GROQ / OPENROUTER
+    // SFW MODE: PRIMARY GEMINI 2.0 FLASH (GOOGLE) -> FALLBACK GROQ / OPENROUTER
     // =========================================================================
     if (!nsfw_enabled) {
       const geminiKey = (provider === "gemini" && effectiveKey) ? effectiveKey : (process.env.GEMINI_API_KEY || "");

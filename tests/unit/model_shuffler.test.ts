@@ -30,7 +30,7 @@ describe("Model Shuffler & Task Routing Engine", () => {
     );
   });
 
-  describe("SFW Mode Shuffling (Gemma 4 31B IT Google Primary -> OpenRouter Fallback)", () => {
+  describe("SFW Mode Shuffling (Gemini 2.0 Flash Google Primary -> OpenRouter Fallback)", () => {
     const sfwFeatures: TaskCategory[] = [
       "edit_prompt",
       "copilot",
@@ -41,17 +41,17 @@ describe("Model Shuffler & Task Routing Engine", () => {
     ];
 
     it.each(sfwFeatures)(
-      "routes %s to Gemma 4 31B IT (Google AI Studio) and OpenRouter fallback when SFW is enabled",
+      "routes %s to Gemini 2.0 Flash (Google AI Studio) and OpenRouter fallback when SFW is enabled",
       (feature) => {
         const route = getShuffledModelRoute({ nsfw_enabled: false, taskType: feature });
 
         expect(route.isNsfw).toBe(false);
         expect(route.primaryProvider).toBe("gemini");
-        expect(route.primaryModel).toBe("google/gemma-4-31b-it");
+        expect(route.primaryModel).toBe("gemini-2.0-flash");
         expect(route.primaryEnvKey).toBe("GEMINI_API_KEY");
 
         expect(route.fallbackProvider).toBe("openrouter");
-        expect(route.fallbackModel).toBe("google/gemma-4-31b-it");
+        expect(route.fallbackModel).toBe("google/gemma-2-27b-it");
         expect(route.fallbackEnvKey).toBe("OPENROUTER_API_KEY");
       }
     );
@@ -98,12 +98,12 @@ describe("Model Shuffler & Task Routing Engine", () => {
       expect(modelIds).toContain("nvidia/llama-3.1-nemotron-70b-instruct");
     });
 
-    it("verifies Google AI Studio catalog contains Gemma 4 31B IT and Gemini coding specialist", () => {
+    it("verifies Google AI Studio catalog contains Gemini 2.0 Flash and Gemini coding specialist", () => {
       const googleProvider = BASE_PROVIDERS.find((p) => p.id === "gemini");
       expect(googleProvider).toBeDefined();
 
       const modelIds = (googleProvider?.models || []).map((m) => m.id);
-      expect(modelIds).toContain("google/gemma-4-31b-it");
+      expect(modelIds).toContain("gemini-2.0-flash");
       expect(modelIds).toContain("gemini-2.5-pro");
     });
 

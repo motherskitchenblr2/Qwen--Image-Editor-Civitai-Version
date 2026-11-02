@@ -29,9 +29,9 @@ function getAiClient(options: ResolveClientOptions) {
     cfg = {
       apiKey: process.env.GEMINI_API_KEY,
       baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-      model: "gemini-2.5-pro",
+      model: "gemini-2.0-flash",
       hasKey: true,
-      providerName: "Gemini 3.8 Pro (Google AI Studio)",
+      providerName: "Gemini 2.0 Flash (Google AI Studio)",
     };
   } else if (taskType === "coding" && process.env.NVIDIA_API_KEY) {
     cfg = {
@@ -79,13 +79,17 @@ function getAiClient(options: ResolveClientOptions) {
       baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
       model: "gemini-2.0-flash",
       hasKey: true,
-      providerName: "Gemma 4 31B IT / Gemini (Google AI Studio)",
+      providerName: "Gemini 2.0 Flash (Google AI Studio)",
     };
   } else if (process.env.OPENROUTER_API_KEY) {
+    const orModel =
+      model === "google/gemma-4-31b-it" || model === "gemini-2.0-flash"
+        ? "google/gemma-2-27b-it"
+        : model || (nsfw_enabled ? "mistralai/mistral-nemo" : "google/gemma-2-27b-it");
     cfg = {
       apiKey: process.env.OPENROUTER_API_KEY,
       baseURL: process.env.AI_BASE_URL || "https://openrouter.ai/api/v1",
-      model: model || (nsfw_enabled ? "mistralai/mistral-nemo" : "google/gemma-2-27b-it:free"),
+      model: orModel,
       hasKey: true,
       providerName: "OpenRouter (Universal Gateway)",
     };
