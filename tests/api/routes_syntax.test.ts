@@ -337,5 +337,44 @@ describe("Next.js App Router API Handlers: Syntax & Export Contracts", () => {
         global.fetch = originalFetch;
       }
     });
+
+    it("/api/backend/status GET returns { online: false, reason: ... } gracefully when offline without throwing 500", async () => {
+      const req = new NextRequest("http://localhost:3000/api/backend/status");
+      const res = await backendStatusRoute.GET(req);
+      expect(res.status).toBe(200);
+
+      const data = await res.json();
+      expect(data.online).toBe(false);
+      expect(typeof data.reason).toBe("string");
+      expect(data.reason).toBe("No active tunnel configured");
+      expect(data.is_alive).toBe(false);
+    });
+
+    it("/api/backend/status GET returns { online: true } when active tunnel responds", async () => {
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes("/api/health")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({ status: "ok", model_ready: true, message: "Pipeline Ready" }),
+          });
+        }
+        return Promise.reject(new Error("Network unmocked"));
+      }) as any;
+
+      try {
+        const req = new NextRequest("http://localhost:3000/api/backend/status?candidate_url=https://mock-tunnel.trycloudflare.com");
+        const res = await backendStatusRoute.GET(req);
+        expect(res.status).toBe(200);
+
+        const data = await res.json();
+        expect(data.online).toBe(true);
+        expect(data.is_alive).toBe(true);
+        expect(data.model_ready).toBe(true);
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
   });
 });

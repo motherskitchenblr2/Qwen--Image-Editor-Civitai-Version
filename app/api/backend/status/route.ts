@@ -77,7 +77,13 @@ async function handleStatus(candidateUrl?: string) {
       coordinatedState = "offline";
     }
 
+    const reason = !activeUrl
+      ? "No active tunnel configured"
+      : (!isAlive ? (failureMessage || "Tunnel health check failed") : undefined);
+
     return NextResponse.json({
+      online: isAlive,
+      reason: reason || undefined,
       coordinated_state: coordinatedState,
       is_alive: isAlive,
       tunnel_url: isAlive ? activeUrl : null,
@@ -89,8 +95,8 @@ async function handleStatus(candidateUrl?: string) {
     });
   } catch (err: any) {
     return NextResponse.json(
-      { coordinated_state: "offline", is_alive: false, error: err.message },
-      { status: 500 }
+      { online: false, coordinated_state: "offline", is_alive: false, reason: err.message || "No active tunnel configured" },
+      { status: 200 }
     );
   }
 }
