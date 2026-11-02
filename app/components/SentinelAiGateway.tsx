@@ -494,7 +494,7 @@ export default function SentinelAiGateway({
   const configuredCount = Object.keys(vaultInfo).filter((k) => vaultInfo[k]?.configured).length;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 animate-fadeIn">
+    <div className="max-w-6xl mx-auto px-2 sm:px-4 py-3 sm:py-6 space-y-3 sm:space-y-5 animate-fadeIn">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 animate-bounce">
@@ -519,63 +519,12 @@ export default function SentinelAiGateway({
         </div>
       )}
 
-      {/* Sentinel Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] bg-slate-950/90 p-6 md:p-8">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 flex-1 min-w-0 max-w-3xl">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-gradient-to-br from-cyan-400 via-teal-400 to-indigo-600 text-black shadow-[0_0_20px_rgba(6,182,212,0.5)]">
-                <Shield className="w-6 h-6 stroke-[2.5]" />
-              </div>
-              <div>
-                <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2.5 drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
-                  Sentinel: AI Gateway &amp; Key Vault
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/25 text-emerald-300 border border-emerald-400/60 uppercase tracking-widest flex items-center gap-1 shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                    <Lock className="w-3 h-3" /> Auto-Encrypting Vercel Env
-                  </span>
-                </h2>
-                <p className="text-xs text-cyan-200/80">
-                  When you paste an API key, it instantly encrypts into <span className="font-mono text-emerald-300 font-extrabold drop-shadow-[0_0_6px_rgba(16,185,129,0.6)]">*************</span> stars and automatically syncs to your app&apos;s Vercel Project Environment.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Metrics & Save All */}
-          <div className="flex items-center gap-3 flex-wrap shrink-0">
-            <div className="bg-black/80 border border-cyan-500/35 px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 shadow-[0_0_10px_rgba(6,182,212,0.15)]">
-              <Lock className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-slate-300">In Vercel Env:</span>
-              <span className="font-mono font-extrabold text-emerald-300 drop-shadow-[0_0_6px_rgba(16,185,129,0.5)]">
-                {configuredCount} / {PROVIDERS.length}
-              </span>
-            </div>
-
-            <button
-              onClick={handleSaveAll}
-              disabled={isSavingAll}
-              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-black font-extrabold rounded-xl text-xs shadow-[0_0_20px_rgba(16,185,129,0.45)] transition active:scale-95 disabled:opacity-50"
-            >
-              {isSavingAll ? (
-                <RefreshCw className="w-4 h-4 animate-spin text-black" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              <span>Sync All Drafts to Vercel</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* ── Sub-Tab Navigation Switcher ── */}
-      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-900/90 border border-cyan-500/30 backdrop-blur-xl">
+      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-900/90 border border-cyan-500/30 backdrop-blur-xl shrink-0">
         <button
           type="button"
           onClick={() => setActiveSubTab("copilot")}
-          className={`flex-1 min-h-[44px] px-4 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all ${
+          className={`flex-1 min-h-[44px] px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all ${
             activeSubTab === "copilot"
               ? "bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]"
               : "text-slate-400 hover:text-white hover:bg-slate-800/60"
@@ -587,7 +536,7 @@ export default function SentinelAiGateway({
         <button
           type="button"
           onClick={() => setActiveSubTab("vault")}
-          className={`flex-1 min-h-[44px] px-4 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all ${
+          className={`flex-1 min-h-[44px] px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all ${
             activeSubTab === "vault"
               ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]"
               : "text-slate-400 hover:text-white hover:bg-slate-800/60"
@@ -611,8 +560,58 @@ export default function SentinelAiGateway({
         />
       </div>
 
-      {/* ── Key Vault & Telemetry Subtab ── */}
+      {/* ── Key Vault & Telemetry Subtab (Contains Hero Banner & Provider Cards) ── */}
       <div className={activeSubTab === "vault" ? "space-y-6 block" : "hidden"}>
+        {/* Sentinel Header Banner - Scoped to Key Vault */}
+        <div className="relative overflow-hidden rounded-3xl border border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.18)] bg-slate-950/90 p-5 sm:p-6 md:p-8">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2 flex-1 min-w-0 max-w-3xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-gradient-to-br from-cyan-400 via-teal-400 to-indigo-600 text-black shadow-[0_0_20px_rgba(6,182,212,0.5)]">
+                  <Shield className="w-6 h-6 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2.5 drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
+                    Sentinel: AI Gateway &amp; Key Vault
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/25 text-emerald-300 border border-emerald-400/60 uppercase tracking-widest flex items-center gap-1 shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+                      <Lock className="w-3 h-3" /> Auto-Encrypting Vercel Env
+                    </span>
+                  </h2>
+                  <p className="text-xs text-cyan-200/80">
+                    When you paste an API key, it instantly encrypts into <span className="font-mono text-emerald-300 font-extrabold drop-shadow-[0_0_6px_rgba(16,185,129,0.6)]">*************</span> stars and automatically syncs to your app&apos;s Vercel Project Environment.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Metrics & Save All */}
+            <div className="flex items-center gap-3 flex-wrap shrink-0">
+              <div className="bg-black/80 border border-cyan-500/35 px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 shadow-[0_0_10px_rgba(6,182,212,0.15)]">
+                <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-slate-300">In Vercel Env:</span>
+                <span className="font-mono font-extrabold text-emerald-300 drop-shadow-[0_0_6px_rgba(16,185,129,0.5)]">
+                  {configuredCount} / {PROVIDERS.length}
+                </span>
+              </div>
+
+              <button
+                onClick={handleSaveAll}
+                disabled={isSavingAll}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-black font-extrabold rounded-xl text-xs shadow-[0_0_20px_rgba(16,185,129,0.45)] transition active:scale-95 disabled:opacity-50"
+              >
+                {isSavingAll ? (
+                  <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                <span>Sync All Drafts to Vercel</span>
+              </button>
+            </div>
+          </div>
+        </div>
         {/* Cloudflare MCP & R2 Status Card */}
       <div className="rounded-2xl border border-amber-500/40 bg-black/80 shadow-[0_0_20px_rgba(245,158,11,0.15)] p-5 backdrop-blur-xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

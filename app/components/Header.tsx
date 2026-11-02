@@ -49,26 +49,28 @@ export default function Header({
   galleryCount = 0,
 }: HeaderProps) {
   return (
-    <header className="border-b border-cyan-500/30 bg-slate-950/95 backdrop-blur-2xl px-3 sm:px-4 lg:px-8 py-2 lg:py-2.5 shrink-0 z-40 shadow-[0_4px_30px_rgba(6,182,212,0.15)] w-full">
-      <div className="w-full flex flex-wrap lg:flex-nowrap items-center justify-between gap-y-2 lg:gap-6">
-        {/* Left: Brand Identity */}
-        <div className="order-1 flex items-center gap-2 sm:gap-3 shrink min-w-0">
-          <div className="bg-gradient-to-tr from-cyan-400 via-teal-400 to-indigo-500 p-1.5 sm:p-2 rounded-xl text-black shadow-[0_0_15px_rgba(6,182,212,0.45)] shrink-0 animate-neon-cyan">
-            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 fill-black" />
+    <header className="sticky top-0 z-50 w-full bg-slate-950/95 backdrop-blur-md border-b border-slate-800 px-3 sm:px-4 lg:px-8 py-2 shrink-0 shadow-[0_4px_30px_rgba(6,182,212,0.15)]">
+      <div className="w-full flex flex-col gap-2">
+        {/* Row 1: Brand title (Left) + System Status Cluster (Kaggle GPU Online/Offline button, theme toggle, NSFW/SFW toggle, Health Guardian, Settings gear) (Right) */}
+        <div className="w-full flex items-center justify-between gap-2 sm:gap-4">
+          {/* Left: Brand Identity */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink min-w-0">
+            <div className="bg-gradient-to-tr from-cyan-400 via-teal-400 to-indigo-500 p-1.5 sm:p-2 rounded-xl text-black shadow-[0_0_15px_rgba(6,182,212,0.45)] shrink-0 animate-neon-cyan">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 fill-black" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <h1 className="font-black text-sm sm:text-lg lg:text-xl leading-tight tracking-tight bg-gradient-to-r from-white via-cyan-200 to-cyan-400 bg-clip-text text-transparent truncate">
+                <span className="inline sm:hidden">Qwen Studio</span>
+                <span className="hidden sm:inline">Qwen Image Editor Studio</span>
+              </h1>
+              <span className="hidden xs:inline text-[9px] sm:text-[10px] text-cyan-300/80 font-mono font-semibold tracking-wider truncate">
+                Dual Tesla T4 &bull; 5 TB Vault
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col min-w-0">
-            <h1 className="font-black text-sm sm:text-lg lg:text-xl leading-tight tracking-tight bg-gradient-to-r from-white via-cyan-200 to-cyan-400 bg-clip-text text-transparent truncate">
-              <span className="inline sm:hidden">Qwen Studio</span>
-              <span className="hidden sm:inline">Qwen Image Editor Studio</span>
-            </h1>
-            <span className="hidden xs:inline text-[9px] sm:text-[10px] text-cyan-300/80 font-mono font-semibold tracking-wider truncate">
-              Dual Tesla T4 &bull; 5 TB Vault
-            </span>
-          </div>
-        </div>
 
-        {/* Right on Mobile / Far Right on Desktop: System Status Cluster (Single Render) */}
-        <div className="order-2 lg:order-3 flex items-center gap-1 sm:gap-1.5 lg:gap-2.5 shrink-0">
+          {/* Right on Mobile / Desktop: System Status Cluster */}
+          <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2.5 shrink-0">
           {/* Unified GPU Toggle Button */}
           {isConnected ? (
             <button
@@ -195,13 +197,14 @@ export default function Header({
             <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
+      </div>
 
-        {/* Center / Row 2: Navigation Horizontal Bar (Smooth swipeable scrolling on mobile with flex-shrink-0 pills) */}
-        <div className="order-3 lg:order-2 w-full min-w-0 max-w-full lg:w-auto relative">
-          <nav
+      {/* Row 2: Navigation Horizontal Bar with overflow-x-auto scrollbar-none */}
+      <div className="w-full min-w-0 overflow-hidden">
+        <nav
             aria-label="Main Navigation"
-            className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-nowrap shrink-0 w-full px-2 py-1 bg-black/80 rounded-xl lg:rounded-2xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.12)] touch-pan-x scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-          >
+          className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none flex-nowrap shrink-0 w-full px-2 py-1 bg-black/80 rounded-xl lg:rounded-2xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.12)] touch-pan-x scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
             <button
               onClick={() => onNavigateTab("studio")}
               className={`flex items-center gap-1.5 px-3.5 py-2 sm:px-4 rounded-lg lg:rounded-xl text-xs font-black whitespace-nowrap flex-shrink-0 shrink-0 min-h-[44px] transition ${
