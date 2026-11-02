@@ -607,7 +607,8 @@ export default function SentinelAiGateway({
         </button>
       </div>
 
-      {activeSubTab === "copilot" ? (
+      {/* ── Copilot Subtab (Persistent Mount to Retain Active Chat State & Stream) ── */}
+      <div className={activeSubTab === "copilot" ? "block" : "hidden"}>
         <SentinelChatCopilot
           canvasImage={canvasImage}
           isNsfwMode={isNsfwMode}
@@ -617,9 +618,11 @@ export default function SentinelAiGateway({
           onFuseLoras={onFuseLoras}
           showToast={showToast}
         />
-      ) : (
-        <>
-          {/* Cloudflare MCP & R2 Status Card */}
+      </div>
+
+      {/* ── Key Vault & Telemetry Subtab ── */}
+      <div className={activeSubTab === "vault" ? "space-y-6 block" : "hidden"}>
+        {/* Cloudflare MCP & R2 Status Card */}
       <div className="rounded-2xl border border-amber-500/40 bg-black/80 shadow-[0_0_20px_rgba(245,158,11,0.15)] p-5 backdrop-blur-xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
@@ -1052,9 +1055,8 @@ export default function SentinelAiGateway({
             </div>
           );
         })}
+        </div>
       </div>
-    </>
-  )}
-</div>
+    </div>
   );
 }

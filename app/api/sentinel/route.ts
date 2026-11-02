@@ -99,11 +99,11 @@ function getAiClient(options: ResolveClientOptions) {
     };
   } else {
     cfg = {
-      apiKey: "dummy-key-fallback",
+      apiKey: "",
       baseURL: "https://openrouter.ai/api/v1",
       model: model || "google/gemini-2.0-flash-001",
       hasKey: false,
-      providerName: "Offline Fallback Heuristics",
+      providerName: "Unconfigured Provider Gateway",
     };
   }
 
@@ -145,10 +145,25 @@ export async function POST(req: Request) {
       customBaseUrl,
     });
 
-    const result = streamText({
-      model: clientConfig.client(clientConfig.model),
-      messages,
-      system: `You are Sentinel, an autonomous AI Studio Copilot and smart, highly skilled professional Admin of Qwen Image Editor Studio.
+    if (!clientConfig.hasKey) {
+      return new Response(
+        JSON.stringify({
+          error: true,
+          message: `Provider [${clientConfig.providerName}] failed: Missing API Key in environment or vault. Switching to fallback...`,
+        }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    let result;
+    try {
+      result = streamText({
+        model: clientConfig.client(clientConfig.model),
+        messages,
+        system: `You are Sentinel, an autonomous AI Studio Copilot and smart, highly skilled professional Admin of Qwen Image Editor Studio.
 The user is the Owner of this app making all major architectural decisions. You collaborate closely with the Owner, discussing and reviewing app behaviors, monitoring performance, and keeping the app healthy, reliable, and error-free.
 You have direct tool access to control the workspace:
 - When the user asks for a prompt, concept, or style, craft a high-end cinematic prompt and call 'studio_refine_prompt'.
@@ -157,54 +172,77 @@ You have direct tool access to control the workspace:
 - When the user inquires about canvas status or image contents, call 'studio_inspect_canvas'.
 - For heavy or GPU operations (such as fusing LoRAs into the Kaggle GPU pipeline), invoke 'studio_fuse_loras' so the user gets an inline human-in-the-loop approval gate.
 Always be concise, proactive, authoritative, and execute actions with tool calls rather than only giving hypothetical advice.`,
-      tools: {
-        studio_refine_prompt: tool({
-          description: "Updates the active prompt and negative prompt in the Studio workstation.",
-          parameters: z.object({
-            refinedPrompt: z.string().describe("Hyper-detailed, cinematic prompt with lighting and style tags"),
-            negativePrompt: z.string().optional().describe("Unwanted artifacts, low quality flags"),
-            suggestedStyle: z.string().optional().describe("Matching art style name"),
+        tools: {
+          studio_refine_prompt: tool({
+            description: "Updates the active prompt and negative prompt in the Studio workstation.",
+            parameters: z.object({
+              refinedPrompt: z.string().describe("Hyper-detailed, cinematic prompt with lighting and style tags"),
+              negativePrompt: z.string().optional().describe("Unwanted artifacts, low quality flags"),
+              suggestedStyle: z.string().optional().describe("Matching art style name"),
+            }),
           }),
-        }),
-        studio_tune_parameters: tool({
-          description: "Adjusts workstation inference parameters.",
-          parameters: z.object({
-            steps: z.number().min(4).max(50).describe("Inference steps (e.g. 4 for Turbo, 20-30 for HD)"),
-            cfgScale: z.number().min(1).max(20).describe("Guidance scale / CFG"),
-            aspectRatio: z.enum(["1:1", "9:16", "16:9", "4:5", "3:2"]).describe("Target aspect ratio"),
-            rationale: z.string().optional().describe("Reasoning for parameters"),
+          studio_tune_parameters: tool({
+            description: "Adjusts workstation inference parameters.",
+            parameters: z.object({
+              steps: z.number().min(4).max(50).describe("Inference steps (e.g. 4 for Turbo, 20-30 for HD)"),
+              cfgScale: z.number().min(1).max(20).describe("Guidance scale / CFG"),
+              aspectRatio: z.enum(["1:1", "9:16", "16:9", "4:5", "3:2"]).describe("Target aspect ratio"),
+              rationale: z.string().optional().describe("Reasoning for parameters"),
+            }),
           }),
-        }),
-        studio_apply_preset: tool({
-          description: "Directly injects a visual style preset into Studio.",
-          parameters: z.object({
-            presetName: z.string().describe("Style preset name (e.g., Cyberpunk, Anime, Photorealistic)"),
-            stylePrompt: z.string().describe("Prompt modifiers for this style"),
-            negativePrompt: z.string().optional().describe("Negative prompt tokens for this style"),
+          studio_apply_preset: tool({
+            description: "Directly injects a visual style preset into Studio.",
+            parameters: z.object({
+              presetName: z.string().describe("Style preset name (e.g., Cyberpunk, Anime, Photorealistic)"),
+              stylePrompt: z.string().describe("Prompt modifiers for this style"),
+              negativePrompt: z.string().optional().describe("Negative prompt tokens for this style"),
+            }),
           }),
-        }),
-        studio_inspect_canvas: tool({
-          description: "Reads active image resolution and visual context.",
-          parameters: z.object({
-            notes: z.string().describe("Observations about the canvas or inpainting recommendations"),
+          studio_inspect_canvas: tool({
+            description: "Reads active image resolution and visual context.",
+            parameters: z.object({
+              notes: z.string().describe("Observations about the canvas or inpainting recommendations"),
+            }),
           }),
-        }),
-        studio_fuse_loras: tool({
-          description: "Prepares and fuses specific LoRAs into the Kaggle GPU pipeline (Requires Human Approval).",
-          parameters: z.object({
-            loraNames: z.array(z.string()).describe("Names or IDs of LoRAs to fuse"),
-            rationale: z.string().describe("Explanation of why these LoRAs enhance the output"),
+          studio_fuse_loras: tool({
+            description: "Prepares and fuses specific LoRAs into the Kaggle GPU pipeline (Requires Human Approval).",
+            parameters: z.object({
+              loraNames: z.array(z.string()).describe("Names or IDs of LoRAs to fuse"),
+              rationale: z.string().describe("Explanation of why these LoRAs enhance the output"),
+            }),
           }),
+        },
+        maxSteps: 3,
+      });
+    } catch (streamErr: any) {
+      return new Response(
+        JSON.stringify({
+          error: true,
+          message: `Provider [${clientConfig.providerName}] failed: ${streamErr?.message || "Invalid model ID or stream initialization failure"}. Switching to fallback...`,
         }),
-      },
-      maxSteps: 3,
-    });
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
 
-    return result.toDataStreamResponse();
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message || "Sentinel Gateway Error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
+    return result.toDataStreamResponse({
+      getErrorMessage: (err) => {
+        const details = err instanceof Error ? err.message : String(err);
+        return `Provider [${clientConfig.providerName}] failed: ${details}. Switching to fallback...`;
+      },
     });
+  } catch (error: any) {
+    return new Response(
+      JSON.stringify({
+        error: true,
+        message: `Provider [Sentinel Gateway] failed: ${error?.message || "Sentinel Gateway Error"}. Switching to fallback...`,
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }

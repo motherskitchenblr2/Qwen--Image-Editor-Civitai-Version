@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { useChat } from "ai/react";
+import { useChat, Message } from "ai/react";
 import {
   Sparkles,
   Send,
@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   Code2,
   Brain,
+  Trash2,
 } from "lucide-react";
 import { AVAILABLE_MODELS } from "@/app/lib/modelShuffler";
 
@@ -92,8 +93,28 @@ export default function SentinelChatCopilot({
   );
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showReasoning, setShowReasoning] = useState<boolean>(true);
+  const [fallbackNotice, setFallbackNotice] = useState<{
+    originalModel: string;
+    fallbackModel: string;
+    reason: string;
+  } | null>(null);
 
+  const fallbackTriggeredRef = useRef<boolean>(false);
+  const stallTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load persisted messages from sessionStorage
+  const [initialChatMessages] = useState<Message[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = sessionStorage.getItem("sentinel_chat_history");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
 
   // Sync model selection with taskType and NSFW mode
   useEffect(() => {
@@ -106,21 +127,57 @@ export default function SentinelChatCopilot({
     }
   }, [taskType, isNsfwMode]);
 
+  const getFallbackModelForCurrentRoute = (currentModel: string): string => {
+    if (isNsfwMode) return "dolphinllm/uncensored";
+    if (taskType === "coding") return "nvidia/nemotron-3-super";
+    if (taskType === "reasoning") return "groq/llama-3.3-70b";
+    if (currentModel === "google/gemma-4-31b-it" || currentModel.includes("gemma") || currentModel.includes("gemini")) {
+      return "groq/llama-3.3-70b";
+    }
+    return "groq/llama-3.3-70b";
+  };
+
+  const handleProviderErrorOrStall = (reason: string) => {
+    if (fallbackTriggeredRef.current) return;
+    const fallback = getFallbackModelForCurrentRoute(selectedModel);
+    if (selectedModel !== fallback) {
+      fallbackTriggeredRef.current = true;
+      setFallbackNotice({
+        originalModel: selectedModel,
+        fallbackModel: fallback,
+        reason,
+      });
+      setSelectedModel(fallback);
+      showToast?.(`⚠️ Model stalled/failed: ${reason}. Auto-switched to ${fallback}`, "info");
+      setTimeout(() => {
+        reload();
+      }, 350);
+    } else {
+      showToast?.(`Sentinel notice: ${reason}`, "error");
+    }
+  };
+
   const {
     messages,
+    setMessages,
     input,
     handleInputChange,
     handleSubmit,
     isLoading,
     addToolResult,
     setInput,
+    reload,
   } = useChat({
     api: "/api/sentinel",
+    initialMessages: initialChatMessages,
     body: {
       model: selectedModel,
       taskType,
       nsfw_enabled: isNsfwMode,
       hasCanvasImage: Boolean(canvasImage),
+    },
+    onError(err) {
+      handleProviderErrorOrStall(err.message || "Provider stream disconnected");
     },
     async onToolCall({ toolCall }) {
       if (toolCall.toolName === "studio_refine_prompt") {
@@ -149,6 +206,39 @@ export default function SentinelChatCopilot({
       }
     },
   });
+
+  // Persist messages to sessionStorage
+  useEffect(() => {
+    if (typeof window !== "undefined" && messages.length > 0) {
+      try {
+        sessionStorage.setItem("sentinel_chat_history", JSON.stringify(messages));
+      } catch {}
+    }
+  }, [messages]);
+
+  // >8 second stall detector
+  useEffect(() => {
+    if (isLoading) {
+      fallbackTriggeredRef.current = false;
+      const countAtStart = messages.length;
+      stallTimerRef.current = setTimeout(() => {
+        if (isLoading && messages.length <= countAtStart) {
+          handleProviderErrorOrStall("Provider response stalled (>8s)");
+        }
+      }, 8000);
+    } else {
+      if (stallTimerRef.current) {
+        clearTimeout(stallTimerRef.current);
+        stallTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (stallTimerRef.current) {
+        clearTimeout(stallTimerRef.current);
+        stallTimerRef.current = null;
+      }
+    };
+  }, [isLoading, messages.length, selectedModel]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -224,6 +314,23 @@ export default function SentinelChatCopilot({
               </option>
             ))}
           </select>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMessages([]);
+              try {
+                sessionStorage.removeItem("sentinel_chat_history");
+              } catch {}
+              setFallbackNotice(null);
+              showToast?.("🧹 Sentinel chat memory cleared", "info");
+            }}
+            className="p-1.5 text-slate-400 hover:text-rose-400 rounded-xl hover:bg-slate-900 border border-slate-800 transition text-[11px] flex items-center gap-1.5 min-h-[36px]"
+            title="Clear chat session"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Clear</span>
+          </button>
         </div>
       </div>
 
@@ -302,6 +409,25 @@ export default function SentinelChatCopilot({
           </button>
         ))}
       </div>
+
+      {/* ── Auto-Fallback Engine Diagnostic Banner ── */}
+      {fallbackNotice && (
+        <div className="mx-3 sm:mx-5 my-2 p-3 rounded-2xl bg-amber-950/80 border border-amber-500/50 flex items-center justify-between gap-3 text-xs text-amber-200 font-mono shadow-[0_0_15px_rgba(245,158,11,0.25)] shrink-0 animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 animate-bounce" />
+            <span>
+              <strong>⚡ Auto-Fallback Engaged:</strong> {fallbackNotice.reason}. Engine switched to <strong>{fallbackNotice.fallbackModel}</strong>.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFallbackNotice(null)}
+            className="text-amber-400 hover:text-white text-[11px] px-2.5 py-1 rounded-lg bg-black/50 hover:bg-black/80 transition"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* ── Chat Messages Scroll View ── */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 no-scrollbar">

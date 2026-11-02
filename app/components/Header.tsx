@@ -200,11 +200,11 @@ export default function Header({
         <div className="order-3 lg:order-2 w-full min-w-0 max-w-full lg:w-auto relative">
           <nav
             aria-label="Main Navigation"
-            className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-nowrap w-full px-2 py-1 bg-black/80 rounded-xl lg:rounded-2xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.12)] shrink-0 touch-pan-x scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-nowrap shrink-0 w-full px-2 py-1 bg-black/80 rounded-xl lg:rounded-2xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.12)] touch-pan-x scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           >
             <button
               onClick={() => onNavigateTab("studio")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-lg lg:rounded-xl text-xs font-black whitespace-nowrap flex-shrink-0 shrink-0 transition ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 sm:px-4 rounded-lg lg:rounded-xl text-xs font-black whitespace-nowrap flex-shrink-0 shrink-0 min-h-[44px] transition ${
                 activeTab === "studio"
                   ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
                   : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
@@ -215,7 +215,7 @@ export default function Header({
             </button>
             <button
               onClick={() => onNavigateTab("generators")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-lg lg:rounded-xl text-xs font-black whitespace-nowrap flex-shrink-0 shrink-0 transition ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 sm:px-4 rounded-lg lg:rounded-xl text-xs font-black whitespace-nowrap flex-shrink-0 shrink-0 min-h-[44px] transition ${
                 activeTab === "generators"
                   ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
                   : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
@@ -223,13 +223,13 @@ export default function Header({
             >
               <Zap className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
               <span>AI Generators</span>
-              <span className="px-1.5 py-0.2 bg-amber-500/20 border border-amber-400/60 rounded-full text-[9px] text-amber-300 font-extrabold shadow-[0_0_8px_rgba(245,158,11,0.3)] flex-shrink-0">
+              <span className="px-1.5 py-0.5 bg-amber-500/20 border border-amber-400/60 rounded-full text-[9px] text-amber-300 font-extrabold shadow-[0_0_8px_rgba(245,158,11,0.3)] flex-shrink-0">
                 NEW
               </span>
             </button>
             <button
               onClick={() => onNavigateTab("loras")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-lg lg:rounded-xl text-xs font-black whitespace-nowrap flex-shrink-0 shrink-0 transition ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 sm:px-4 rounded-lg lg:rounded-xl text-xs font-black whitespace-nowrap flex-shrink-0 shrink-0 min-h-[44px] transition ${
                 activeTab === "loras"
                   ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
                   : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
@@ -238,14 +238,14 @@ export default function Header({
               <Layers className="w-3.5 h-3.5 flex-shrink-0" />
               <span>Civitai LoRA Hub</span>
               {availableLorasCount > 0 && (
-                <span className="px-1.5 py-0.2 bg-slate-900 border border-cyan-500/40 rounded-full text-[10px] text-cyan-300 font-mono font-black flex-shrink-0">
+                <span className="px-1.5 py-0.5 bg-slate-900 border border-cyan-500/40 rounded-full text-[10px] text-cyan-300 font-mono font-black flex-shrink-0">
                   {availableLorasCount}
                 </span>
               )}
             </button>
             <button
               onClick={() => onNavigateTab("gallery")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-lg lg:rounded-xl text-xs font-black whitespace-nowrap flex-shrink-0 shrink-0 transition ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 sm:px-4 rounded-lg lg:rounded-xl text-xs font-black whitespace-nowrap flex-shrink-0 shrink-0 min-h-[44px] transition ${
                 activeTab === "gallery"
                   ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
                   : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"
@@ -254,14 +254,14 @@ export default function Header({
               <ImageIcon className="w-3.5 h-3.5 flex-shrink-0" />
               <span>Gallery</span>
               {galleryCount > 0 && (
-                <span className="px-1.5 py-0.2 bg-slate-900 border border-slate-700/80 rounded-full text-[10px] text-slate-300 font-mono font-bold flex-shrink-0">
+                <span className="px-1.5 py-0.5 bg-slate-900 border border-slate-700/80 rounded-full text-[10px] text-slate-300 font-mono font-bold flex-shrink-0">
                   {galleryCount}
                 </span>
               )}
             </button>
             <button
               onClick={() => onNavigateTab("sentinel")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-lg lg:rounded-xl text-xs font-black whitespace-nowrap flex-shrink-0 shrink-0 transition ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 sm:px-4 rounded-lg lg:rounded-xl text-xs font-black whitespace-nowrap flex-shrink-0 shrink-0 min-h-[44px] transition ${
                 activeTab === "sentinel"
                   ? "bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.45)]"
                   : "text-slate-300 hover:text-cyan-300 hover:bg-slate-900/60"

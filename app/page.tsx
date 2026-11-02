@@ -1679,6 +1679,18 @@ export default function ImageEditorStudio() {
 
       {/* ── UNIVERSAL SCROLLABLE VIEWPORT CONTAINER ── */}
       <main className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden relative scrollbar-thin scrollbar-thumb-slate-800 -webkit-overflow-scrolling-touch">
+        {/* ── Autonomous Sentinel AI Gateway & Copilot Workspace (Mounted persistently to retain streaming & chat state) ── */}
+        <div className={activeTab === "sentinel" ? "w-full pb-28 lg:pb-8 block" : "hidden"}>
+          <SentinelAiGateway
+            canvasImage={originalImage || editedImage}
+            isNsfwMode={isNsfwMode}
+            onUsePrompt={handleApplyCopilotPrompt}
+            onApplySettings={handleApplyCopilotSettings}
+            onApplyPreset={handleApplyCopilotPreset}
+            onFuseLoras={handleApplyCopilotFuseLoras}
+          />
+        </div>
+
         {activeTab === "generators" ? (
           <div className="w-full pb-28 lg:pb-8">
             <AiGeneratorHub
@@ -1955,18 +1967,7 @@ export default function ImageEditorStudio() {
               media={galleryPreviewMedia}
             />
           </div>
-        ) : activeTab === "sentinel" ? (
-          <div className="w-full pb-28 lg:pb-8">
-            <SentinelAiGateway
-              canvasImage={originalImage || editedImage}
-              isNsfwMode={isNsfwMode}
-              onUsePrompt={handleApplyCopilotPrompt}
-              onApplySettings={handleApplyCopilotSettings}
-              onApplyPreset={handleApplyCopilotPreset}
-              onFuseLoras={handleApplyCopilotFuseLoras}
-            />
-          </div>
-        ) : (
+        ) : activeTab === "sentinel" ? null : (
           /* ── TWO-COLUMN STUDIO & LIVE CANVAS WORKSPACE ─────────────── */
           <StudioLayout
             controlPanel={
