@@ -1167,7 +1167,11 @@ export default function ImageEditorStudio() {
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.detail || errData.error || "Request failed");
+          const errMsg = errData.detail || errData.error || `GPU Request failed (${res.status})`;
+          if (res.status === 503) {
+            showToast(`⚠️ Kaggle GPU: ${errMsg}`, "error");
+          }
+          throw new Error(errMsg);
         }
 
         const data = await res.json();
@@ -1307,7 +1311,7 @@ export default function ImageEditorStudio() {
       }
     } catch (e: any) {
       console.error("Generation failed:", e);
-      alert(`Generation notice: ${e.message || e}`);
+      showToast(e.message || "Generation notice", "error");
     } finally {
       clearInterval(timer);
       setIsGenerating(false);
@@ -1326,6 +1330,8 @@ export default function ImageEditorStudio() {
         isNsfwMode={isNsfwMode}
         onToggleNsfwMode={handleToggleNsfwMode}
         isConnected={isConnected}
+        isModelReady={isModelReady}
+        modelStatusMessage={modelStatusMessage}
         isStartingGpu={isStartingGpu}
         isShuttingDown={isShuttingDown}
         onStartGpu={() => handleStartGpu(false)}

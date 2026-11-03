@@ -73,7 +73,7 @@ CONFIGS_DIR = WORKING_DIR / "configs"
 for d in [MODELS_DIR, LORAS_DIR, OUTPUTS_DIR, CONFIGS_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
-BASE_MODEL_ID = os.environ.get("BASE_MODEL_ID", "Qwen/Qwen-Image-Edit-2509")
+BASE_MODEL_ID = os.environ.get("BASE_MODEL_ID", "prithivMLmods/Qwen-Image-Edit-Rapid-AIO-V4")
 VIGGLE_TURBO_REPO = os.environ.get("VIGGLE_TURBO_REPO", "Viggle/Qwen-Image-2.1-viggle-turbo")
 VIGGLE_LORA_FILE = os.environ.get("VIGGLE_LORA_FILE", "Qwen-Image-2.1-viggle-turbo-v0.3-6step-lora-r256.safetensors")
 RAPID_TRANSFORMER_ID = os.environ.get("RAPID_TRANSFORMER_ID", "prithivMLmods/Qwen-Image-Edit-Rapid-AIO-V4")
@@ -1063,11 +1063,13 @@ class ModelOrchestrator:
 
                     # Viggle Turbo exact 6-step or 9-step sigma schedule
                     sigmas = raw_nodes(num_inference_steps)
-                    if sigmas is not None:
+                    if sigmas is not None and true_cfg_scale <= 1.0:
                         call_kwargs["sigmas"] = sigmas
-                        # Distilled model must run with true_cfg_scale=1.0 (zero-CFG)
+                        # Distilled model running zero-CFG
                         call_kwargs["true_cfg_scale"] = 1.0
                     else:
+                        if sigmas is not None:
+                            call_kwargs["sigmas"] = sigmas
                         call_kwargs["negative_prompt"] = negative_prompt
                         call_kwargs["true_cfg_scale"] = true_cfg_scale
 

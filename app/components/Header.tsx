@@ -19,6 +19,8 @@ export interface HeaderProps {
   isNsfwMode: boolean;
   onToggleNsfwMode: (enabled: boolean) => void;
   isConnected: boolean;
+  isModelReady?: boolean;
+  modelStatusMessage?: string;
   isStartingGpu: boolean;
   isShuttingDown: boolean;
   onStartGpu: () => void;
@@ -37,6 +39,8 @@ export default function Header({
   isNsfwMode,
   onToggleNsfwMode,
   isConnected,
+  isModelReady = false,
+  modelStatusMessage = "",
   isStartingGpu,
   isShuttingDown,
   onStartGpu,
@@ -72,11 +76,11 @@ export default function Header({
           {/* Right on Mobile / Desktop: System Status Cluster */}
           <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2.5 shrink-0">
           {/* Unified GPU Toggle Button */}
-          {isConnected ? (
+          {isConnected && isModelReady ? (
             <button
               onClick={() => onShutdownGpu()}
               disabled={isShuttingDown}
-              title="GPU is Online. Click to turn off and save quota."
+              title="GPU & Model Pipeline Ready in VRAM. Click to turn off and save quota."
               className="group h-8 sm:h-9 md:h-10 px-2 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-emerald-500/20 hover:bg-rose-500/25 border border-emerald-400/80 hover:border-rose-400 text-emerald-200 hover:text-rose-200 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all active:scale-95 disabled:opacity-50 shrink-0"
             >
               <span className="relative flex h-2 w-2">
@@ -85,6 +89,20 @@ export default function Header({
               </span>
               <span className="hidden sm:inline group-hover:hidden">GPU Online</span>
               <span className="inline sm:hidden group-hover:hidden">Online</span>
+              <span className="hidden group-hover:inline text-rose-300">
+                {isShuttingDown ? "Stop" : "Turn Off"}
+              </span>
+            </button>
+          ) : isConnected && !isModelReady ? (
+            <button
+              onClick={() => onShutdownGpu()}
+              disabled={isShuttingDown}
+              title={modelStatusMessage || "Tunnel connected. Model weights warming up in Dual T4 VRAM (~60s)..."}
+              className="group h-8 sm:h-9 md:h-10 px-2 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-amber-500/20 hover:bg-rose-500/25 border border-amber-400/80 hover:border-rose-400 text-amber-200 hover:text-rose-200 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all active:scale-95 disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-amber-300 animate-spin" />
+              <span className="hidden sm:inline group-hover:hidden">Warming Up (~60s)</span>
+              <span className="sm:hidden group-hover:hidden">Warming</span>
               <span className="hidden group-hover:inline text-rose-300">
                 {isShuttingDown ? "Stop" : "Turn Off"}
               </span>

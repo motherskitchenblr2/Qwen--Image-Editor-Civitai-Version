@@ -14,9 +14,11 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || "";
  */
 async function generateWithTurboNeural(
   prompt: string,
+  negative_prompt = "",
   size = "1024*1024",
   seed?: number | null,
-  modelName = "turbo"
+  modelName = "turbo",
+  imageUrl?: string | null
 ) {
   let width = 768;
   let height = 768;
@@ -50,21 +52,45 @@ async function generateWithTurboNeural(
     cleanModel = "flux";
   }
 
-  // Quality Booster: Enrich prompt based on target model aesthetic specialization
+  // Quality Booster: Enrich prompt based on target model aesthetic specialization,
+  // strictly avoiding terms that overlap with user's negative prompt constraints.
   let enrichedPrompt = prompt.trim();
-  if (cleanModel === "midjourney" && !enrichedPrompt.includes("cinematic")) {
+  const lowerNeg = (negative_prompt || "").toLowerCase();
+
+  if (
+    cleanModel === "midjourney" &&
+    !enrichedPrompt.includes("cinematic") &&
+    !lowerNeg.includes("cinematic")
+  ) {
     enrichedPrompt = `${enrichedPrompt}, cinematic composition, dramatic volumetric lighting, photorealistic textures, 8k resolution, award-winning cinematography`;
-  } else if (cleanModel === "flux-realism" && !enrichedPrompt.includes("shot on")) {
+  } else if (
+    cleanModel === "flux-realism" &&
+    !enrichedPrompt.includes("shot on") &&
+    !lowerNeg.includes("photo") &&
+    !lowerNeg.includes("realistic")
+  ) {
     enrichedPrompt = `${enrichedPrompt}, shot on 85mm f/1.4 lens, natural skin textures, pore details, realistic ambient lighting, uncompressed 8k raw photo`;
-  } else if (cleanModel === "flux-anime" && !enrichedPrompt.includes("cel shading")) {
+  } else if (
+    cleanModel === "flux-anime" &&
+    !enrichedPrompt.includes("cel shading") &&
+    !lowerNeg.includes("anime") &&
+    !lowerNeg.includes("cartoon")
+  ) {
     enrichedPrompt = `${enrichedPrompt}, vibrant colors, Makoto Shinkai studio lighting, crisp cel shading, dynamic anime linework, 4k digital illustration`;
   }
 
-  const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+  let pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
     enrichedPrompt
   )}?width=${width}&height=${height}&seed=${numericSeed}&nologo=true&model=${encodeURIComponent(
     cleanModel
   )}`;
+
+  if (negative_prompt && negative_prompt.trim()) {
+    pollUrl += `&negative_prompt=${encodeURIComponent(negative_prompt.trim())}`;
+  }
+  if (imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))) {
+    pollUrl += `&image=${encodeURIComponent(imageUrl)}`;
+  }
 
   const res = await fetch(pollUrl, {
     signal: AbortSignal.timeout(15000),
@@ -323,13 +349,16 @@ export async function POST(req: NextRequest) {
       try {
         const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${activeGoogleKey}`;
         const imagenAspect = size === "1280*720" ? "16:9" : size === "720*1280" ? "9:16" : "1:1";
-        const imagenPayload = {
+        const imagenPayload: Record<string, any> = {
           instances: [{ prompt: prompt.trim() }],
           parameters: {
             sampleCount: 1,
             aspectRatio: imagenAspect,
           },
         };
+        if (negative_prompt && negative_prompt.trim()) {
+          imagenPayload.parameters.negativePrompt = negative_prompt.trim();
+        }
 
         const imagenRes = await fetch(imagenUrl, {
           method: "POST",
@@ -357,9 +386,12 @@ export async function POST(req: NextRequest) {
       // 3B. Google Gemini 2.0 Flash Multimodal Vision Engine (Guaranteed zero-404)
       try {
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${activeGoogleKey}`;
+        const negConstraint = negative_prompt && negative_prompt.trim()
+          ? ` Strictly exclude and do not describe or introduce any of these negative attributes: "${negative_prompt.trim()}".`
+          : "";
         const promptInstruction = mode === "edit"
-          ? `You are an expert AI vision director. The user wants to edit this image with the instruction: "${prompt}". Expand this into a hyper-detailed, crystal clear photorealistic image generation prompt maintaining the composition, fixing all blur and color saturation issues. Return ONLY the enhanced prompt in 1-2 sentences.`
-          : `You are an expert AI vision director. Expand this prompt for hyper-realistic visual generation: "${prompt}". Focus on sharp textures, 8k resolution, volumetric lighting, and natural color grading. Return ONLY the enhanced prompt in 1-2 sentences.`;
+          ? `You are an expert AI vision director. The user wants to edit this image with the instruction: "${prompt}". Expand this into a crystal clear, high fidelity image generation prompt maintaining the core composition and fixing defects.${negConstraint} Return ONLY the enhanced prompt in 1-2 sentences.`
+          : `You are an expert AI vision director. Expand this prompt for visual generation: "${prompt}". Focus on sharp textures, natural lighting, and balanced composition.${negConstraint} Return ONLY the enhanced prompt in 1-2 sentences.`;
 
         const parts: any[] = [{ text: promptInstruction }];
         if (mode === "edit" && image_base64) {
@@ -382,7 +414,7 @@ export async function POST(req: NextRequest) {
         if (geminiRes.ok) {
           const geminiData = await geminiRes.json();
           const enrichedText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || prompt;
-          const renderedB64 = await generateWithTurboNeural(enrichedText, size, seed, "flux");
+          const renderedB64 = await generateWithTurboNeural(enrichedText, negative_prompt, size, seed, "flux");
           return NextResponse.json({
             success: true,
             image_base64: renderedB64,
@@ -459,7 +491,14 @@ export async function POST(req: NextRequest) {
         finalPrompt = `${prompt.trim()}, masterpiece, high definition, sharp focus, natural color balance, 8k resolution`;
       }
 
-      const fallbackImageBase64 = await generateWithTurboNeural(finalPrompt, size, seed, model);
+      const fallbackImageBase64 = await generateWithTurboNeural(
+        finalPrompt,
+        negative_prompt,
+        size,
+        seed,
+        model,
+        image_base64 && image_base64.startsWith("http") ? image_base64 : null
+      );
       let resolvedModelName = `Pollinations AI (${model})`;
       if (model === "nano-banana" || model === "flux" || model.includes("flux")) {
         resolvedModelName = mode === "edit"

@@ -46,7 +46,7 @@ async function callChatCompletion(options: {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { prompt = "", provider, apiKey, mode = "enhance", nsfw_enabled = false } = body;
+    const { prompt = "", negative_prompt = "", provider, apiKey, mode = "enhance", nsfw_enabled = false } = body;
 
     const isBrainstorm = mode === "brainstorm";
     const isInspire = mode === "inspire";
@@ -68,13 +68,17 @@ export async function POST(req: NextRequest) {
       effectiveKey = (envKey && process.env[envKey]) ? process.env[envKey] : "";
     }
 
+    const negConstraint = negative_prompt && negative_prompt.trim()
+      ? ` Strictly avoid adding, mentioning, or implying any of these negative attributes: "${negative_prompt.trim()}".`
+      : "";
+
     const systemInstruction = isInspire
-      ? "You are an inspiring artistic director for masterwork diffusion models. Compose an ultra-imaginative, evocative, and aesthetically stunning prompt concept for a brand-new image generation. Specify medium/style, atmospheric textures, lighting, camera lens, palette, and mood in one cohesive paragraph (4-6 sentences). Return ONLY the prompt string without explanations or quotes."
+      ? `You are an inspiring artistic director for masterwork diffusion models. Compose an ultra-imaginative, evocative, and aesthetically stunning prompt concept for a brand-new image generation. Specify medium/style, atmospheric textures, lighting, camera lens, palette, and mood in one cohesive paragraph (4-6 sentences).${negConstraint} Return ONLY the prompt string without explanations or quotes.`
       : isBrainstorm
-      ? "You rewrite a user's image request into an evocative, master-grade prompt for a diffusion model. Reply with the prompt only: one paragraph of plain English (4-6 sentences). Describe what is in the frame in present tense, specifying medium/style, element positioning, background, volumetric lighting, palette, and mood. Return ONLY the prompt string without explanations or quotes."
+      ? `You rewrite a user's image request into an evocative, master-grade prompt for a diffusion model. Reply with the prompt only: one paragraph of plain English (4-6 sentences). Describe what is in the frame in present tense, specifying medium/style, element positioning, background, volumetric lighting, palette, and mood.${negConstraint} Return ONLY the prompt string without explanations or quotes.`
       : isEditMode
-      ? "You rewrite a user's image-editing instruction into a clear instruction for an image-editing model. Reply with the instruction only: one paragraph of plain text, 1 to 3 sentences, at most 80 words. Lead with the concrete edit: what changes, where, and how it looks afterwards. Then add one short clause for what stays: 'keep her face, pose, clothing and the background unchanged'. Change only what was asked; do not clean up or restyle anything else. Return ONLY the instruction string without explanations or quotes."
-      : "You are an expert prompt engineer. The user has written an image generation or editing prompt in casual language, incomplete phrasing, or raw imagination. Analyze and reform this text into a balanced, professional prompt with precise artistic framing, lighting, textures, and balancing descriptors while faithfully keeping the user's intended subject. Return ONLY the enhanced prompt string without explanations.";
+      ? `You rewrite a user's image-editing instruction into a clear instruction for an image-editing model. Reply with the instruction only: one paragraph of plain text, 1 to 3 sentences, at most 80 words. Lead with the concrete edit: what changes, where, and how it looks afterwards. Then add one short clause for what stays: 'keep her face, pose, clothing and the background unchanged'. Change only what was asked; do not clean up or restyle anything else.${negConstraint} Return ONLY the instruction string without explanations or quotes.`
+      : `You are an expert prompt engineer. The user has written an image generation or editing prompt in casual language, incomplete phrasing, or raw imagination. Analyze and reform this text into a balanced, professional prompt with precise artistic framing, lighting, textures, and balancing descriptors while faithfully keeping the user's intended subject.${negConstraint} Return ONLY the enhanced prompt string without explanations.`;
 
     const inputTopic = prompt.trim() || (isInspire ? "visionary surreal masterwork" : "cyberpunk visionary masterwork");
 
