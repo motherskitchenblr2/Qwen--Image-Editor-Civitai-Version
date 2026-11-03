@@ -91,9 +91,11 @@ export default function SentinelChatCopilot({
     reason: string;
   } | null>(null);
 
-  const fallbackTriggeredRef = useRef<boolean>(false);
+  const hasFallbackTriggeredRef = useRef<boolean>(false);
   const stallTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const reloadRef = useRef<() => void>(() => {});
+  const stopRef = useRef<() => void>(() => {});
 
   // Load persisted messages from sessionStorage
   const [initialChatMessages] = useState<Message[]>(() => {
@@ -110,6 +112,7 @@ export default function SentinelChatCopilot({
 
   // Sync model selection with taskType and NSFW mode
   useEffect(() => {
+    hasFallbackTriggeredRef.current = false;
     if (taskType === "coding") {
       setSelectedModel("google/gemini-2.5-pro");
     } else if (taskType === "reasoning") {
@@ -122,18 +125,31 @@ export default function SentinelChatCopilot({
   const getFallbackModelForCurrentRoute = (currentModel: string): string => {
     if (isNsfwMode) return "dolphinllm/uncensored";
     if (taskType === "coding") return "nvidia/nemotron-3-super";
-    if (taskType === "reasoning") return "groq/llama-3.3-70b";
+    if (taskType === "reasoning") return "meta-llama/llama-3.3-70b-instruct";
     if (currentModel === "gemini-2.0-flash" || currentModel.includes("gemma") || currentModel.includes("gemini")) {
-      return "groq/llama-3.3-70b";
+      return "meta-llama/llama-3.3-70b-instruct";
     }
-    return "groq/llama-3.3-70b";
+    return "meta-llama/llama-3.3-70b-instruct";
   };
 
   const handleProviderErrorOrStall = (reason: string) => {
-    if (fallbackTriggeredRef.current) return;
+    if (stallTimerRef.current) {
+      clearTimeout(stallTimerRef.current);
+      stallTimerRef.current = null;
+    }
+
+    if (hasFallbackTriggeredRef.current) {
+      // Circuit breaker: Stop the loop: do not call reload() again
+      console.warn("Fallback model also failed. Halting retry loop.");
+      stopRef.current();
+      showToast?.(`Sentinel notice: ${reason}`, "error");
+      return;
+    }
+
+    hasFallbackTriggeredRef.current = true;
     const fallback = getFallbackModelForCurrentRoute(selectedModel);
+
     if (selectedModel !== fallback) {
-      fallbackTriggeredRef.current = true;
       setFallbackNotice({
         originalModel: selectedModel,
         fallbackModel: fallback,
@@ -142,9 +158,10 @@ export default function SentinelChatCopilot({
       setSelectedModel(fallback);
       showToast?.(`⚠️ Model stalled/failed: ${reason}. Auto-switched to ${fallback}`, "info");
       setTimeout(() => {
-        reload();
+        reloadRef.current();
       }, 350);
     } else {
+      stopRef.current();
       showToast?.(`Sentinel notice: ${reason}`, "error");
     }
   };
@@ -159,6 +176,7 @@ export default function SentinelChatCopilot({
     addToolResult,
     setInput,
     reload,
+    stop,
   } = useChat({
     api: "/api/sentinel",
     initialMessages: initialChatMessages,
@@ -199,6 +217,9 @@ export default function SentinelChatCopilot({
     },
   });
 
+  reloadRef.current = reload;
+  stopRef.current = stop;
+
   // Persist messages to sessionStorage
   useEffect(() => {
     if (typeof window !== "undefined" && messages.length > 0) {
@@ -211,7 +232,6 @@ export default function SentinelChatCopilot({
   // >8 second stall detector
   useEffect(() => {
     if (isLoading) {
-      fallbackTriggeredRef.current = false;
       const countAtStart = messages.length;
       stallTimerRef.current = setTimeout(() => {
         if (isLoading && messages.length <= countAtStart) {
@@ -298,7 +318,11 @@ export default function SentinelChatCopilot({
           <div className="flex-1 min-w-0 sm:max-w-[240px]">
             <select
               value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
+              onChange={(e) => {
+                hasFallbackTriggeredRef.current = false;
+                setFallbackNotice(null);
+                setSelectedModel(e.target.value);
+              }}
               className="w-full truncate bg-slate-900 border border-cyan-500/30 text-xs px-2.5 py-1.5 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-400 font-medium cursor-pointer"
             >
               {AVAILABLE_MODELS.map((m) => (
@@ -317,6 +341,8 @@ export default function SentinelChatCopilot({
                 sessionStorage.removeItem("sentinel_chat_history");
               } catch {}
               setFallbackNotice(null);
+              hasFallbackTriggeredRef.current = false;
+              stopRef.current();
               showToast?.("🧹 Sentinel chat memory cleared", "info");
             }}
             className="p-1.5 text-slate-400 hover:text-rose-400 rounded-xl hover:bg-slate-900 border border-slate-800 transition text-[11px] flex items-center gap-1.5 min-h-[36px] shrink-0"
@@ -333,7 +359,11 @@ export default function SentinelChatCopilot({
         <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
           <button
             type="button"
-            onClick={() => setTaskType("general")}
+            onClick={() => {
+              hasFallbackTriggeredRef.current = false;
+              setFallbackNotice(null);
+              setTaskType("general");
+            }}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold text-[11px] transition ${
               taskType === "general"
                 ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
@@ -345,7 +375,11 @@ export default function SentinelChatCopilot({
           </button>
           <button
             type="button"
-            onClick={() => setTaskType("coding")}
+            onClick={() => {
+              hasFallbackTriggeredRef.current = false;
+              setFallbackNotice(null);
+              setTaskType("coding");
+            }}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold text-[11px] transition ${
               taskType === "coding"
                 ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40"
@@ -357,7 +391,11 @@ export default function SentinelChatCopilot({
           </button>
           <button
             type="button"
-            onClick={() => setTaskType("reasoning")}
+            onClick={() => {
+              hasFallbackTriggeredRef.current = false;
+              setFallbackNotice(null);
+              setTaskType("reasoning");
+            }}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold text-[11px] transition ${
               taskType === "reasoning"
                 ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
@@ -383,7 +421,7 @@ export default function SentinelChatCopilot({
           {taskType === "coding"
             ? "💻 Primary: Gemini 3.8 Pro • Fallback: Nemotron (NVIDIA)"
             : taskType === "reasoning"
-            ? "🧠 Primary: DeepSeek v4.1 (NVIDIA) • Fallback: Groq 70B"
+            ? "🧠 Primary: DeepSeek v4.1 (NVIDIA) • Fallback: Llama 3.3 70B"
             : isNsfwMode
             ? "🔞 NSFW Primary: Mistral AI • Fallback: Dolphin LLM"
             : "🛡️ SFW Primary: Gemini 2.0 Flash (Google AI Studio)"}
@@ -397,7 +435,10 @@ export default function SentinelChatCopilot({
             <button
               key={action.id}
               type="button"
-              onClick={() => setInput(action.prompt)}
+              onClick={() => {
+                hasFallbackTriggeredRef.current = false;
+                setInput(action.prompt);
+              }}
               className="flex-shrink-0 whitespace-nowrap text-xs min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-cyan-950/40 border border-slate-800 hover:border-cyan-400/50 text-slate-300 hover:text-cyan-300 font-bold transition active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
             >
               <span>{action.label}</span>
@@ -417,7 +458,11 @@ export default function SentinelChatCopilot({
           </div>
           <button
             type="button"
-            onClick={() => setFallbackNotice(null)}
+            onClick={() => {
+              setFallbackNotice(null);
+              hasFallbackTriggeredRef.current = false;
+              stopRef.current();
+            }}
             className="text-amber-400 hover:text-white text-[11px] px-2.5 py-1 rounded-lg bg-black/50 hover:bg-black/80 transition"
           >
             Dismiss
@@ -595,6 +640,7 @@ export default function SentinelChatCopilot({
           onSubmit={(e) => {
             e.preventDefault();
             if (!input.trim() || isLoading) return;
+            hasFallbackTriggeredRef.current = false;
             handleSubmit(e);
           }}
           className="flex items-center gap-2"
@@ -602,7 +648,10 @@ export default function SentinelChatCopilot({
           <input
             type="text"
             value={input}
-            onChange={handleInputChange}
+            onChange={(e) => {
+              hasFallbackTriggeredRef.current = false;
+              handleInputChange(e);
+            }}
             placeholder={
               taskType === "coding"
                 ? "Ask Sentinel to inspect code, debug syntax, or test endpoints..."

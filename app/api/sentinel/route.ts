@@ -165,15 +165,15 @@ function getAiClient(options: ResolveClientOptions): ResolvedModelResult {
         baseURL: process.env.AI_BASE_URL || "https://openrouter.ai/api/v1",
       });
       return {
-        model: openrouter("deepseek/deepseek-r1:free"),
+        model: openrouter("meta-llama/llama-3.3-70b-instruct"),
         hasKey: true,
-        providerName: "DeepSeek R1 (OpenRouter Free Tier)",
+        providerName: "Llama 3.3 70B (OpenRouter Fallback)",
       };
     }
     return {
       hasKey: false,
-      providerName: "Reasoning Engine (NVIDIA NIM / Groq)",
-      error: "NVIDIA_API_KEY or GROQ_API_KEY is not configured in Vercel/Environment.",
+      providerName: "Reasoning Engine (NVIDIA NIM / Groq / OpenRouter)",
+      error: "NVIDIA_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY is not configured in Vercel/Environment.",
     };
   }
 
@@ -219,8 +219,11 @@ function getAiClient(options: ResolveClientOptions): ResolvedModelResult {
     };
   }
 
-  // 6. Generic / Fallback Models
-  if (model && (model.startsWith("groq/") || model.includes("llama-3.3-70b"))) {
+  // 6. Generic / Fallback Models (Groq native & OpenRouter)
+  if (
+    provider === "groq" ||
+    (model && (model === "llama-3.3-70b-versatile" || model.startsWith("groq/")))
+  ) {
     if (process.env.GROQ_API_KEY) {
       const groq = createOpenAI({
         apiKey: process.env.GROQ_API_KEY,
@@ -229,7 +232,22 @@ function getAiClient(options: ResolveClientOptions): ResolvedModelResult {
       return {
         model: groq("llama-3.3-70b-versatile"),
         hasKey: true,
-        providerName: "Groq LPU (Free Tier)",
+        providerName: "Groq LPU (llama-3.3-70b-versatile)",
+      };
+    }
+  }
+
+  // If model is Llama 3.3 70B and Groq key is available, use Groq native:
+  if (model && (model === "meta-llama/llama-3.3-70b-instruct" || model.includes("llama-3.3-70b"))) {
+    if (provider === "groq" || (!provider && process.env.GROQ_API_KEY)) {
+      const groq = createOpenAI({
+        apiKey: process.env.GROQ_API_KEY,
+        baseURL: "https://api.groq.com/openai/v1",
+      });
+      return {
+        model: groq("llama-3.3-70b-versatile"),
+        hasKey: true,
+        providerName: "Groq LPU (llama-3.3-70b-versatile)",
       };
     }
   }
@@ -239,8 +257,15 @@ function getAiClient(options: ResolveClientOptions): ResolvedModelResult {
       apiKey: process.env.OPENROUTER_API_KEY,
       baseURL: process.env.AI_BASE_URL || "https://openrouter.ai/api/v1",
     });
+
+    let openRouterModel = model || "google/gemini-2.0-flash-001";
+    // Normalize legacy or groq-prefixed slug to valid OpenRouter identifier
+    if (openRouterModel === "groq/llama-3.3-70b" || openRouterModel === "llama-3.3-70b-versatile") {
+      openRouterModel = "meta-llama/llama-3.3-70b-instruct";
+    }
+
     return {
-      model: openrouter(model || "google/gemini-2.0-flash-001"),
+      model: openrouter(openRouterModel),
       hasKey: true,
       providerName: "OpenRouter (Universal Gateway)",
     };

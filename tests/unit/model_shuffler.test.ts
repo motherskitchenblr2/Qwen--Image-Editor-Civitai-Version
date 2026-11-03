@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getShuffledModelRoute, TaskCategory } from "@/app/lib/modelShuffler";
+import { getShuffledModelRoute, TaskCategory, AVAILABLE_MODELS } from "@/app/lib/modelShuffler";
 import { BASE_PROVIDERS } from "@/app/lib/aiModelRegistry";
 
 describe("Model Shuffler & Task Routing Engine", () => {
@@ -115,6 +115,14 @@ describe("Model Shuffler & Task Routing Engine", () => {
       const dolphinProvider = BASE_PROVIDERS.find((p) => p.id === "dolphin");
       expect(dolphinProvider).toBeDefined();
       expect(dolphinProvider?.models.some((m) => m.id === "uncensored")).toBe(true);
+    });
+  });
+
+  describe("Available Models Configuration", () => {
+    it("ensures OpenRouter Llama 3.3 70B uses valid meta-llama/llama-3.3-70b-instruct slug and rejects groq/llama-3.3-70b", () => {
+      const modelIds = AVAILABLE_MODELS.map((m) => m.id);
+      expect(modelIds).toContain("meta-llama/llama-3.3-70b-instruct");
+      expect(modelIds).not.toContain("groq/llama-3.3-70b");
     });
   });
 });
